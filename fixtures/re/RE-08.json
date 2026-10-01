@@ -1,0 +1,29 @@
+{
+  "id": "RE-08",
+  "kind": "condition",
+  "title": "not_in",
+  "source": "PRD P0-1",
+  "dictionary": "rules/electronics/facts-v1.json",
+  "cell": {
+    "fact": "claim.peril",
+    "op": "not_in",
+    "value": [
+      "breakdown",
+      "adh"
+    ]
+  },
+  "cases": [
+    {
+      "facts": {
+        "claim.peril": "other"
+      },
+      "expected": "TRUE"
+    },
+    {
+      "facts": {
+        "claim.peril": "adh"
+      },
+      "expected": "FALSE"
+    }
+  ]
+}

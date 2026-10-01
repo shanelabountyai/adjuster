@@ -1,0 +1,47 @@
+{
+  "id": "RE-09",
+  "kind": "condition",
+  "title": "between is inclusive at both ends",
+  "source": "PRD P0-1",
+  "dictionary": "rules/electronics/facts-v1.json",
+  "cell": {
+    "fact": "claim.batteryCapacityPct",
+    "op": "between",
+    "value": [
+      70,
+      80
+    ]
+  },
+  "cases": [
+    {
+      "facts": {
+        "claim.batteryCapacityPct": 70
+      },
+      "expected": "TRUE"
+    },
+    {
+      "facts": {
+        "claim.batteryCapacityPct": 75
+      },
+      "expected": "TRUE"
+    },
+    {
+      "facts": {
+        "claim.batteryCapacityPct": 80
+      },
+      "expected": "TRUE"
+    },
+    {
+      "facts": {
+        "claim.batteryCapacityPct": 69
+      },
+      "expected": "FALSE"
+    },
+    {
+      "facts": {
+        "claim.batteryCapacityPct": 81
+      },
+      "expected": "FALSE"
+    }
+  ]
+}

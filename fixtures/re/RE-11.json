@@ -1,0 +1,101 @@
+{
+  "id": "RE-11",
+  "kind": "validate",
+  "title": "Unknown operator and unknown calc step fail validation",
+  "source": "PRD P0-1",
+  "dictionary": "rules/electronics/facts-v1.json",
+  "cases": [
+    {
+      "name": "operator 'contains'",
+      "ruleSet": {
+        "schema": "adjuster.ruleset/1",
+        "kind": "ops",
+        "product": "electronics",
+        "version": 1,
+        "effectiveFrom": "2025-01-01",
+        "factDictionary": "facts-v1",
+        "roundingMode": "half_up",
+        "rules": [
+          {
+            "id": "E5",
+            "name": "t",
+            "class": "O",
+            "stage": "contract_verification",
+            "kind": "eligibility",
+            "rows": [
+              {
+                "id": "E5.pass",
+                "when": [
+                  {
+                    "fact": "claim.peril",
+                    "op": "contains",
+                    "value": "adh"
+                  }
+                ],
+                "then": {
+                  "outcome": "PASS"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectedCodes": [
+        "UNKNOWN_OPERATOR"
+      ]
+    },
+    {
+      "name": "calc step 'multiply'",
+      "ruleSet": {
+        "schema": "adjuster.ruleset/1",
+        "kind": "plan",
+        "product": "electronics",
+        "version": 1,
+        "effectiveFrom": "2025-01-01",
+        "factDictionary": "facts-v1",
+        "roundingMode": "half_up",
+        "rules": [
+          {
+            "id": "E5",
+            "name": "t",
+            "class": "O",
+            "stage": "contract_verification",
+            "kind": "eligibility",
+            "rows": [
+              {
+                "id": "E5.pass",
+                "when": [
+                  {
+                    "fact": "claim.peril",
+                    "op": "eq",
+                    "value": "adh"
+                  }
+                ],
+                "then": {
+                  "outcome": "PASS"
+                }
+              }
+            ]
+          }
+        ],
+        "payout": {
+          "steps": [
+            {
+              "id": "c1",
+              "op": "multiply",
+              "operand": {
+                "const": 2
+              }
+            }
+          ],
+          "outputs": {
+            "payableCents": "L"
+          }
+        }
+      },
+      "expectedCodes": [
+        "UNKNOWN_CALC_STEP"
+      ]
+    }
+  ]
+}

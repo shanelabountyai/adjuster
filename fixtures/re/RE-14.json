@@ -1,0 +1,61 @@
+{
+  "id": "RE-14",
+  "kind": "calc",
+  "title": "subtract: no implicit floor, the result may go negative",
+  "source": "PRD P0-1",
+  "facts": {
+    "claim.coveredRepairCents": 1000,
+    "product.purchasePriceCents": 2500
+  },
+  "steps": [
+    {
+      "id": "a",
+      "op": "start_from",
+      "reg": "L",
+      "operand": {
+        "fact": "claim.coveredRepairCents"
+      }
+    },
+    {
+      "id": "b",
+      "op": "subtract",
+      "reg": "L",
+      "operand": {
+        "fact": "product.purchasePriceCents"
+      }
+    }
+  ],
+  "expected": {
+    "steps": [
+      {
+        "id": "a",
+        "op": "start_from",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "claim.coveredRepairCents",
+          "value": 1000
+        },
+        "inputCents": null,
+        "outputCents": 1000
+      },
+      {
+        "id": "b",
+        "op": "subtract",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "product.purchasePriceCents",
+          "value": 2500
+        },
+        "inputCents": 1000,
+        "outputCents": -1500
+      }
+    ],
+    "registers": {
+      "L": -1500
+    }
+  }
+}

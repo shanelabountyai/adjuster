@@ -1,0 +1,39 @@
+{
+  "id": "RE-21",
+  "kind": "condition-list",
+  "title": "Unknown is never false: neq and not_in over a missing fact are UNKNOWN, not TRUE",
+  "source": "D9",
+  "cases": [
+    {
+      "cell": {
+        "fact": "claim.peril",
+        "op": "neq",
+        "value": "adh"
+      },
+      "facts": {},
+      "expected": "UNKNOWN"
+    },
+    {
+      "cell": {
+        "fact": "claim.peril",
+        "op": "not_in",
+        "value": [
+          "adh"
+        ]
+      },
+      "facts": {},
+      "expected": "UNKNOWN"
+    },
+    {
+      "cell": {
+        "fact": "claim.peril",
+        "op": "neq",
+        "value": "adh"
+      },
+      "facts": {
+        "claim.peril": "breakdown"
+      },
+      "expected": "TRUE"
+    }
+  ]
+}

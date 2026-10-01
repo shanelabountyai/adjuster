@@ -1,0 +1,419 @@
+{
+  "id": "GC-08",
+  "kind": "decision",
+  "title": "Plus, PAY-E: replace on an ACV plan, two years of depreciation",
+  "source": "domain brief s11 / PAY-E",
+  "asOf": "2025-07-18",
+  "plan": "plan-v1",
+  "ops": "ops-v1",
+  "facts": {
+    "contract.planCode": "plus",
+    "contract.status": "active",
+    "contract.termStart": "2023-06-10",
+    "contract.termEnd": "2026-06-09",
+    "contract.waitingEndsOn": "2023-07-10",
+    "product.purchaseDate": "2023-06-10",
+    "product.purchasePriceCents": 80000,
+    "claim.peril": "breakdown",
+    "claim.dateOfLoss": "2025-07-15",
+    "claim.dateReported": "2025-07-17",
+    "claim.cosmeticOnly": false,
+    "claim.preExisting": false,
+    "claim.consumableOrAccessory": false,
+    "claim.unauthorizedRepair": "none",
+    "claim.commercialUse": false,
+    "claim.intentionalOrAbuse": false,
+    "claim.inMfrWarrantyOrRecall": false,
+    "claim.productUnavailable": false,
+    "claim.softwareOrData": false,
+    "claim.externalCause": false,
+    "claim.serialMatchesContract": true,
+    "claim.claimantIsHolder": true,
+    "claim.accountChanged": false,
+    "claim.coveredRepairCents": 70000,
+    "claim.replacementValueCents": 90000,
+    "history.priorClaims": [],
+    "history.claimantContractsWithClaims": 1,
+    "evidence.estimateFromNetwork": true,
+    "evidence.estimatorIsPayee": false,
+    "evidence.proofOfPurchaseDate": "2023-06-10",
+    "evidence.photoMetaDateBeforeLoss": false,
+    "evidence.documentHashOnOtherClaim": false,
+    "docs.proofOfPurchase": "accepted",
+    "docs.repairEstimate": "accepted",
+    "docs.damagePhotos": "accepted",
+    "docs.incidentStatement": "accepted"
+  },
+  "expected": {
+    "outcome": "APPROVE",
+    "reasons": [],
+    "payableCents": 46500,
+    "contractFulfilled": true,
+    "skippedStages": [],
+    "rules": [
+      {
+        "ruleId": "E17",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E5",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E1",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E2",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E3",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E4",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E6",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E7",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E8",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E9",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E10",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E11",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E12",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E13",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E14",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E18",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E19",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E15",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E16",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E22",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E20.proofOfPurchase",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E20.repairEstimate",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E20.damagePhotos",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E20.incidentStatement",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E21",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F1",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F2",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F3",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F4",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F5",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F6",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F7",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F8",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F9",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F10",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E23",
+        "result": "PASS",
+        "missing": []
+      }
+    ],
+    "valuation": {
+      "path": "replace",
+      "steps": [
+        {
+          "id": "c1",
+          "op": "start_from",
+          "reg": "L",
+          "applied": false,
+          "operand": null,
+          "inputCents": null,
+          "outputCents": null
+        },
+        {
+          "id": "c2",
+          "op": "start_from",
+          "reg": "L",
+          "applied": true,
+          "operand": {
+            "kind": "fact",
+            "name": "claim.replacementValueCents",
+            "value": 90000
+          },
+          "inputCents": null,
+          "outputCents": 90000
+        },
+        {
+          "id": "c3",
+          "op": "apply_bps",
+          "reg": "L",
+          "applied": true,
+          "operand": {
+            "kind": "fact",
+            "name": "lookup.retentionBps",
+            "value": 6000
+          },
+          "inputCents": 90000,
+          "outputCents": 54000
+        },
+        {
+          "id": "c4",
+          "op": "cap_at",
+          "reg": "L",
+          "applied": true,
+          "operand": {
+            "kind": "fact",
+            "name": "product.purchasePriceCents",
+            "value": 80000
+          },
+          "inputCents": 54000,
+          "outputCents": 54000
+        },
+        {
+          "id": "c5",
+          "op": "subtract",
+          "reg": "L",
+          "applied": true,
+          "operand": {
+            "kind": "fact",
+            "name": "lookup.deductibleCents",
+            "value": 7500
+          },
+          "inputCents": 54000,
+          "outputCents": 46500
+        },
+        {
+          "id": "c6",
+          "op": "floor_at",
+          "reg": "L",
+          "applied": true,
+          "operand": {
+            "kind": "const",
+            "name": null,
+            "value": 0
+          },
+          "inputCents": 46500,
+          "outputCents": 46500
+        },
+        {
+          "id": "c7",
+          "op": "start_from",
+          "reg": "DED",
+          "applied": true,
+          "operand": {
+            "kind": "reg",
+            "name": "L",
+            "value": 46500
+          },
+          "inputCents": null,
+          "outputCents": 46500
+        },
+        {
+          "id": "c8",
+          "op": "cap_at",
+          "reg": "L",
+          "applied": true,
+          "operand": {
+            "kind": "fact",
+            "name": "lookup.perClaimLimitCents",
+            "value": 100000
+          },
+          "inputCents": 46500,
+          "outputCents": 46500
+        },
+        {
+          "id": "c9",
+          "op": "start_from",
+          "reg": "AGG",
+          "applied": true,
+          "operand": {
+            "kind": "fact",
+            "name": "lookup.aggregateLimitCents",
+            "value": 200000
+          },
+          "inputCents": null,
+          "outputCents": 200000
+        },
+        {
+          "id": "c10",
+          "op": "subtract",
+          "reg": "AGG",
+          "applied": true,
+          "operand": {
+            "kind": "fact",
+            "name": "d.sumPriorPaid",
+            "value": 0
+          },
+          "inputCents": 200000,
+          "outputCents": 200000
+        },
+        {
+          "id": "c11",
+          "op": "floor_at",
+          "reg": "AGG",
+          "applied": true,
+          "operand": {
+            "kind": "const",
+            "name": null,
+            "value": 0
+          },
+          "inputCents": 200000,
+          "outputCents": 200000
+        },
+        {
+          "id": "c12",
+          "op": "cap_at",
+          "reg": "L",
+          "applied": true,
+          "operand": {
+            "kind": "reg",
+            "name": "AGG",
+            "value": 200000
+          },
+          "inputCents": 46500,
+          "outputCents": 46500
+        },
+        {
+          "id": "c13",
+          "op": "start_from",
+          "reg": "AFTER",
+          "applied": true,
+          "operand": {
+            "kind": "reg",
+            "name": "AGG",
+            "value": 200000
+          },
+          "inputCents": null,
+          "outputCents": 200000
+        },
+        {
+          "id": "c14",
+          "op": "subtract",
+          "reg": "AFTER",
+          "applied": true,
+          "operand": {
+            "kind": "reg",
+            "name": "L",
+            "value": 46500
+          },
+          "inputCents": 200000,
+          "outputCents": 153500
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,27 @@
+# Fixtures
+
+Frozen expected values. Tests **read** these; product code must never generate them.
+
+| Dir | Covers | Kind |
+|-----|--------|------|
+| `re/` | RE-01..RE-23, evaluator level: one per operator (01-10), validation failures (11-12), one per calc step (13-18), three-valued logic (19-22), rule gap (23) | `condition`, `condition-list`, `row`, `rule`, `calc`, `validate` |
+| `pay/` | PAY-A..PAY-G: facts in, calc-step trace and payable out. PAY-H is a pointer to GC-02 (a denial carries a null amount) | `valuation`, `ref` |
+| `gc/` | GC-01..GC-10: a full fact snapshot in, outcome, reasons, every rule's result, calc trace and cents out | `decision` |
+
+Conventions: amounts are integer cents, rates are basis points, dates are ISO `YYYY-MM-DD`. Facts use the ids in `rules/electronics/facts-v1.json` (flat, dotted). A decision fixture's `expected.rules` lists every rule that ran; compare by `ruleId`, not position. `expected.skippedStages` is non-empty exactly when an objective denial stopped evidence, flags, valuation and authority from running.
+
+**What is and is not in `expected`.** Outcome, reasons (rule ids), per-rule result, calc steps (input, operand, output cents) and payable are frozen. Prose (claimant letter, file note), `rowIds` and `factsRead` are not: they are the engine's own output, checked against the trace schema rather than a golden file. The trace shape is provisional (`adjuster.trace/0`) until the by-hand page (task 1.2) lands.
+
+**RE-xx are a proposal.** The PRD and tasks name RE-01..RE-23 but nowhere define them; the mapping above is mine. Review it before task 1.7.
+
+**Where the numbers come from.** PAY-A..PAY-H and the GC outcomes are the answer key in `docs/domain-brief.md` s4 and s11. Facts the brief does not state (dates, replacement values, which documents are in) are filled in so every other rule passes; each GC title says what the scenario is about.
+
+## Provenance and how they were checked
+
+- `tools/build_fixtures.py` adjudicates the brief's claims procedurally with exact rational arithmetic (`fractions.Fraction`). It does not read `rules/`.
+- `tools/verify_fixtures.py` derives them a **different way**: it interprets `rules/electronics/*.json` with `decimal` arithmetic and Kleene three-valued logic, and checks the result against answer keys typed in from the brief. It must print `OK`. That one run proves the fixtures *and* that the rule data encodes the brief.
+- Run: `npm run fixtures:check` (builds, verifies, then `git diff --exit-code fixtures/`, so it fails if anything rewrote a fixture and it was not committed on purpose).
+
+## Rules
+- Never edit a fixture to make a failing test pass. If a fixture is wrong, change `docs/decisions.md` first, regenerate with `tools/build_fixtures.py`, confirm `tools/verify_fixtures.py` prints OK, review the diff.
+- `tools/` is a test oracle, not product code: do not import it, do not port it.

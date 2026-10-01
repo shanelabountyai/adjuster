@@ -1,0 +1,207 @@
+{
+  "id": "RE-12",
+  "kind": "validate",
+  "title": "Unknown fact and type mismatch fail validation",
+  "source": "PRD P0-1",
+  "dictionary": "rules/electronics/facts-v1.json",
+  "cases": [
+    {
+      "name": "unknown fact",
+      "ruleSet": {
+        "schema": "adjuster.ruleset/1",
+        "kind": "ops",
+        "product": "electronics",
+        "version": 1,
+        "effectiveFrom": "2025-01-01",
+        "factDictionary": "facts-v1",
+        "roundingMode": "half_up",
+        "rules": [
+          {
+            "id": "E5",
+            "name": "t",
+            "class": "O",
+            "stage": "contract_verification",
+            "kind": "eligibility",
+            "rows": [
+              {
+                "id": "E5.pass",
+                "when": [
+                  {
+                    "fact": "claim.colour",
+                    "op": "eq",
+                    "value": "red"
+                  }
+                ],
+                "then": {
+                  "outcome": "PASS"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectedCodes": [
+        "UNKNOWN_FACT"
+      ]
+    },
+    {
+      "name": "lt on an enum fact",
+      "ruleSet": {
+        "schema": "adjuster.ruleset/1",
+        "kind": "ops",
+        "product": "electronics",
+        "version": 1,
+        "effectiveFrom": "2025-01-01",
+        "factDictionary": "facts-v1",
+        "roundingMode": "half_up",
+        "rules": [
+          {
+            "id": "E5",
+            "name": "t",
+            "class": "O",
+            "stage": "contract_verification",
+            "kind": "eligibility",
+            "rows": [
+              {
+                "id": "E5.pass",
+                "when": [
+                  {
+                    "fact": "claim.peril",
+                    "op": "lt",
+                    "value": "adh"
+                  }
+                ],
+                "then": {
+                  "outcome": "PASS"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectedCodes": [
+        "TYPE_MISMATCH"
+      ]
+    },
+    {
+      "name": "number compared to an enum fact",
+      "ruleSet": {
+        "schema": "adjuster.ruleset/1",
+        "kind": "ops",
+        "product": "electronics",
+        "version": 1,
+        "effectiveFrom": "2025-01-01",
+        "factDictionary": "facts-v1",
+        "roundingMode": "half_up",
+        "rules": [
+          {
+            "id": "E5",
+            "name": "t",
+            "class": "O",
+            "stage": "contract_verification",
+            "kind": "eligibility",
+            "rows": [
+              {
+                "id": "E5.pass",
+                "when": [
+                  {
+                    "fact": "claim.peril",
+                    "op": "eq",
+                    "value": 5
+                  }
+                ],
+                "then": {
+                  "outcome": "PASS"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectedCodes": [
+        "TYPE_MISMATCH"
+      ]
+    },
+    {
+      "name": "value outside the enum",
+      "ruleSet": {
+        "schema": "adjuster.ruleset/1",
+        "kind": "ops",
+        "product": "electronics",
+        "version": 1,
+        "effectiveFrom": "2025-01-01",
+        "factDictionary": "facts-v1",
+        "roundingMode": "half_up",
+        "rules": [
+          {
+            "id": "E5",
+            "name": "t",
+            "class": "O",
+            "stage": "contract_verification",
+            "kind": "eligibility",
+            "rows": [
+              {
+                "id": "E5.pass",
+                "when": [
+                  {
+                    "fact": "claim.peril",
+                    "op": "eq",
+                    "value": "theft"
+                  }
+                ],
+                "then": {
+                  "outcome": "PASS"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectedCodes": [
+        "TYPE_MISMATCH"
+      ]
+    },
+    {
+      "name": "between with low > high",
+      "ruleSet": {
+        "schema": "adjuster.ruleset/1",
+        "kind": "ops",
+        "product": "electronics",
+        "version": 1,
+        "effectiveFrom": "2025-01-01",
+        "factDictionary": "facts-v1",
+        "roundingMode": "half_up",
+        "rules": [
+          {
+            "id": "E5",
+            "name": "t",
+            "class": "O",
+            "stage": "contract_verification",
+            "kind": "eligibility",
+            "rows": [
+              {
+                "id": "E5.pass",
+                "when": [
+                  {
+                    "fact": "claim.batteryCapacityPct",
+                    "op": "between",
+                    "value": [
+                      80,
+                      70
+                    ]
+                  }
+                ],
+                "then": {
+                  "outcome": "PASS"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectedCodes": [
+        "TYPE_MISMATCH"
+      ]
+    }
+  ]
+}

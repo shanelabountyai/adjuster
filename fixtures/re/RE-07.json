@@ -1,0 +1,35 @@
+{
+  "id": "RE-07",
+  "kind": "condition",
+  "title": "in",
+  "source": "PRD P0-1",
+  "dictionary": "rules/electronics/facts-v1.json",
+  "cell": {
+    "fact": "claim.peril",
+    "op": "in",
+    "value": [
+      "breakdown",
+      "adh"
+    ]
+  },
+  "cases": [
+    {
+      "facts": {
+        "claim.peril": "adh"
+      },
+      "expected": "TRUE"
+    },
+    {
+      "facts": {
+        "claim.peril": "breakdown"
+      },
+      "expected": "TRUE"
+    },
+    {
+      "facts": {
+        "claim.peril": "other"
+      },
+      "expected": "FALSE"
+    }
+  ]
+}

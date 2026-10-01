@@ -1,0 +1,54 @@
+{
+  "id": "RE-03",
+  "kind": "condition",
+  "title": "lt (integer and date)",
+  "source": "PRD P0-1",
+  "dictionary": "rules/electronics/facts-v1.json",
+  "cell": {
+    "fact": "claim.batteryCapacityPct",
+    "op": "lt",
+    "value": 80
+  },
+  "cases": [
+    {
+      "facts": {
+        "claim.batteryCapacityPct": 79
+      },
+      "expected": "TRUE"
+    },
+    {
+      "facts": {
+        "claim.batteryCapacityPct": 80
+      },
+      "expected": "FALSE"
+    },
+    {
+      "facts": {
+        "claim.batteryCapacityPct": 81
+      },
+      "expected": "FALSE"
+    },
+    {
+      "facts": {
+        "claim.dateOfLoss": "2025-05-31"
+      },
+      "expected": "TRUE",
+      "cell": {
+        "fact": "claim.dateOfLoss",
+        "op": "lt",
+        "value": "2025-06-01"
+      }
+    },
+    {
+      "facts": {
+        "claim.dateOfLoss": "2025-06-01"
+      },
+      "expected": "FALSE",
+      "cell": {
+        "fact": "claim.dateOfLoss",
+        "op": "lt",
+        "value": "2025-06-01"
+      }
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "id": "RE-13",
+  "kind": "calc",
+  "title": "start_from: from a fact, from a constant",
+  "source": "PRD P0-1",
+  "facts": {
+    "claim.coveredRepairCents": 12345
+  },
+  "steps": [
+    {
+      "id": "a",
+      "op": "start_from",
+      "reg": "L",
+      "operand": {
+        "fact": "claim.coveredRepairCents"
+      }
+    },
+    {
+      "id": "b",
+      "op": "start_from",
+      "reg": "X",
+      "operand": {
+        "const": 700
+      }
+    }
+  ],
+  "expected": {
+    "steps": [
+      {
+        "id": "a",
+        "op": "start_from",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "claim.coveredRepairCents",
+          "value": 12345
+        },
+        "inputCents": null,
+        "outputCents": 12345
+      },
+      {
+        "id": "b",
+        "op": "start_from",
+        "reg": "X",
+        "applied": true,
+        "operand": {
+          "kind": "const",
+          "name": null,
+          "value": 700
+        },
+        "inputCents": null,
+        "outputCents": 700
+      }
+    ],
+    "registers": {
+      "L": 12345,
+      "X": 700
+    }
+  }
+}

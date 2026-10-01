@@ -1,0 +1,146 @@
+{
+  "id": "RE-15",
+  "kind": "calc",
+  "title": "apply_bps: half up at exactly .5, below .5 rounds down",
+  "source": "PRD P0-1",
+  "facts": {
+    "claim.coveredRepairCents": 5
+  },
+  "steps": [
+    {
+      "id": "a",
+      "op": "start_from",
+      "reg": "L",
+      "operand": {
+        "fact": "claim.coveredRepairCents"
+      }
+    },
+    {
+      "id": "b",
+      "op": "apply_bps",
+      "reg": "L",
+      "operand": {
+        "const": 5000
+      }
+    },
+    {
+      "id": "c",
+      "op": "start_from",
+      "reg": "Y",
+      "operand": {
+        "const": 3
+      }
+    },
+    {
+      "id": "d",
+      "op": "apply_bps",
+      "reg": "Y",
+      "operand": {
+        "const": 5000
+      }
+    },
+    {
+      "id": "e",
+      "op": "start_from",
+      "reg": "Z",
+      "operand": {
+        "const": 1
+      }
+    },
+    {
+      "id": "f",
+      "op": "apply_bps",
+      "reg": "Z",
+      "operand": {
+        "const": 4999
+      }
+    }
+  ],
+  "expected": {
+    "steps": [
+      {
+        "id": "a",
+        "op": "start_from",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "claim.coveredRepairCents",
+          "value": 5
+        },
+        "inputCents": null,
+        "outputCents": 5
+      },
+      {
+        "id": "b",
+        "op": "apply_bps",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "const",
+          "name": null,
+          "value": 5000
+        },
+        "inputCents": 5,
+        "outputCents": 3
+      },
+      {
+        "id": "c",
+        "op": "start_from",
+        "reg": "Y",
+        "applied": true,
+        "operand": {
+          "kind": "const",
+          "name": null,
+          "value": 3
+        },
+        "inputCents": null,
+        "outputCents": 3
+      },
+      {
+        "id": "d",
+        "op": "apply_bps",
+        "reg": "Y",
+        "applied": true,
+        "operand": {
+          "kind": "const",
+          "name": null,
+          "value": 5000
+        },
+        "inputCents": 3,
+        "outputCents": 2
+      },
+      {
+        "id": "e",
+        "op": "start_from",
+        "reg": "Z",
+        "applied": true,
+        "operand": {
+          "kind": "const",
+          "name": null,
+          "value": 1
+        },
+        "inputCents": null,
+        "outputCents": 1
+      },
+      {
+        "id": "f",
+        "op": "apply_bps",
+        "reg": "Z",
+        "applied": true,
+        "operand": {
+          "kind": "const",
+          "name": null,
+          "value": 4999
+        },
+        "inputCents": 1,
+        "outputCents": 0
+      }
+    ],
+    "registers": {
+      "L": 3,
+      "Y": 2,
+      "Z": 0
+    }
+  }
+}

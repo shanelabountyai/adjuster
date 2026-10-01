@@ -1,0 +1,23 @@
+{
+  "id": "RE-10",
+  "kind": "condition",
+  "title": "is_known: present is TRUE, missing is FALSE, never UNKNOWN",
+  "source": "PRD P0-1",
+  "dictionary": "rules/electronics/facts-v1.json",
+  "cell": {
+    "fact": "claim.batteryCapacityPct",
+    "op": "is_known"
+  },
+  "cases": [
+    {
+      "facts": {
+        "claim.batteryCapacityPct": 0
+      },
+      "expected": "TRUE"
+    },
+    {
+      "facts": {},
+      "expected": "FALSE"
+    }
+  ]
+}

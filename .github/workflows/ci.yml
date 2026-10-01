@@ -40,6 +40,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run rules:lint
+      - run: npm run fixtures:check # task 1.5: fails if a fixture changed without being committed on purpose
       - run: createdb adjuster_test
       - run: npx prisma migrate deploy
       - run: npx vitest run

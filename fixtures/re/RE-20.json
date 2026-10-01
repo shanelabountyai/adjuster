@@ -1,0 +1,50 @@
+{
+  "id": "RE-20",
+  "kind": "row",
+  "title": "Row AND is Kleene: FALSE beats UNKNOWN, TRUE with UNKNOWN stays UNKNOWN",
+  "source": "D9",
+  "when": [
+    {
+      "fact": "claim.peril",
+      "op": "eq",
+      "value": "adh"
+    },
+    {
+      "fact": "claim.batteryCapacityPct",
+      "op": "lt",
+      "value": 80
+    }
+  ],
+  "cases": [
+    {
+      "facts": {
+        "claim.peril": "adh",
+        "claim.batteryCapacityPct": 70
+      },
+      "expected": "TRUE"
+    },
+    {
+      "facts": {
+        "claim.peril": "adh",
+        "claim.batteryCapacityPct": 90
+      },
+      "expected": "FALSE"
+    },
+    {
+      "facts": {
+        "claim.peril": "adh"
+      },
+      "expected": "UNKNOWN"
+    },
+    {
+      "facts": {
+        "claim.peril": "breakdown"
+      },
+      "expected": "FALSE"
+    },
+    {
+      "facts": {},
+      "expected": "UNKNOWN"
+    }
+  ]
+}

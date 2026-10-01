@@ -1,0 +1,12 @@
+{
+  "id": "PAY-H",
+  "kind": "ref",
+  "title": "Essential denial: valuation does not run, amount is null (not 0)",
+  "source": "domain brief s4",
+  "ref": "GC-02",
+  "expected": {
+    "payableCents": null,
+    "valuation": null,
+    "outcome": "DENY"
+  }
+}

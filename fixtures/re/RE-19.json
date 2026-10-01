@@ -1,0 +1,104 @@
+{
+  "id": "RE-19",
+  "kind": "condition-list",
+  "title": "A missing fact makes every operator UNKNOWN, except is_known which is FALSE",
+  "source": "PRD P0-1 / D9",
+  "cases": [
+    {
+      "cell": {
+        "fact": "claim.peril",
+        "op": "eq",
+        "value": "adh"
+      },
+      "facts": {},
+      "expected": "UNKNOWN"
+    },
+    {
+      "cell": {
+        "fact": "claim.peril",
+        "op": "neq",
+        "value": "adh"
+      },
+      "facts": {},
+      "expected": "UNKNOWN"
+    },
+    {
+      "cell": {
+        "fact": "claim.batteryCapacityPct",
+        "op": "lt",
+        "value": 80
+      },
+      "facts": {},
+      "expected": "UNKNOWN"
+    },
+    {
+      "cell": {
+        "fact": "claim.batteryCapacityPct",
+        "op": "lte",
+        "value": 80
+      },
+      "facts": {},
+      "expected": "UNKNOWN"
+    },
+    {
+      "cell": {
+        "fact": "claim.batteryCapacityPct",
+        "op": "gt",
+        "value": 80
+      },
+      "facts": {},
+      "expected": "UNKNOWN"
+    },
+    {
+      "cell": {
+        "fact": "claim.batteryCapacityPct",
+        "op": "gte",
+        "value": 80
+      },
+      "facts": {},
+      "expected": "UNKNOWN"
+    },
+    {
+      "cell": {
+        "fact": "claim.peril",
+        "op": "in",
+        "value": [
+          "adh"
+        ]
+      },
+      "facts": {},
+      "expected": "UNKNOWN"
+    },
+    {
+      "cell": {
+        "fact": "claim.peril",
+        "op": "not_in",
+        "value": [
+          "adh"
+        ]
+      },
+      "facts": {},
+      "expected": "UNKNOWN"
+    },
+    {
+      "cell": {
+        "fact": "claim.batteryCapacityPct",
+        "op": "between",
+        "value": [
+          70,
+          80
+        ]
+      },
+      "facts": {},
+      "expected": "UNKNOWN"
+    },
+    {
+      "cell": {
+        "fact": "claim.batteryCapacityPct",
+        "op": "is_known"
+      },
+      "facts": {},
+      "expected": "FALSE"
+    }
+  ]
+}

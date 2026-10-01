@@ -1,0 +1,234 @@
+{
+  "id": "PAY-D",
+  "kind": "valuation",
+  "title": "Plus aggregate",
+  "source": "domain brief s4",
+  "note": "Valuation-level: the calc-step evaluator runs plan-v1 payout against these facts. Facts the brief does not state are filled in so eligibility is clean.",
+  "facts": {
+    "contract.planCode": "plus",
+    "contract.status": "active",
+    "contract.termStart": "2025-01-15",
+    "contract.termEnd": "2028-01-14",
+    "contract.waitingEndsOn": "2025-02-14",
+    "product.purchaseDate": "2025-01-15",
+    "product.purchasePriceCents": 150000,
+    "claim.peril": "breakdown",
+    "claim.dateOfLoss": "2025-09-15",
+    "claim.dateReported": "2025-09-17",
+    "claim.cosmeticOnly": false,
+    "claim.preExisting": false,
+    "claim.consumableOrAccessory": false,
+    "claim.unauthorizedRepair": "none",
+    "claim.commercialUse": false,
+    "claim.intentionalOrAbuse": false,
+    "claim.inMfrWarrantyOrRecall": false,
+    "claim.productUnavailable": false,
+    "claim.softwareOrData": false,
+    "claim.externalCause": false,
+    "claim.serialMatchesContract": true,
+    "claim.claimantIsHolder": true,
+    "claim.accountChanged": false,
+    "claim.coveredRepairCents": 60000,
+    "claim.replacementValueCents": 140000,
+    "history.priorClaims": [
+      {
+        "claimId": "PAY-D-P1",
+        "dateOfLoss": "2025-02-01",
+        "peril": "breakdown",
+        "outcome": "APPROVE",
+        "paidCents": 170000
+      }
+    ],
+    "history.claimantContractsWithClaims": 1,
+    "evidence.estimateFromNetwork": true,
+    "evidence.estimatorIsPayee": false,
+    "evidence.proofOfPurchaseDate": "2025-01-15",
+    "evidence.photoMetaDateBeforeLoss": false,
+    "evidence.documentHashOnOtherClaim": false,
+    "docs.proofOfPurchase": "accepted",
+    "docs.repairEstimate": "accepted",
+    "docs.damagePhotos": "accepted",
+    "docs.incidentStatement": "accepted"
+  },
+  "expected": {
+    "path": "repair",
+    "steps": [
+      {
+        "id": "c1",
+        "op": "start_from",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "claim.coveredRepairCents",
+          "value": 60000
+        },
+        "inputCents": null,
+        "outputCents": 60000
+      },
+      {
+        "id": "c2",
+        "op": "start_from",
+        "reg": "L",
+        "applied": false,
+        "operand": null,
+        "inputCents": null,
+        "outputCents": null
+      },
+      {
+        "id": "c3",
+        "op": "apply_bps",
+        "reg": "L",
+        "applied": false,
+        "operand": null,
+        "inputCents": null,
+        "outputCents": null
+      },
+      {
+        "id": "c4",
+        "op": "cap_at",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "product.purchasePriceCents",
+          "value": 150000
+        },
+        "inputCents": 60000,
+        "outputCents": 60000
+      },
+      {
+        "id": "c5",
+        "op": "subtract",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "lookup.deductibleCents",
+          "value": 7500
+        },
+        "inputCents": 60000,
+        "outputCents": 52500
+      },
+      {
+        "id": "c6",
+        "op": "floor_at",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "const",
+          "name": null,
+          "value": 0
+        },
+        "inputCents": 52500,
+        "outputCents": 52500
+      },
+      {
+        "id": "c7",
+        "op": "start_from",
+        "reg": "DED",
+        "applied": true,
+        "operand": {
+          "kind": "reg",
+          "name": "L",
+          "value": 52500
+        },
+        "inputCents": null,
+        "outputCents": 52500
+      },
+      {
+        "id": "c8",
+        "op": "cap_at",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "lookup.perClaimLimitCents",
+          "value": 100000
+        },
+        "inputCents": 52500,
+        "outputCents": 52500
+      },
+      {
+        "id": "c9",
+        "op": "start_from",
+        "reg": "AGG",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "lookup.aggregateLimitCents",
+          "value": 200000
+        },
+        "inputCents": null,
+        "outputCents": 200000
+      },
+      {
+        "id": "c10",
+        "op": "subtract",
+        "reg": "AGG",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "d.sumPriorPaid",
+          "value": 170000
+        },
+        "inputCents": 200000,
+        "outputCents": 30000
+      },
+      {
+        "id": "c11",
+        "op": "floor_at",
+        "reg": "AGG",
+        "applied": true,
+        "operand": {
+          "kind": "const",
+          "name": null,
+          "value": 0
+        },
+        "inputCents": 30000,
+        "outputCents": 30000
+      },
+      {
+        "id": "c12",
+        "op": "cap_at",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "reg",
+          "name": "AGG",
+          "value": 30000
+        },
+        "inputCents": 52500,
+        "outputCents": 30000
+      },
+      {
+        "id": "c13",
+        "op": "start_from",
+        "reg": "AFTER",
+        "applied": true,
+        "operand": {
+          "kind": "reg",
+          "name": "AGG",
+          "value": 30000
+        },
+        "inputCents": null,
+        "outputCents": 30000
+      },
+      {
+        "id": "c14",
+        "op": "subtract",
+        "reg": "AFTER",
+        "applied": true,
+        "operand": {
+          "kind": "reg",
+          "name": "L",
+          "value": 30000
+        },
+        "inputCents": 30000,
+        "outputCents": 0
+      }
+    ],
+    "payableCents": 30000,
+    "contractFulfilled": true
+  }
+}

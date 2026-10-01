@@ -1,0 +1,175 @@
+{
+  "id": "GC-09",
+  "kind": "decision",
+  "title": "Plus third ADH claim in 12 months",
+  "source": "domain brief s11",
+  "asOf": "2025-09-18",
+  "plan": "plan-v1",
+  "ops": "ops-v1",
+  "facts": {
+    "contract.planCode": "plus",
+    "contract.status": "active",
+    "contract.termStart": "2025-01-15",
+    "contract.termEnd": "2028-01-14",
+    "contract.waitingEndsOn": "2025-02-14",
+    "product.purchaseDate": "2025-01-15",
+    "product.purchasePriceCents": 80000,
+    "claim.peril": "adh",
+    "claim.dateOfLoss": "2025-09-15",
+    "claim.dateReported": "2025-09-17",
+    "claim.cosmeticOnly": false,
+    "claim.preExisting": false,
+    "claim.consumableOrAccessory": false,
+    "claim.unauthorizedRepair": "none",
+    "claim.commercialUse": false,
+    "claim.intentionalOrAbuse": false,
+    "claim.inMfrWarrantyOrRecall": false,
+    "claim.productUnavailable": false,
+    "claim.softwareOrData": false,
+    "claim.externalCause": false,
+    "claim.serialMatchesContract": true,
+    "claim.claimantIsHolder": true,
+    "claim.accountChanged": false,
+    "claim.coveredRepairCents": 20000,
+    "claim.replacementValueCents": 70000,
+    "history.priorClaims": [
+      {
+        "claimId": "GC-09-P1",
+        "dateOfLoss": "2025-06-07",
+        "peril": "adh",
+        "outcome": "APPROVE",
+        "paidCents": 5000
+      },
+      {
+        "claimId": "GC-09-P2",
+        "dateOfLoss": "2025-02-27",
+        "peril": "adh",
+        "outcome": "APPROVE",
+        "paidCents": 5000
+      }
+    ],
+    "history.claimantContractsWithClaims": 1,
+    "evidence.estimateFromNetwork": true,
+    "evidence.estimatorIsPayee": false,
+    "evidence.proofOfPurchaseDate": "2025-01-15",
+    "evidence.photoMetaDateBeforeLoss": false,
+    "evidence.documentHashOnOtherClaim": false,
+    "docs.proofOfPurchase": "accepted",
+    "docs.repairEstimate": "accepted",
+    "docs.damagePhotos": "accepted",
+    "docs.incidentStatement": "accepted"
+  },
+  "expected": {
+    "outcome": "DENY",
+    "reasons": [
+      "E15"
+    ],
+    "payableCents": null,
+    "contractFulfilled": null,
+    "skippedStages": [
+      "evidence",
+      "red_flags",
+      "valuation",
+      "deductible_limits",
+      "authority"
+    ],
+    "rules": [
+      {
+        "ruleId": "E17",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E5",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E1",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E2",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E3",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E4",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E6",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E7",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E8",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E9",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E10",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E11",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E12",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E13",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E14",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E18",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E19",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E15",
+        "result": "DENY",
+        "missing": []
+      },
+      {
+        "ruleId": "E16",
+        "result": "PASS",
+        "missing": []
+      }
+    ],
+    "valuation": null
+  }
+}

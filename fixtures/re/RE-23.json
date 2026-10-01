@@ -1,0 +1,66 @@
+{
+  "id": "RE-23",
+  "kind": "rule",
+  "title": "No row matches: GAP (REFER / RULE_GAP). Nothing defaults to approve",
+  "source": "D10",
+  "cases": [
+    {
+      "rule": {
+        "id": "E6",
+        "rows": [
+          {
+            "id": "g.a",
+            "when": [
+              {
+                "fact": "claim.peril",
+                "op": "eq",
+                "value": "breakdown"
+              }
+            ],
+            "then": {
+              "outcome": "PASS"
+            }
+          }
+        ]
+      },
+      "facts": {
+        "claim.peril": "adh"
+      },
+      "expected": {
+        "result": "GAP",
+        "hits": [],
+        "missing": []
+      }
+    },
+    {
+      "rule": {
+        "id": "E6",
+        "rows": [
+          {
+            "id": "g.a",
+            "when": [
+              {
+                "fact": "claim.peril",
+                "op": "eq",
+                "value": "breakdown"
+              }
+            ],
+            "then": {
+              "outcome": "PASS"
+            }
+          }
+        ]
+      },
+      "facts": {
+        "claim.peril": "breakdown"
+      },
+      "expected": {
+        "result": "PASS",
+        "hits": [
+          "g.a"
+        ],
+        "missing": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,161 @@
+{
+  "id": "GC-04",
+  "kind": "decision",
+  "title": "Plus loss 10 days after term end; scratches only",
+  "source": "domain brief s11",
+  "asOf": "2028-01-27",
+  "plan": "plan-v1",
+  "ops": "ops-v1",
+  "facts": {
+    "contract.planCode": "plus",
+    "contract.status": "active",
+    "contract.termStart": "2025-01-15",
+    "contract.termEnd": "2028-01-14",
+    "contract.waitingEndsOn": "2025-02-14",
+    "product.purchaseDate": "2025-01-15",
+    "product.purchasePriceCents": 80000,
+    "claim.peril": "adh",
+    "claim.dateOfLoss": "2028-01-24",
+    "claim.dateReported": "2028-01-26",
+    "claim.cosmeticOnly": true,
+    "claim.preExisting": false,
+    "claim.consumableOrAccessory": false,
+    "claim.unauthorizedRepair": "none",
+    "claim.commercialUse": false,
+    "claim.intentionalOrAbuse": false,
+    "claim.inMfrWarrantyOrRecall": false,
+    "claim.productUnavailable": false,
+    "claim.softwareOrData": false,
+    "claim.externalCause": false,
+    "claim.serialMatchesContract": true,
+    "claim.claimantIsHolder": true,
+    "claim.accountChanged": false,
+    "claim.coveredRepairCents": 5000,
+    "claim.replacementValueCents": 70000,
+    "history.priorClaims": [],
+    "history.claimantContractsWithClaims": 1,
+    "evidence.estimateFromNetwork": true,
+    "evidence.estimatorIsPayee": false,
+    "evidence.proofOfPurchaseDate": "2025-01-15",
+    "evidence.photoMetaDateBeforeLoss": false,
+    "evidence.documentHashOnOtherClaim": false,
+    "docs.proofOfPurchase": "accepted",
+    "docs.repairEstimate": "accepted",
+    "docs.damagePhotos": "accepted",
+    "docs.incidentStatement": "accepted"
+  },
+  "expected": {
+    "outcome": "DENY",
+    "reasons": [
+      "E2",
+      "E7"
+    ],
+    "payableCents": null,
+    "contractFulfilled": null,
+    "skippedStages": [
+      "evidence",
+      "red_flags",
+      "valuation",
+      "deductible_limits",
+      "authority"
+    ],
+    "rules": [
+      {
+        "ruleId": "E17",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E5",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E1",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E2",
+        "result": "DENY",
+        "missing": []
+      },
+      {
+        "ruleId": "E3",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E4",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E6",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E7",
+        "result": "DENY",
+        "missing": []
+      },
+      {
+        "ruleId": "E8",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E9",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E10",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E11",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E12",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E13",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E14",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E18",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E19",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E15",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E16",
+        "result": "PASS",
+        "missing": []
+      }
+    ],
+    "valuation": null
+  }
+}

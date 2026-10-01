@@ -1,0 +1,65 @@
+{
+  "id": "RE-18",
+  "kind": "calc",
+  "title": "min_of: the smallest of two or more operands, ignoring the register's old value",
+  "source": "PRD P0-1",
+  "facts": {
+    "claim.coveredRepairCents": 8000,
+    "product.purchasePriceCents": 7000
+  },
+  "steps": [
+    {
+      "id": "a",
+      "op": "start_from",
+      "reg": "L",
+      "operand": {
+        "const": 1
+      }
+    },
+    {
+      "id": "b",
+      "op": "min_of",
+      "reg": "L",
+      "operands": [
+        {
+          "fact": "claim.coveredRepairCents"
+        },
+        {
+          "const": 6000
+        },
+        {
+          "fact": "product.purchasePriceCents"
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "steps": [
+      {
+        "id": "a",
+        "op": "start_from",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "const",
+          "name": null,
+          "value": 1
+        },
+        "inputCents": null,
+        "outputCents": 1
+      },
+      {
+        "id": "b",
+        "op": "min_of",
+        "reg": "L",
+        "applied": true,
+        "operand": null,
+        "inputCents": 1,
+        "outputCents": 6000
+      }
+    ],
+    "registers": {
+      "L": 6000
+    }
+  }
+}

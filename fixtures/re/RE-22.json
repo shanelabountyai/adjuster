@@ -1,0 +1,216 @@
+{
+  "id": "RE-22",
+  "kind": "rule",
+  "title": "A rule with no TRUE row and an UNKNOWN row is PEND naming the missing facts; a TRUE row outranks UNKNOWN rows",
+  "source": "D8 / D9",
+  "cases": [
+    {
+      "rule": {
+        "id": "E7",
+        "rows": [
+          {
+            "id": "r.deny",
+            "when": [
+              {
+                "fact": "claim.cosmeticOnly",
+                "op": "eq",
+                "value": true
+              }
+            ],
+            "then": {
+              "outcome": "DENY"
+            }
+          },
+          {
+            "id": "r.pass",
+            "when": [
+              {
+                "fact": "claim.cosmeticOnly",
+                "op": "eq",
+                "value": false
+              }
+            ],
+            "then": {
+              "outcome": "PASS"
+            }
+          }
+        ]
+      },
+      "facts": {},
+      "expected": {
+        "result": "PEND",
+        "hits": [],
+        "missing": [
+          "claim.cosmeticOnly"
+        ]
+      }
+    },
+    {
+      "rule": {
+        "id": "E7",
+        "rows": [
+          {
+            "id": "r.deny",
+            "when": [
+              {
+                "fact": "claim.cosmeticOnly",
+                "op": "eq",
+                "value": true
+              }
+            ],
+            "then": {
+              "outcome": "DENY"
+            }
+          },
+          {
+            "id": "r.pass",
+            "when": [
+              {
+                "fact": "claim.cosmeticOnly",
+                "op": "eq",
+                "value": false
+              }
+            ],
+            "then": {
+              "outcome": "PASS"
+            }
+          }
+        ]
+      },
+      "facts": {
+        "claim.cosmeticOnly": true
+      },
+      "expected": {
+        "result": "DENY",
+        "hits": [
+          "r.deny"
+        ],
+        "missing": []
+      }
+    },
+    {
+      "rule": {
+        "id": "E9",
+        "rows": [
+          {
+            "id": "r.a",
+            "when": [
+              {
+                "fact": "claim.cosmeticOnly",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "fact": "claim.batteryCapacityPct",
+                "op": "lt",
+                "value": 80
+              }
+            ],
+            "then": {
+              "outcome": "DENY"
+            }
+          },
+          {
+            "id": "r.b",
+            "when": [
+              {
+                "fact": "claim.preExisting",
+                "op": "eq",
+                "value": true
+              }
+            ],
+            "then": {
+              "outcome": "REFER"
+            }
+          },
+          {
+            "id": "r.c",
+            "when": [
+              {
+                "fact": "claim.cosmeticOnly",
+                "op": "eq",
+                "value": false
+              }
+            ],
+            "then": {
+              "outcome": "PASS"
+            }
+          }
+        ]
+      },
+      "facts": {
+        "claim.cosmeticOnly": true
+      },
+      "expected": {
+        "result": "PEND",
+        "hits": [],
+        "missing": [
+          "claim.batteryCapacityPct",
+          "claim.preExisting"
+        ]
+      }
+    },
+    {
+      "rule": {
+        "id": "E9",
+        "rows": [
+          {
+            "id": "r.a",
+            "when": [
+              {
+                "fact": "claim.cosmeticOnly",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "fact": "claim.batteryCapacityPct",
+                "op": "lt",
+                "value": 80
+              }
+            ],
+            "then": {
+              "outcome": "DENY"
+            }
+          },
+          {
+            "id": "r.b",
+            "when": [
+              {
+                "fact": "claim.preExisting",
+                "op": "eq",
+                "value": true
+              }
+            ],
+            "then": {
+              "outcome": "REFER"
+            }
+          },
+          {
+            "id": "r.c",
+            "when": [
+              {
+                "fact": "claim.cosmeticOnly",
+                "op": "eq",
+                "value": false
+              }
+            ],
+            "then": {
+              "outcome": "PASS"
+            }
+          }
+        ]
+      },
+      "facts": {
+        "claim.cosmeticOnly": true,
+        "claim.preExisting": true
+      },
+      "expected": {
+        "result": "REFER",
+        "hits": [
+          "r.b"
+        ],
+        "missing": []
+      }
+    }
+  ]
+}

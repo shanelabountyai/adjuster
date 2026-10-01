@@ -1,0 +1,32 @@
+{
+  "id": "RE-06",
+  "kind": "condition",
+  "title": "gte",
+  "source": "PRD P0-1",
+  "dictionary": "rules/electronics/facts-v1.json",
+  "cell": {
+    "fact": "claim.batteryCapacityPct",
+    "op": "gte",
+    "value": 80
+  },
+  "cases": [
+    {
+      "facts": {
+        "claim.batteryCapacityPct": 80
+      },
+      "expected": "TRUE"
+    },
+    {
+      "facts": {
+        "claim.batteryCapacityPct": 81
+      },
+      "expected": "TRUE"
+    },
+    {
+      "facts": {
+        "claim.batteryCapacityPct": 79
+      },
+      "expected": "FALSE"
+    }
+  ]
+}
