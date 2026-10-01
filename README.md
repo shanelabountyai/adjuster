@@ -1,4 +1,12 @@
-# SaaS Foundation
+## ⚠️ Scope Honesty (read first)
+
+Learning project, synthetic data only. Real claims handling is regulated (state unfair claims settlement practices acts, prompt-payment statutes, service contract acts, Magnuson-Moss, adjuster licensing, privacy law — all varying by state); this project models the *decisioning mechanics*, makes no compliance claims, and must never touch real claimants, real contracts or real money. Payments are mocked.
+
+# adjuster — Insurance Claims
+
+Rules-as-data claims adjudication. Spec: `prd-adjuster-insurance-claims.md`; working rules: `CLAUDE.md`; current work: `docs/phase-1-tasks.md`.
+
+> Cloned from saas-foundation v1.2.0. Port 4900. Upgrade with `npm run foundation:status`; template-owned paths are listed in the template's plan §3.2.
 
 A Next.js 16 + Prisma 7 + Postgres template with the parts every multi-tenant app rebuilds: magic-link sign-in with TOTP,
 orgs and roles, one authorization path, an append-only audit log, share links, cron, and optional billing (Stripe) and
