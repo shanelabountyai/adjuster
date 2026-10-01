@@ -29,7 +29,11 @@
     "new-project": "tsx scripts/new-project.ts",
     "foundation:drift": "tsx scripts/foundation-drift.ts",
     "foundation:status": "tsx scripts/foundation-status.ts",
-    "foundation:check-modules": "tsx scripts/foundation-check-modules.ts"
+    "foundation:check-modules": "tsx scripts/foundation-check-modules.ts",
+    "decisions:verify": "dotenv -e .env.local -- tsx scripts/decisions-verify.ts",
+    "fixtures:check": "python3 tools/build_fixtures.py && python3 tools/verify_fixtures.py && git diff --exit-code fixtures/",
+    "rules:lint": "tsx scripts/rules-lint.ts",
+    "rules:schemas": "tsx scripts/rules-schemas.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

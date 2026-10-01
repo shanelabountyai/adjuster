@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "adjuster.facts/1"
+    },
+    "id": {
+      "type": "string"
+    },
+    "product": {
+      "type": "string"
+    },
+    "facts": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][A-Za-z0-9]*\\.[A-Za-z0-9]+$"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "bool",
+              "int",
+              "cents",
+              "bps",
+              "date",
+              "string",
+              "enum",
+              "list"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "input",
+              "derived",
+              "lookup",
+              "calc"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "values": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "planIdentifier": {
+            "type": "boolean"
+          },
+          "fn": {
+            "type": "string",
+            "enum": [
+              "days_between",
+              "full_years_between",
+              "ratio_bps",
+              "count_claims_in_window",
+              "sum_prior_paid"
+            ]
+          },
+          "args": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "itemFields": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "source"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "product",
+    "facts"
+  ],
+  "additionalProperties": false
+}

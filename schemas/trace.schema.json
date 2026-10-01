@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "adjuster.trace/0"
+    },
+    "asOf": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "planVersion": {
+      "type": "string"
+    },
+    "opsVersion": {
+      "type": "string"
+    },
+    "skipped": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "intake",
+          "contract_verification",
+          "coverage_period",
+          "peril_exclusions",
+          "frequency_limits",
+          "evidence",
+          "red_flags",
+          "valuation",
+          "deductible_limits",
+          "authority",
+          "decision"
+        ]
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": "string"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "intake",
+              "contract_verification",
+              "coverage_period",
+              "peril_exclusions",
+              "frequency_limits",
+              "evidence",
+              "red_flags",
+              "valuation",
+              "deductible_limits",
+              "authority",
+              "decision"
+            ]
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "DENY",
+              "REFER",
+              "PEND",
+              "GAP"
+            ]
+          },
+          "rowIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reasonCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "clause": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "factsRead": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claimantText": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "noteText": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ruleId",
+          "stage",
+          "result",
+          "rowIds",
+          "reasonCode",
+          "clause",
+          "factsRead",
+          "missing",
+          "claimantText",
+          "noteText"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "valuation": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "enum": [
+                "repair",
+                "replace"
+              ]
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "start_from",
+                      "subtract",
+                      "apply_bps",
+                      "cap_at",
+                      "floor_at",
+                      "min_of"
+                    ]
+                  },
+                  "reg": {
+                    "type": "string"
+                  },
+                  "applied": {
+                    "type": "boolean"
+                  },
+                  "operand": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "fact",
+                              "const",
+                              "reg"
+                            ]
+                          },
+                          "name": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "value": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "name",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "inputCents": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "outputCents": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "op",
+                  "reg",
+                  "applied",
+                  "operand",
+                  "inputCents",
+                  "outputCents"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "path",
+            "steps"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "decision": {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "APPROVE",
+            "PARTIAL",
+            "DENY",
+            "REFER",
+            "PEND"
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "payableCents": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "contractFulfilled": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "outcome",
+        "reasons",
+        "payableCents",
+        "contractFulfilled"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema",
+    "asOf",
+    "planVersion",
+    "opsVersion",
+    "skipped",
+    "rules",
+    "valuation",
+    "decision"
+  ],
+  "additionalProperties": false
+}

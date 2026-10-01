@@ -1,0 +1,553 @@
+{
+  "schema": "adjuster.facts/1",
+  "id": "facts-v1",
+  "product": "electronics",
+  "facts": [
+    {
+      "id": "contract.planCode",
+      "type": "enum",
+      "source": "input",
+      "description": "Which plan the contract bought; selects rows in plan tables. Data, never a code branch.",
+      "values": [
+        "essential",
+        "plus",
+        "premier"
+      ],
+      "planIdentifier": true
+    },
+    {
+      "id": "contract.status",
+      "type": "enum",
+      "source": "input",
+      "description": "Stored contract status (E1). Term dates are E2's business.",
+      "values": [
+        "active",
+        "cancelled",
+        "lapsed"
+      ]
+    },
+    {
+      "id": "contract.termStart",
+      "type": "date",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "contract.termEnd",
+      "type": "date",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "contract.waitingEndsOn",
+      "type": "date",
+      "source": "input",
+      "description": "Seeded on the contract at sale: termStart + the plan's waiting period (F1 needs it)."
+    },
+    {
+      "id": "product.purchaseDate",
+      "type": "date",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "product.purchasePriceCents",
+      "type": "cents",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "claim.peril",
+      "type": "enum",
+      "source": "input",
+      "description": "",
+      "values": [
+        "breakdown",
+        "adh",
+        "battery_degradation",
+        "other"
+      ]
+    },
+    {
+      "id": "claim.dateOfLoss",
+      "type": "date",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "claim.dateReported",
+      "type": "date",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "claim.cosmeticOnly",
+      "type": "bool",
+      "source": "input",
+      "description": "E7: cosmetic only, function unaffected"
+    },
+    {
+      "id": "claim.preExisting",
+      "type": "bool",
+      "source": "input",
+      "description": "E8"
+    },
+    {
+      "id": "claim.consumableOrAccessory",
+      "type": "bool",
+      "source": "input",
+      "description": "E9"
+    },
+    {
+      "id": "claim.batteryCapacityPct",
+      "type": "int",
+      "source": "input",
+      "description": "E9, Premier battery peril: covered below 80"
+    },
+    {
+      "id": "claim.unauthorizedRepair",
+      "type": "enum",
+      "source": "input",
+      "description": "E10",
+      "values": [
+        "none",
+        "declared",
+        "suspected"
+      ]
+    },
+    {
+      "id": "claim.commercialUse",
+      "type": "bool",
+      "source": "input",
+      "description": "E11"
+    },
+    {
+      "id": "claim.intentionalOrAbuse",
+      "type": "bool",
+      "source": "input",
+      "description": "E12"
+    },
+    {
+      "id": "claim.inMfrWarrantyOrRecall",
+      "type": "bool",
+      "source": "input",
+      "description": "E13: modelled as a human-entered boolean because N (months) is not in the domain brief"
+    },
+    {
+      "id": "claim.productUnavailable",
+      "type": "bool",
+      "source": "input",
+      "description": "E14: lost, stolen or unavailable for inspection"
+    },
+    {
+      "id": "claim.softwareOrData",
+      "type": "bool",
+      "source": "input",
+      "description": "E18"
+    },
+    {
+      "id": "claim.externalCause",
+      "type": "bool",
+      "source": "input",
+      "description": "E19"
+    },
+    {
+      "id": "claim.serialMatchesContract",
+      "type": "bool",
+      "source": "input",
+      "description": "E5: human-entered; the vocabulary has no fact-to-fact comparison"
+    },
+    {
+      "id": "claim.claimantIsHolder",
+      "type": "bool",
+      "source": "input",
+      "description": "E22: human-entered, same reason"
+    },
+    {
+      "id": "claim.accountChanged",
+      "type": "bool",
+      "source": "input",
+      "description": "F10"
+    },
+    {
+      "id": "claim.coveredRepairCents",
+      "type": "cents",
+      "source": "input",
+      "description": "C: estimate minus non-covered line items"
+    },
+    {
+      "id": "claim.replacementValueCents",
+      "type": "cents",
+      "source": "input",
+      "description": "R: like kind and quality"
+    },
+    {
+      "id": "history.priorClaims",
+      "type": "list",
+      "source": "input",
+      "description": "This contract's earlier claims (so 'same serial' = same contract). Part of the frozen fact snapshot.",
+      "itemFields": {
+        "claimId": "string",
+        "dateOfLoss": "date",
+        "peril": "enum",
+        "outcome": "enum",
+        "paidCents": "cents"
+      }
+    },
+    {
+      "id": "history.duplicateClaimId",
+      "type": "string",
+      "source": "input",
+      "description": "E17 text placeholder only"
+    },
+    {
+      "id": "history.claimantContractsWithClaims",
+      "type": "int",
+      "source": "input",
+      "description": "F6: supplied by intake; no derived fact counts across contracts"
+    },
+    {
+      "id": "evidence.estimateFromNetwork",
+      "type": "bool",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "evidence.estimatorIsPayee",
+      "type": "bool",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "evidence.proofOfPurchaseDate",
+      "type": "date",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "evidence.photoMetaDateBeforeLoss",
+      "type": "bool",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "evidence.documentHashOnOtherClaim",
+      "type": "bool",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "docs.proofOfPurchase",
+      "type": "enum",
+      "source": "input",
+      "description": "",
+      "values": [
+        "requested",
+        "received",
+        "accepted",
+        "rejected",
+        "superseded",
+        "waived"
+      ]
+    },
+    {
+      "id": "docs.repairEstimate",
+      "type": "enum",
+      "source": "input",
+      "description": "",
+      "values": [
+        "requested",
+        "received",
+        "accepted",
+        "rejected",
+        "superseded",
+        "waived"
+      ]
+    },
+    {
+      "id": "docs.damagePhotos",
+      "type": "enum",
+      "source": "input",
+      "description": "",
+      "values": [
+        "requested",
+        "received",
+        "accepted",
+        "rejected",
+        "superseded",
+        "waived"
+      ]
+    },
+    {
+      "id": "docs.incidentStatement",
+      "type": "enum",
+      "source": "input",
+      "description": "",
+      "values": [
+        "requested",
+        "received",
+        "accepted",
+        "rejected",
+        "superseded",
+        "waived"
+      ]
+    },
+    {
+      "id": "docs.secondEstimate",
+      "type": "enum",
+      "source": "input",
+      "description": "",
+      "values": [
+        "requested",
+        "received",
+        "accepted",
+        "rejected",
+        "superseded",
+        "waived"
+      ]
+    },
+    {
+      "id": "docs.transferProof",
+      "type": "enum",
+      "source": "input",
+      "description": "",
+      "values": [
+        "requested",
+        "received",
+        "accepted",
+        "rejected",
+        "superseded",
+        "waived"
+      ]
+    },
+    {
+      "id": "d.daysSinceStart",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "days_between",
+      "args": {
+        "from": "contract.termStart",
+        "to": "claim.dateOfLoss"
+      }
+    },
+    {
+      "id": "d.daysToTermEnd",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "days_between",
+      "args": {
+        "from": "claim.dateOfLoss",
+        "to": "contract.termEnd"
+      }
+    },
+    {
+      "id": "d.daysReportLag",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "days_between",
+      "args": {
+        "from": "claim.dateOfLoss",
+        "to": "claim.dateReported"
+      }
+    },
+    {
+      "id": "d.daysPastWaitingEnd",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "days_between",
+      "args": {
+        "from": "contract.waitingEndsOn",
+        "to": "claim.dateOfLoss"
+      }
+    },
+    {
+      "id": "d.purchaseLagDays",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "days_between",
+      "args": {
+        "from": "product.purchaseDate",
+        "to": "contract.termStart"
+      }
+    },
+    {
+      "id": "d.proofDateVsLossDays",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "days_between",
+      "args": {
+        "from": "evidence.proofOfPurchaseDate",
+        "to": "claim.dateOfLoss"
+      }
+    },
+    {
+      "id": "d.productAgeYears",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "full_years_between",
+      "args": {
+        "from": "product.purchaseDate",
+        "to": "claim.dateOfLoss"
+      }
+    },
+    {
+      "id": "d.repairRatioBps",
+      "type": "bps",
+      "source": "derived",
+      "description": "",
+      "fn": "ratio_bps",
+      "args": {
+        "num": "claim.coveredRepairCents",
+        "den": "claim.replacementValueCents"
+      }
+    },
+    {
+      "id": "d.estimateVsLimitBps",
+      "type": "bps",
+      "source": "derived",
+      "description": "",
+      "fn": "ratio_bps",
+      "args": {
+        "num": "claim.coveredRepairCents",
+        "den": "lookup.perClaimLimitCents"
+      }
+    },
+    {
+      "id": "d.claims12mAll",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "count_claims_in_window",
+      "args": {
+        "list": "history.priorClaims",
+        "anchor": "claim.dateOfLoss",
+        "windowDays": 365,
+        "peril": "any",
+        "counts": [
+          "APPROVE",
+          "PARTIAL"
+        ]
+      }
+    },
+    {
+      "id": "d.claims12mAdh",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "count_claims_in_window",
+      "args": {
+        "list": "history.priorClaims",
+        "anchor": "claim.dateOfLoss",
+        "windowDays": 365,
+        "peril": [
+          "adh"
+        ],
+        "counts": [
+          "APPROVE",
+          "PARTIAL"
+        ]
+      }
+    },
+    {
+      "id": "d.claims60d",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "count_claims_in_window",
+      "args": {
+        "list": "history.priorClaims",
+        "anchor": "claim.dateOfLoss",
+        "windowDays": 60,
+        "peril": "any"
+      }
+    },
+    {
+      "id": "d.dupWithin7",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "count_claims_in_window",
+      "args": {
+        "list": "history.priorClaims",
+        "anchor": "claim.dateOfLoss",
+        "windowDays": 7,
+        "peril": "same"
+      }
+    },
+    {
+      "id": "d.sumPriorPaid",
+      "type": "cents",
+      "source": "derived",
+      "description": "",
+      "fn": "sum_prior_paid",
+      "args": {
+        "list": "history.priorClaims"
+      }
+    },
+    {
+      "id": "lookup.deductibleCents",
+      "type": "cents",
+      "source": "lookup",
+      "description": ""
+    },
+    {
+      "id": "lookup.perClaimLimitCents",
+      "type": "cents",
+      "source": "lookup",
+      "description": ""
+    },
+    {
+      "id": "lookup.aggregateLimitCents",
+      "type": "cents",
+      "source": "lookup",
+      "description": ""
+    },
+    {
+      "id": "lookup.retentionBps",
+      "type": "bps",
+      "source": "lookup",
+      "description": ""
+    },
+    {
+      "id": "lookup.path",
+      "type": "enum",
+      "source": "lookup",
+      "description": "",
+      "values": [
+        "repair",
+        "replace"
+      ]
+    },
+    {
+      "id": "lookup.fulfillsOnReplace",
+      "type": "bool",
+      "source": "lookup",
+      "description": ""
+    },
+    {
+      "id": "calc.payableCents",
+      "type": "cents",
+      "source": "calc",
+      "description": ""
+    },
+    {
+      "id": "calc.afterDeductibleCents",
+      "type": "cents",
+      "source": "calc",
+      "description": ""
+    },
+    {
+      "id": "calc.aggregateRemainingAfterCents",
+      "type": "cents",
+      "source": "calc",
+      "description": ""
+    }
+  ]
+}

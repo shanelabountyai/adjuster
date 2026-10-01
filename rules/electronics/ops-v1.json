@@ -1,0 +1,1075 @@
+{
+  "schema": "adjuster.ruleset/1",
+  "kind": "ops",
+  "product": "electronics",
+  "version": 1,
+  "effectiveFrom": "2025-01-01",
+  "factDictionary": "facts-v1",
+  "roundingMode": "half_up",
+  "rules": [
+    {
+      "id": "E17",
+      "name": "Duplicate claim",
+      "class": "O",
+      "stage": "intake",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E17.pass",
+          "when": [
+            {
+              "fact": "d.dupWithin7",
+              "op": "eq",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E17.fail",
+          "when": [
+            {
+              "fact": "d.dupWithin7",
+              "op": "gt",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "DUPLICATE",
+            "clause": "§8.2",
+            "claimantText": "This appears to duplicate claim {id}.",
+            "noteText": "{n} prior claim(s) on this contract and peril within 7 days.",
+            "bind": {
+              "id": "history.duplicateClaimId",
+              "n": "d.dupWithin7"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E5",
+      "name": "Serial matches contract",
+      "class": "O",
+      "stage": "contract_verification",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E5.pass",
+          "when": [
+            {
+              "fact": "claim.serialMatchesContract",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E5.fail",
+          "when": [
+            {
+              "fact": "claim.serialMatchesContract",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "SERIAL_MISMATCH",
+            "clause": "§8.2",
+            "claimantText": "The product identified does not match the covered product.",
+            "noteText": "Claimed serial does not match the contract."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E22",
+      "name": "Claimant is holder or transferee",
+      "class": "O",
+      "stage": "evidence",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E22.pass.holder",
+          "when": [
+            {
+              "fact": "claim.claimantIsHolder",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E22.pass.transfer",
+          "when": [
+            {
+              "fact": "claim.claimantIsHolder",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "fact": "docs.transferProof",
+              "op": "in",
+              "value": [
+                "accepted",
+                "waived"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E22.pend",
+          "when": [
+            {
+              "fact": "claim.claimantIsHolder",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "fact": "docs.transferProof",
+              "op": "not_in",
+              "value": [
+                "accepted",
+                "waived"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PEND",
+            "reasonCode": "TRANSFER_PROOF",
+            "clause": "§8.1",
+            "claimantText": "We need proof the contract was transferred to you.",
+            "noteText": "Claimant is not the holder; transfer proof not accepted."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E20.proofOfPurchase",
+      "name": "Proof of purchase accepted",
+      "class": "O",
+      "stage": "evidence",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E20.proofOfPurchase.pass",
+          "when": [
+            {
+              "fact": "docs.proofOfPurchase",
+              "op": "in",
+              "value": [
+                "accepted",
+                "waived"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E20.proofOfPurchase.pend",
+          "when": [
+            {
+              "fact": "docs.proofOfPurchase",
+              "op": "not_in",
+              "value": [
+                "accepted",
+                "waived"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PEND",
+            "reasonCode": "DOCUMENT_REQUIRED",
+            "clause": "§8.1",
+            "params": {
+              "doc": "proof of purchase"
+            },
+            "claimantText": "We need: {doc}.",
+            "noteText": "Required document not accepted: {doc} ({status}).",
+            "bind": {
+              "status": "docs.proofOfPurchase"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E20.repairEstimate",
+      "name": "Repair estimate accepted",
+      "class": "O",
+      "stage": "evidence",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E20.repairEstimate.pass",
+          "when": [
+            {
+              "fact": "docs.repairEstimate",
+              "op": "in",
+              "value": [
+                "accepted",
+                "waived"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E20.repairEstimate.pend",
+          "when": [
+            {
+              "fact": "docs.repairEstimate",
+              "op": "not_in",
+              "value": [
+                "accepted",
+                "waived"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PEND",
+            "reasonCode": "DOCUMENT_REQUIRED",
+            "clause": "§8.1",
+            "params": {
+              "doc": "repair estimate or diagnostic"
+            },
+            "claimantText": "We need: {doc}.",
+            "noteText": "Required document not accepted: {doc} ({status}).",
+            "bind": {
+              "status": "docs.repairEstimate"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E20.damagePhotos",
+      "name": "Damage photos accepted (ADH)",
+      "class": "O",
+      "stage": "evidence",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E20.damagePhotos.pass",
+          "when": [
+            {
+              "fact": "docs.damagePhotos",
+              "op": "in",
+              "value": [
+                "accepted",
+                "waived"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E20.damagePhotos.na",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "neq",
+              "value": "adh"
+            }
+          ],
+          "then": {
+            "outcome": "PASS",
+            "noteText": "Required for ADH claims only."
+          }
+        },
+        {
+          "id": "E20.damagePhotos.pend",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "adh"
+            },
+            {
+              "fact": "docs.damagePhotos",
+              "op": "not_in",
+              "value": [
+                "accepted",
+                "waived"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PEND",
+            "reasonCode": "DOCUMENT_REQUIRED",
+            "clause": "§8.1",
+            "params": {
+              "doc": "damage photos"
+            },
+            "claimantText": "We need: {doc}.",
+            "noteText": "Required document not accepted: {doc} ({status}).",
+            "bind": {
+              "status": "docs.damagePhotos"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E20.incidentStatement",
+      "name": "Incident statement accepted (ADH)",
+      "class": "O",
+      "stage": "evidence",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E20.incidentStatement.pass",
+          "when": [
+            {
+              "fact": "docs.incidentStatement",
+              "op": "in",
+              "value": [
+                "accepted",
+                "waived"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E20.incidentStatement.na",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "neq",
+              "value": "adh"
+            }
+          ],
+          "then": {
+            "outcome": "PASS",
+            "noteText": "Required for ADH claims only."
+          }
+        },
+        {
+          "id": "E20.incidentStatement.pend",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "adh"
+            },
+            {
+              "fact": "docs.incidentStatement",
+              "op": "not_in",
+              "value": [
+                "accepted",
+                "waived"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PEND",
+            "reasonCode": "DOCUMENT_REQUIRED",
+            "clause": "§8.1",
+            "params": {
+              "doc": "incident statement"
+            },
+            "claimantText": "We need: {doc}.",
+            "noteText": "Required document not accepted: {doc} ({status}).",
+            "bind": {
+              "status": "docs.incidentStatement"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E21",
+      "name": "Network estimate, else second estimate",
+      "class": "O",
+      "stage": "evidence",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E21.pass.network",
+          "when": [
+            {
+              "fact": "evidence.estimateFromNetwork",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E21.pass.second",
+          "when": [
+            {
+              "fact": "evidence.estimateFromNetwork",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "fact": "docs.secondEstimate",
+              "op": "in",
+              "value": [
+                "accepted",
+                "waived"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E21.pend",
+          "when": [
+            {
+              "fact": "evidence.estimateFromNetwork",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "fact": "docs.secondEstimate",
+              "op": "not_in",
+              "value": [
+                "accepted",
+                "waived"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PEND",
+            "reasonCode": "NETWORK_ESTIMATE",
+            "clause": "§8.1",
+            "claimantText": "Please provide an estimate from an authorized servicer.",
+            "noteText": "Estimate is not from a network servicer and no second estimate accepted."
+          }
+        }
+      ]
+    },
+    {
+      "id": "F1",
+      "name": "Loss within 7 days after waiting period ends",
+      "class": "O",
+      "stage": "red_flags",
+      "kind": "flag",
+      "rows": [
+        {
+          "id": "F1.hit",
+          "when": [
+            {
+              "fact": "d.daysPastWaitingEnd",
+              "op": "between",
+              "value": [
+                0,
+                7
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "FLAG_F1",
+            "noteText": "Loss {d} days after the waiting period ended.",
+            "bind": {
+              "d": "d.daysPastWaitingEnd"
+            }
+          }
+        },
+        {
+          "id": "F1.clear0",
+          "when": [
+            {
+              "fact": "d.daysPastWaitingEnd",
+              "op": "lt",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "F1.clear1",
+          "when": [
+            {
+              "fact": "d.daysPastWaitingEnd",
+              "op": "gt",
+              "value": 7
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "name": "Another claim on this contract within 60 days",
+      "class": "O",
+      "stage": "red_flags",
+      "kind": "flag",
+      "rows": [
+        {
+          "id": "F2.hit",
+          "when": [
+            {
+              "fact": "d.claims60d",
+              "op": "gte",
+              "value": 1
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "FLAG_F2",
+            "noteText": "{n} other claim(s) on this serial within 60 days.",
+            "bind": {
+              "n": "d.claims60d"
+            }
+          }
+        },
+        {
+          "id": "F2.clear",
+          "when": [
+            {
+              "fact": "d.claims60d",
+              "op": "eq",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "name": "Proof of purchase dated after date of loss",
+      "class": "O",
+      "stage": "red_flags",
+      "kind": "flag",
+      "rows": [
+        {
+          "id": "F3.hit",
+          "when": [
+            {
+              "fact": "d.proofDateVsLossDays",
+              "op": "lt",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "FLAG_F3",
+            "noteText": "Proof of purchase is dated after the loss."
+          }
+        },
+        {
+          "id": "F3.clear",
+          "when": [
+            {
+              "fact": "d.proofDateVsLossDays",
+              "op": "gte",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "name": "Contract bought long after product, claim soon after",
+      "class": "O",
+      "stage": "red_flags",
+      "kind": "flag",
+      "rows": [
+        {
+          "id": "F4.hit",
+          "when": [
+            {
+              "fact": "d.purchaseLagDays",
+              "op": "gt",
+              "value": 30
+            },
+            {
+              "fact": "d.daysSinceStart",
+              "op": "lt",
+              "value": 60
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "FLAG_F4",
+            "noteText": "Contract bought {lag} days after the product; claim {d} days into term.",
+            "bind": {
+              "lag": "d.purchaseLagDays",
+              "d": "d.daysSinceStart"
+            }
+          }
+        },
+        {
+          "id": "F4.clear0",
+          "when": [
+            {
+              "fact": "d.purchaseLagDays",
+              "op": "lte",
+              "value": 30
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "F4.clear1",
+          "when": [
+            {
+              "fact": "d.daysSinceStart",
+              "op": "gte",
+              "value": 60
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        }
+      ],
+      "note": "PROVISIONAL: the brief says 'more than N days' and 'soon after' without numbers. 30 and 60 are placeholders."
+    },
+    {
+      "id": "F5",
+      "name": "Estimate near per-claim limit or just under replace threshold",
+      "class": "O",
+      "stage": "red_flags",
+      "kind": "flag",
+      "rows": [
+        {
+          "id": "F5.hit0",
+          "when": [
+            {
+              "fact": "d.estimateVsLimitBps",
+              "op": "gte",
+              "value": 9500
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "FLAG_F5",
+            "noteText": "Estimate is {r} bps of the per-claim limit.",
+            "bind": {
+              "r": "d.estimateVsLimitBps"
+            }
+          }
+        },
+        {
+          "id": "F5.hit1",
+          "when": [
+            {
+              "fact": "d.repairRatioBps",
+              "op": "between",
+              "value": [
+                6500,
+                7000
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "FLAG_F5",
+            "noteText": "Estimate is {r} bps of replacement value, just under the replace threshold.",
+            "bind": {
+              "r": "d.repairRatioBps"
+            }
+          }
+        },
+        {
+          "id": "F5.clear0",
+          "when": [
+            {
+              "fact": "d.estimateVsLimitBps",
+              "op": "lt",
+              "value": 9500
+            },
+            {
+              "fact": "d.repairRatioBps",
+              "op": "lt",
+              "value": 6500
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "F5.clear1",
+          "when": [
+            {
+              "fact": "d.estimateVsLimitBps",
+              "op": "lt",
+              "value": 9500
+            },
+            {
+              "fact": "d.repairRatioBps",
+              "op": "gt",
+              "value": 7000
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        }
+      ],
+      "note": "PROVISIONAL: 'just under' is undefined; 6500-7000 bps is a placeholder band."
+    },
+    {
+      "id": "F6",
+      "name": "Same claimant across 3+ contracts with claims",
+      "class": "O",
+      "stage": "red_flags",
+      "kind": "flag",
+      "rows": [
+        {
+          "id": "F6.hit",
+          "when": [
+            {
+              "fact": "history.claimantContractsWithClaims",
+              "op": "gte",
+              "value": 3
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "FLAG_F6",
+            "noteText": "Claimant has claims on {n} contracts.",
+            "bind": {
+              "n": "history.claimantContractsWithClaims"
+            }
+          }
+        },
+        {
+          "id": "F6.clear",
+          "when": [
+            {
+              "fact": "history.claimantContractsWithClaims",
+              "op": "lt",
+              "value": 3
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        }
+      ]
+    },
+    {
+      "id": "F7",
+      "name": "Photo metadata date or document hash anomaly",
+      "class": "O",
+      "stage": "red_flags",
+      "kind": "flag",
+      "rows": [
+        {
+          "id": "F7.hit0",
+          "when": [
+            {
+              "fact": "evidence.photoMetaDateBeforeLoss",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "FLAG_F7",
+            "noteText": "Photo metadata predates the loss."
+          }
+        },
+        {
+          "id": "F7.hit1",
+          "when": [
+            {
+              "fact": "evidence.documentHashOnOtherClaim",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "FLAG_F7",
+            "noteText": "Same document hash appears on another claim."
+          }
+        },
+        {
+          "id": "F7.clear",
+          "when": [
+            {
+              "fact": "evidence.photoMetaDateBeforeLoss",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "fact": "evidence.documentHashOnOtherClaim",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        }
+      ]
+    },
+    {
+      "id": "F8",
+      "name": "Non-network estimate from the payee",
+      "class": "O",
+      "stage": "red_flags",
+      "kind": "flag",
+      "rows": [
+        {
+          "id": "F8.hit",
+          "when": [
+            {
+              "fact": "evidence.estimateFromNetwork",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "fact": "evidence.estimatorIsPayee",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "FLAG_F8",
+            "noteText": "Estimator is a non-network servicer and also the payee."
+          }
+        },
+        {
+          "id": "F8.clear0",
+          "when": [
+            {
+              "fact": "evidence.estimateFromNetwork",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "F8.clear1",
+          "when": [
+            {
+              "fact": "evidence.estimatorIsPayee",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        }
+      ]
+    },
+    {
+      "id": "F9",
+      "name": "Loss in last 30 days of term",
+      "class": "O",
+      "stage": "red_flags",
+      "kind": "flag",
+      "rows": [
+        {
+          "id": "F9.hit",
+          "when": [
+            {
+              "fact": "d.daysToTermEnd",
+              "op": "between",
+              "value": [
+                0,
+                30
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "FLAG_F9",
+            "noteText": "Loss {d} days before term end.",
+            "bind": {
+              "d": "d.daysToTermEnd"
+            }
+          }
+        },
+        {
+          "id": "F9.clear0",
+          "when": [
+            {
+              "fact": "d.daysToTermEnd",
+              "op": "gt",
+              "value": 30
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "F9.clear1",
+          "when": [
+            {
+              "fact": "d.daysToTermEnd",
+              "op": "lt",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        }
+      ]
+    },
+    {
+      "id": "F10",
+      "name": "Account of cause changed",
+      "class": "O",
+      "stage": "red_flags",
+      "kind": "flag",
+      "rows": [
+        {
+          "id": "F10.hit",
+          "when": [
+            {
+              "fact": "claim.accountChanged",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "FLAG_F10",
+            "noteText": "Cause changed between FNOL and statement."
+          }
+        },
+        {
+          "id": "F10.clear",
+          "when": [
+            {
+              "fact": "claim.accountChanged",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        }
+      ]
+    },
+    {
+      "id": "E23",
+      "name": "Payable above auto-approve limit",
+      "class": "O",
+      "stage": "authority",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E23.pass",
+          "when": [
+            {
+              "fact": "calc.payableCents",
+              "op": "lte",
+              "value": 50000
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E23.fail",
+          "when": [
+            {
+              "fact": "calc.payableCents",
+              "op": "gt",
+              "value": 50000
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "ABOVE_AUTO_LIMIT",
+            "clause": "§8.3",
+            "claimantVisible": false,
+            "noteText": "Payable {amt} above auto-approve limit 50000.",
+            "bind": {
+              "amt": "calc.payableCents"
+            }
+          }
+        }
+      ],
+      "note": "50000 equals the system tier below; the two must move together."
+    }
+  ],
+  "authority": [
+    {
+      "code": "system",
+      "approveUpToCents": 50000,
+      "powers": []
+    },
+    {
+      "code": "adjuster",
+      "approveUpToCents": 100000,
+      "powers": [
+        "clear_flags",
+        "waive_documents"
+      ]
+    },
+    {
+      "code": "senior",
+      "approveUpToCents": 250000,
+      "powers": [
+        "decide_appeals"
+      ]
+    },
+    {
+      "code": "manager",
+      "approveUpToCents": null,
+      "powers": [
+        "ex_gratia",
+        "publish_rules"
+      ]
+    }
+  ],
+  "reminders": {
+    "firstDay": 10,
+    "secondDay": 20,
+    "closeDay": 30
+  },
+  "outcomePolicy": {
+    "autoDenyEnabled": true
+  }
+}
