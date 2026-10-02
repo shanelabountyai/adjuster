@@ -1,6 +1,8 @@
 # NEXT
 
-## ▶ Next session: task 1.2 is Shane's (by hand), then 1.7
+## ▶ Next session: 1.8 (table evaluator); 1.2 still Shane's
+
+**2026-10-02 (1.7 done):** `src/rules/evaluate.ts`: `evalCell`, `evalRow`, `evalRule`. Absent or null is UNKNOWN; `is_known` is never UNKNOWN. `evalRule` already collects every TRUE row, applies the D8 severity, returns PEND with sorted missing facts, and returns GAP when every row is FALSE. So 1.8 adds the `unique` hit policy (lookups, overlap fails validation), RE-23, and mapping derived facts' missing names to their input roots (the oracle's `roots`). `npm test` 255 pass. One full run had 6 timeouts in `tests/invariants/inv-01-04-22-actions` while tsc ran alongside and a rental sweep held 25 PG connections; it passed 14/14 alone, with and without the change.
 
 **2026-10-02 (later):** 1.6 done: `src/rules/canonical.ts` (`canonicalJson`, `sha256Hex`), D28 applied (`factDictionaryHash` in plan/ops, checked by `rules:lint`). `npm test` 200 pass. `docs/trace-by-hand.md` still empty. 1.7 (condition evaluator) does not depend on the trace shape for its cell results, so it can start before 1.2 lands. **Shane said go (2026-10-02): next session builds 1.7 now; 1.2 can reshape the trace later.**
 
