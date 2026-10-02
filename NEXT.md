@@ -2,6 +2,8 @@
 
 ## ▶ Next session: task 1.2 is Shane's (by hand), then 1.6
 
+**2026-10-02:** Shane is doing 1.2 now; skeleton at `docs/trace-by-hand.md` (facts only, no answers). When it's filled in: compare it to the fixtures' trace shape, adjust `src/rules/schema.ts` + regenerate if they differ, then 1.6. Start sessions in `~/Projects/adjuster`, not `adjuster-kickoff`.
+
 **Update 2026-10-02:** review answered (decisions D23–D29, recommended options). D25 (F5 upper bound) and D26 (`ratio_exceeds_bps`, PAY-I) applied; fixtures now 23 RE, 9 PAY, 10 GC. Still open: P1–P6 and review items 5–10, 13, 14, 16, 18–20, 22 (provisional, none moves GC-01..10). D28 (dictionary hash in the envelope) lands with 1.6.
 
 Setup and phase 1 tasks 1.1, 1.3, 1.4, 1.5 are done and pushed (2026-10-01, repo `shanelabountyai/adjuster`, private).
