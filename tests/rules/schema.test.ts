@@ -60,3 +60,29 @@ describe('fixtures carry calc traces in the trace schema', () => {
   for (const f of readdirSync('fixtures/pay').filter((n) => n !== 'PAY-H.json'))
     it(f, () => { for (const s of json(`fixtures/pay/${f}`).expected.steps) expect(calcStepTraceSchema.safeParse(s).success).toBe(true); });
 });
+
+describe('unique lookups: overlap fails validation (D7, 1.8)', () => {
+  const lookup = (...rows: object[]) => ({ ...plan, lookups: [...plan.lookups.slice(1), { id: 'deductibleCents', hitPolicy: 'unique', rows }] });
+  const row = (id: string, ...when: object[]) => ({ id, when, value: 1 });
+  const age = (op: string, value: unknown) => ({ fact: 'd.productAgeYears', op, value });
+  const plus = { fact: 'contract.planCode', op: 'eq', value: 'plus' };
+
+  it('plan-v1 tables are disjoint', () => expect(codes(plan)).toEqual([]));
+  it('a duplicated row overlaps', () => expect(codes(lookup(row('a', plus), row('b', plus)))).toEqual(['OVERLAP']));
+  it('a row with no condition on a fact overlaps a row that has one', () =>
+    expect(codes(lookup(row('a', plus), row('b', plus, age('gte', 3))))).toEqual(['OVERLAP']));
+  it('shared boundary overlaps; adjacent integer ranges do not', () => {
+    expect(codes(lookup(row('a', age('between', [0, 2])), row('b', age('gte', 2))))).toEqual(['OVERLAP']);
+    expect(codes(lookup(row('a', age('between', [0, 1])), row('b', age('gte', 2))))).toEqual([]);
+  });
+  it('dates: lt vs gte the same day are disjoint; lte vs gte overlap', () => {
+    const d = (op: string) => ({ fact: 'claim.dateOfLoss', op, value: '2026-03-01' });
+    expect(codes(lookup(row('a', d('lt')), row('b', d('gte'))))).toEqual([]);
+    expect(codes(lookup(row('a', d('lte')), row('b', d('gte'))))).toEqual(['OVERLAP']);
+  });
+  it('enums: in vs not_in of the same list are disjoint; neq vs neq overlap', () => {
+    const p = (op: string, value: unknown) => ({ fact: 'contract.planCode', op, value });
+    expect(codes(lookup(row('a', p('in', ['plus'])), row('b', p('not_in', ['plus']))))).toEqual([]);
+    expect(codes(lookup(row('a', p('neq', 'plus')), row('b', p('neq', 'premier'))))).toEqual(['OVERLAP']);
+  });
+});

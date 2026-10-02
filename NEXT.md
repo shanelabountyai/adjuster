@@ -1,6 +1,8 @@
 # NEXT
 
-## ▶ Next session: 1.8 (table evaluator); 1.2 still Shane's
+## ▶ Next session: 1.9 (calc-step evaluator); 1.2 still Shane's
+
+**2026-10-02 (1.8 done):** `evalLookup` (`unique`: one TRUE row decides even beside UNKNOWN rows; none → PEND or GAP; two → throws), `rootsOf(dict)` (derived → input roots; lookups are their own root, as in the oracle), `evalRule(rows, facts, roots)`. Publish check `OVERLAP` in `validate.ts`: per-fact candidate testing, may over-report for derived facts tied to the same input, never under-reports. RE-23 passes. `npm test` 270 pass, `rules:lint` ok, `fixtures:check` OK. 1.9 next: RE-13..18, PAY-A..I, no float; derived-fact computation (days_between etc.) is not built yet and has no task of its own — fold it into 1.9 or GC wiring.
 
 **2026-10-02 (1.7 done):** `src/rules/evaluate.ts`: `evalCell`, `evalRow`, `evalRule`. Absent or null is UNKNOWN; `is_known` is never UNKNOWN. `evalRule` already collects every TRUE row, applies the D8 severity, returns PEND with sorted missing facts, and returns GAP when every row is FALSE. So 1.8 adds the `unique` hit policy (lookups, overlap fails validation), RE-23, and mapping derived facts' missing names to their input roots (the oracle's `roots`). `npm test` 255 pass. One full run had 6 timeouts in `tests/invariants/inv-01-04-22-actions` while tsc ran alongside and a rental sweep held 25 PG connections; it passed 14/14 alone, with and without the change.
 

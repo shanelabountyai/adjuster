@@ -1,4 +1,5 @@
 import { sha256Hex } from './canonical';
+import { evalCell, type FactValue } from './evaluate';
 import { dictionarySchema, ruleSetSchema, type Cell, type Dictionary, type RuleSet } from './schema';
 
 // Publish-time checks: structure (zod) first, then every cross-reference against the fact dictionary.
@@ -6,7 +7,7 @@ import { dictionarySchema, ruleSetSchema, type Cell, type Dictionary, type RuleS
 
 export type IssueCode =
   | 'SCHEMA' | 'UNKNOWN_OPERATOR' | 'UNKNOWN_CALC_STEP' | 'UNKNOWN_FACT' | 'TYPE_MISMATCH' | 'DUPLICATE_ID'
-  | 'MISSING_TEMPLATE' | 'UNRESOLVED_PLACEHOLDER' | 'FLAG_CLAIMANT_TEXT' | 'UNDEFINED_REGISTER' | 'BAD_STEP' | 'UNDEFINED_OUTPUT' | 'DICTIONARY_HASH';
+  | 'MISSING_TEMPLATE' | 'UNRESOLVED_PLACEHOLDER' | 'FLAG_CLAIMANT_TEXT' | 'UNDEFINED_REGISTER' | 'BAD_STEP' | 'UNDEFINED_OUTPUT' | 'DICTIONARY_HASH' | 'OVERLAP';
 export type Issue = { code: IssueCode; path: string; message: string };
 type Fact = Dictionary['facts'][number];
 
@@ -24,6 +25,27 @@ function fits(f: Fact, v: unknown): boolean {
     case 'enum': return typeof v === 'string' && !!f.values?.includes(v);
     default: return false;
   }
+}
+
+const shiftDay = (d: string, n: number) => { const t = new Date(`${d}T00:00:00Z`); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+
+// D7: can one set of facts make every cell TRUE? Facts are tested independently (derived facts' links to their inputs are
+// ignored), so this may report an overlap that real data cannot reach, never miss one. Per fact the candidates cover every
+// region the literals carve out: the whole domain for bool/enum, each literal and its neighbours for ordered types, and
+// one value equal to no literal for strings.
+function canBothHold(cells: readonly Cell[], byId: ReadonlyMap<string, Fact>): boolean {
+  return [...new Set(cells.map((c) => c.fact))].every((id) => {
+    const f = byId.get(id)!;
+    const mine = cells.filter((c) => c.fact === id);
+    const lits = mine.flatMap((c) => (c.value === undefined ? [] : Array.isArray(c.value) ? c.value : [c.value]));
+    const candidates: FactValue[] =
+      f.type === 'bool' ? [true, false]
+      : f.type === 'enum' ? f.values!
+      : f.type === 'date' ? ['2000-01-01', ...(lits as string[]).flatMap((d) => [shiftDay(d, -1), d, shiftDay(d, 1)])]
+      : f.type === 'string' ? [...lits, `${lits.join('')}~`]
+      : [0, ...(lits as number[]).flatMap((n) => [n - 1, n, n + 1])];
+    return candidates.some((v) => mine.every((c) => evalCell(c, { [id]: v }) === 'TRUE'));
+  });
 }
 
 export function validateDictionary(input: unknown): { dict?: Dictionary; issues: Issue[] } {
@@ -118,7 +140,13 @@ function validateSemantics(rs: RuleSet, dict: Dictionary): Issue[] {
     });
   });
 
-  rs.lookups?.forEach((l, li) => l.rows.forEach((row, wi) => row.when.forEach((c, ci) => cell(c, `lookups.${li}.rows.${wi}.when.${ci}`))));
+  rs.lookups?.forEach((l, li) => {
+    l.rows.forEach((row, wi) => row.when.forEach((c, ci) => cell(c, `lookups.${li}.rows.${wi}.when.${ci}`)));
+    if (l.rows.some((r) => r.when.some((c) => !byId.has(c.fact)))) return; // already reported; no types to reason with
+    l.rows.forEach((a, i) => l.rows.slice(i + 1).forEach((b) => {
+      if (canBothHold([...a.when, ...b.when], byId)) add('OVERLAP', `lookups.${li}`, `unique table ${l.id}: rows ${a.id} and ${b.id} can both match`);
+    }));
+  });
   rs.fulfillment?.forEach((r, ri) => r.when.forEach((c, ci) => cell(c, `fulfillment.${ri}.when.${ci}`)));
 
   if (rs.kind === 'plan') {
