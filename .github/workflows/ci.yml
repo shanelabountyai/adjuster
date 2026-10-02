@@ -45,6 +45,9 @@ jobs:
       - run: createdb adjuster_test
       - run: npx prisma migrate deploy
       - run: npx vitest run
+      # Task 1.12: the gate. Seed GC-01..GC-10 through the engine, then replay every stored decision; any divergence exits 1.
+      - run: npm run seed:decisions:test
+      - run: npm run decisions:verify:test
       # Production build, served — the way it ships. login.spec.ts drives a real page.
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
