@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { validateDictionary, validateRuleSet, type Issue } from '@/rules/validate';
+import { checkDictionaryHash, validateDictionary, validateRuleSet, type Issue } from '@/rules/validate';
 
 // `npm run rules:lint` (CLAUDE.md): schema-validate rules/, then grep src/ for plan identifiers and escape hatches.
 // Plan identifiers are read from the fact dictionary (planIdentifier: true), so no plan name lives in this script either.
@@ -14,20 +14,21 @@ const report = (where: string, issues: Issue[]) => issues.forEach((i) => fail(`$
 const identifiers = new Set<string>();
 for (const dir of readdirSync('rules')) {
   const files = readdirSync(join('rules', dir));
-  const dicts = new Map<string, NonNullable<ReturnType<typeof validateDictionary>['dict']>>();
+  const dicts = new Map<string, { dict: NonNullable<ReturnType<typeof validateDictionary>['dict']>; raw: unknown }>();
   for (const f of files.filter((n) => n.startsWith('facts-'))) {
-    const { dict, issues } = validateDictionary(json(join('rules', dir, f)));
+    const raw = json(join('rules', dir, f));
+    const { dict, issues } = validateDictionary(raw);
     report(`rules/${dir}/${f}`, issues);
     if (dict) {
-      dicts.set(dict.id, dict);
+      dicts.set(dict.id, { dict, raw });
       dict.facts.filter((x) => x.planIdentifier).forEach((x) => x.values?.forEach((v) => identifiers.add(v)));
     }
   }
   for (const f of files.filter((n) => /^(plan|ops)-/.test(n))) {
     const doc = json(join('rules', dir, f));
-    const dict = dicts.get(doc.factDictionary);
-    if (!dict) fail(`rules/${dir}/${f}`, `fact dictionary ${doc.factDictionary} not found`);
-    else report(`rules/${dir}/${f}`, validateRuleSet(doc, dict));
+    const d = dicts.get(doc.factDictionary);
+    if (!d) fail(`rules/${dir}/${f}`, `fact dictionary ${doc.factDictionary} not found`);
+    else report(`rules/${dir}/${f}`, [...validateRuleSet(doc, d.dict), ...checkDictionaryHash(doc, d.raw)]);
   }
 }
 

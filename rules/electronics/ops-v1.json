@@ -5,6 +5,7 @@
   "version": 1,
   "effectiveFrom": "2025-01-01",
   "factDictionary": "facts-v1",
+  "factDictionaryHash": "3fc666585d7c02bde18c5f73927e37cc5e7976f701e814cc6cec48ab3f551011",
   "roundingMode": "half_up",
   "rules": [
     {

@@ -7,7 +7,7 @@ Nothing else until the invariant holds. No UI, pipeline stages, documents or ove
 - [x] **1.3 Schemas.** JSON schemas for fact dictionary, decision tables, calc steps, rule-set envelope, trace. Tests reject an unknown operator, an unknown fact, a type mismatch.
 - [x] **1.4 Rule data.** `rules/electronics/plan-v1.json` and `ops-v1.json` encoding E1–E23, F1–F10, the three tiers and payout order D15. Passes `rules:lint`.
 - [x] **1.5 Fixtures.** `tools/build_fixtures.py` + `tools/verify_fixtures.py` (second derivation) produce RE-01..RE-23, PAY-A..PAY-H and GC-01..GC-10 (engine-level: facts in → outcome, reasons, cents, trace out). Both agree; fixtures frozen; CI fails if product code writes to `fixtures/`.
-- [ ] **1.6 Canonical JSON + hashing.** Shuffled key order → identical bytes and hash. Floats rejected.
+- [x] **1.6 Canonical JSON + hashing.** Shuffled key order → identical bytes and hash. Floats rejected.
 - [ ] **1.7 Condition evaluator.** Three-valued logic. RE-01..RE-12, RE-19..RE-22 pass.
 - [ ] **1.8 Table evaluator.** `collect` and `unique` hit policies, rule gap, outcome precedence D8. RE-23 passes; a `unique` overlap fails validation.
 - [ ] **1.9 Calc-step evaluator.** Cents, bps, half-up. RE-13..RE-18 and PAY-A..PAY-H pass; no float in the module.

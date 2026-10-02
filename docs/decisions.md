@@ -81,7 +81,7 @@ D1 and D17 close the vocabulary. Writing E1–E23 and the payout order as data n
 | D25 | F5 fires only below the limit: estimate ≥ 95% **and < 100%** of the per-claim limit. At or over the limit it is a plain cap → PARTIAL (GC-13 / PAY-G stands). | 4 | applied: F5.hit0 is 9500–9999 bps; rows F5.clear2/3 pass at ≥10000 |
 | D26 | Repair-vs-replace compares by integer cross-multiplication (cost × 10000 vs threshold bps × R), no rounded ratio. Implemented as derived fn `ratio_exceeds_bps` (bool: `num*10000 > bps*den`), fact `d.repairExceedsReplaceBps`; the `path` table tests it. Fixture PAY-I (77001 of 110000 → replace, payable 100000). | 11 | applied: new derived fn, PAY-I; F5's rounded ratio bands stay (provisional) |
 | D27 | O1 auto-deny on, O2 deductible before limit, O3 keep ACV schedule, O4 accept lesser payout, O7 E4 contractual — all defaults confirmed. | O1–O4, O7 | none |
-| D28 | The fact dictionary's hash is recorded in each rule-set envelope and checked at publish. | 21 | envelope schema + hash (task 1.6) |
+| D28 | The fact dictionary's hash is recorded in each rule-set envelope and checked at publish. | 21 | applied (1.6): `factDictionaryHash` = `sha256Hex` of the dictionary file, in plan-v1 and ops-v1; `checkDictionaryHash` runs in `rules:lint` and at publish. Optional in the zod schema so the validate-only RE-11/12 rule sets stay minimal |
 | D29 | Deferred or accepted as encoded: fact-to-fact operator (12, a seam); Premier battery stays `RULE_GAP` (17); history counting as encoded (15). | 12, 15, 17 | none |
 
 Still unanswered: P1–P6 above, and review items 5–10, 13, 14, 16, 18–20, 22 (all encoded provisionally; none moves a GC-01..10 fixture).

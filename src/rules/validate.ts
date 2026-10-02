@@ -1,3 +1,4 @@
+import { sha256Hex } from './canonical';
 import { dictionarySchema, ruleSetSchema, type Cell, type Dictionary, type RuleSet } from './schema';
 
 // Publish-time checks: structure (zod) first, then every cross-reference against the fact dictionary.
@@ -5,7 +6,7 @@ import { dictionarySchema, ruleSetSchema, type Cell, type Dictionary, type RuleS
 
 export type IssueCode =
   | 'SCHEMA' | 'UNKNOWN_OPERATOR' | 'UNKNOWN_CALC_STEP' | 'UNKNOWN_FACT' | 'TYPE_MISMATCH' | 'DUPLICATE_ID'
-  | 'MISSING_TEMPLATE' | 'UNRESOLVED_PLACEHOLDER' | 'FLAG_CLAIMANT_TEXT' | 'UNDEFINED_REGISTER' | 'BAD_STEP' | 'UNDEFINED_OUTPUT';
+  | 'MISSING_TEMPLATE' | 'UNRESOLVED_PLACEHOLDER' | 'FLAG_CLAIMANT_TEXT' | 'UNDEFINED_REGISTER' | 'BAD_STEP' | 'UNDEFINED_OUTPUT' | 'DICTIONARY_HASH';
 export type Issue = { code: IssueCode; path: string; message: string };
 type Fact = Dictionary['facts'][number];
 
@@ -55,6 +56,13 @@ export function validateRuleSet(input: unknown, dict: Dictionary): Issue[] {
     });
   }
   return validateSemantics(parsed.data, dict);
+}
+
+// D28: a rule set is bound to the exact dictionary it was written against. Run at publish (and by rules:lint), on the raw file.
+export function checkDictionaryHash(rs: { factDictionaryHash?: string }, dictFile: unknown): Issue[] {
+  const want = sha256Hex(dictFile);
+  if (rs.factDictionaryHash === want) return [];
+  return [{ code: 'DICTIONARY_HASH', path: 'factDictionaryHash', message: rs.factDictionaryHash ? `does not match the dictionary (${want})` : `missing; the dictionary hashes to ${want}` }];
 }
 
 function validateSemantics(rs: RuleSet, dict: Dictionary): Issue[] {

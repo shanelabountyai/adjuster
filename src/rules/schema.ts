@@ -67,7 +67,10 @@ export const payoutSchema = z.object({ steps: z.array(stepSchema).min(1), output
 // ---- rule-set envelope. Status and hash are not in the file: they belong to the DB row (D2, task 1.10).
 export const ruleSetSchema = z.object({
   schema: z.literal('adjuster.ruleset/1'), kind: z.enum(['plan', 'ops']), product: z.string(), version: z.number().int().min(1),
-  effectiveFrom: isoDate, factDictionary: z.string(), roundingMode: z.literal('half_up'),
+  effectiveFrom: isoDate, factDictionary: z.string(),
+  // D28: sha256Hex of the dictionary file. Optional here so validate-only fixtures stay minimal; checkDictionaryHash requires it at publish.
+  factDictionaryHash: z.string().regex(/^[0-9a-f]{64}$/).optional(),
+  roundingMode: z.literal('half_up'),
   rules: z.array(ruleSchema).min(1),
   lookups: z.array(lookupSchema).optional(), payout: payoutSchema.optional(),
   fulfillment: z.array(z.object({ id: z.string(), when: z.array(cellSchema) }).strict()).optional(),
