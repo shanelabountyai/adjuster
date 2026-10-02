@@ -1,6 +1,9 @@
 # NEXT
 
-## ▶ Next session: 1.10 (persistence: RuleSetVersion + Decision tables, immutability triggers); 1.2 still Shane's
+## ▶ Next session: 1.11 (`decisions:verify`, eight codes, TM-01..08); 1.2 still Shane's
+
+**2026-10-02 (1.10 done):** `prisma/schema/adjudication.prisma` + migration `20261002000000_adjudication_init` (hand-written rules below the generated SQL). `RuleSetVersion`: draft is free; published may only change status to retired (`to_jsonb(NEW) - 'status'` must equal OLD); retired is final; publish needs a 64-hex `contentHash` + `publishedAt`. `Decision`: append-only; explanation NOT NULL + CHECK non-empty `rules` array (keyed on the trace's `rules`: move it if 1.2 reshapes the trace); DENY → null amount; amount ≥ 0; override columns all-or-none; insert must pin a non-draft plan + ops version of the right kind. Every rejection names its constraint (`err.constraint`). Trap found: a CHECK that evaluates to NULL passes, so both nullable CHECKs are wrapped in `coalesce(..., false)`. `claimId` is text (no Claim table until Phase 2); document version ids (D4) arrive as a column in Phase 3. 1.11's tamper loader must bypass the triggers (`ALTER TABLE ... DISABLE TRIGGER` as owner). `npm test` 295 pass, `rules:lint` ok, `fixtures:check` OK, tsc clean, migrate diff clean.
+
 
 **2026-10-02 (1.9 done):** `src/rules/money.ts` (`divHalfUp`, `applyBps`: the one rounding module, integer-only, throws past safe-integer range), `src/rules/calc.ts` (`runSteps`, `valuate`: path, step trace, payable, `contractFulfilled` null when a fulfillment row is UNKNOWN), `src/rules/derive.ts` (`resolveFacts`: all six derived fns + lookups, lazy and memoized; missing input → null). RE-13..18 and PAY-A..G, I pass. PAY-H (denial → null amount) is a decision-pipeline check: cover it when GC-01..10 are wired. Seam: `resolveFacts` turns a lookup PEND/GAP into null; the pipeline must call `evalLookup` itself to tell PEND from RULE_GAP. `npm test` 289 pass, `rules:lint` ok, `fixtures:check` OK.
 

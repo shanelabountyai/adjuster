@@ -1,0 +1,53 @@
+// Task 1.10. Rule sets and decisions. The rules Prisma cannot express (immutability, the explanation CHECK,
+// status and outcome sets) are hand-written in migration 20261002000000_adjudication_init.
+
+// D2: one row per whole rule set. `body` is the rules/*.json file; `contentHash` is sha256Hex(body) (D5),
+// set at publish. Published rows only ever change status to retired (VP-01).
+model RuleSetVersion {
+  id            String    @id @default(uuid()) @db.Uuid
+  kind          String // plan | ops
+  product       String
+  version       Int
+  status        String    @default("draft") // draft | published | retired
+  effectiveFrom DateTime  @db.Date
+  body          Json
+  contentHash   String?
+  publishedAt   DateTime? @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  planDecisions Decision[] @relation("planVersion")
+  opsDecisions  Decision[] @relation("opsVersion")
+
+  @@unique([kind, product, version])
+}
+
+// D4, D13, D18: append-only. A correction is a new row that supersedes; an override is a new row that overrides.
+// Seam: document version ids relied on (D4) arrive with evidence in Phase 3, as a new column.
+model Decision {
+  id                     String         @id @default(uuid()) @db.Uuid
+  claimId                String // seam: no Claim table until the Phase 2 pipeline
+  planVersionId          String         @db.Uuid
+  planVersion            RuleSetVersion @relation("planVersion", fields: [planVersionId], references: [id], onDelete: Restrict)
+  planHash               String
+  opsVersionId           String         @db.Uuid
+  opsVersion             RuleSetVersion @relation("opsVersion", fields: [opsVersionId], references: [id], onDelete: Restrict)
+  opsHash                String
+  asOf                   DateTime       @db.Date
+  facts                  Json // canonical fact snapshot
+  inputHash              String
+  outputHash             String
+  engineSemanticsVersion String
+  outcome                String // APPROVE | PARTIAL | DENY | REFER | PEND
+  payableCents           Int?
+  explanation            Json // the trace (adjuster.trace/*): NOT NULL + CHECK non-empty (PL-04)
+  supersedesId           String?        @unique @db.Uuid
+  supersedes             Decision?      @relation("chain", fields: [supersedesId], references: [id], onDelete: Restrict)
+  supersededBy           Decision?      @relation("chain")
+  overridesId            String?        @db.Uuid
+  overrides              Decision?      @relation("override", fields: [overridesId], references: [id], onDelete: Restrict)
+  overriddenBy           Decision[]     @relation("override")
+  overrideReasonCode     String?
+  overrideReasonText     String?
+  createdAt              DateTime       @default(now()) @db.Timestamptz(6)
+
+  @@index([claimId])
+}
