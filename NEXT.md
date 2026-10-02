@@ -1,6 +1,8 @@
 # NEXT
 
-## ▶ Next session: Phase 1 exit check. 1.2 is still Shane's and blocks the gate. Also the "Before Phase 2" deductible-copy check, and the exit criteria in `docs/phase-1-tasks.md`
+## ▶ Next session: Phase 1 gate waits only on 1.2 (Shane fills `docs/trace-by-hand.md`). Then compare it to `adjuster.trace/0`, reshape + regenerate if it differs, re-run this check, and open Phase 2.
+
+**2026-10-02 (Phase 1 exit check, all but 1.2):** RE/PAY/GC-01..10 pass; `seed:decisions:test` → `decisions:verify:test` OK (10 decisions); TM-01..08 covered by `decisions-verify.test.ts`; CI enforces it (main run 37060363989 green, tamper run 37060007007 red); `rules:lint` finds no plan identifier in 53 `src` files; `fixtures:check` OK. **Before Phase 2 check done:** an in-memory copy of `plan-v1.json` with `ded.essential` 5000 → 30000 moved GC-01 from APPROVE/25000 to APPROVE/0 (under deductible approves at 0), the other nine unchanged, no code or file change. Full `npm test` had 2 failures, both in template-owned `tests/invariants/inv-01-04-22-actions` (a 20s timeout, then an `Org_pkey` collision from the leftover fixture) while `bookable_test` held 16 PG connections; the file passed 14/14 alone. Second time this file has flaked under contention (also in 1.7): a template issue, not adjuster's.
 
 **2026-10-02 (1.12 done):** CI runs `seed:decisions:test` → `decisions:verify:test` after vitest (`rules:lint` and `fixtures:check` were already in it). Proof: throwaway branch `tamper/1.12-proof` planted TM-04 (`payableCents + 1` on GC-01, triggers disabled) and CI run 37060007007 failed on that step with `EXPLANATION_INCONSISTENT … 1 failure(s) in 10 decision(s)`. Main run 37060005058 is green. Branch deleted. Weak spot: verify on an empty DB prints OK (0 decisions); CI always seeds first, so it is not guarded.
 
