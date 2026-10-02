@@ -21,7 +21,11 @@ describe('RE-13..RE-18: one calc step each', () => {
 describe('PAY: plan-v1 payout over the fixture facts', () => {
   for (const id of ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'I']) {
     const fx = read(`fixtures/pay/PAY-${id}.json`);
-    it(`PAY-${id} ${fx.title}`, () => expect(valuate(plan, resolveFacts(fx.facts, dict!, plan))).toEqual(fx.expected));
+    it(`PAY-${id} ${fx.title}`, () => {
+      const { calc, ...v } = valuate(plan, resolveFacts(fx.facts, dict!, plan));
+      expect(v).toEqual(fx.expected);
+      expect(calc['calc.payableCents']).toBe(v.payableCents);
+    });
   }
 });
 

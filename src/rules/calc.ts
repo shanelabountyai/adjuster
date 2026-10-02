@@ -54,5 +54,6 @@ export function valuate(plan: Pick<RuleSet, 'payout' | 'fulfillment'>, facts: Fa
     payableCents: calc['calc.payableCents'] ?? null,
     // Unknown is never false: an UNKNOWN row with no TRUE one leaves fulfilment unknown.
     contractFulfilled: ful.includes('TRUE') ? true : ful.includes('UNKNOWN') ? null : false,
+    calc, // the `calc.*` facts, for the rules that run after valuation (authority)
   };
 }
