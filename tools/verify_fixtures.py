@@ -25,7 +25,7 @@ q = lambda x: int(Decimal(x).quantize(Decimal(1), rounding=ROUND_HALF_UP))  # th
 D = dt.date.fromisoformat
 
 # ---- answer keys, typed from docs/domain-brief.md s4 and s11 (not read from any fixture)
-PAY_KEY = {"PAY-A": 22500, "PAY-B": 77500, "PAY-C": 0, "PAY-D": 30000, "PAY-E": 46500, "PAY-F": 90100, "PAY-G": 50000, "PAY-H": None}
+PAY_KEY = {"PAY-A": 22500, "PAY-B": 77500, "PAY-C": 0, "PAY-D": 30000, "PAY-E": 46500, "PAY-F": 90100, "PAY-G": 50000, "PAY-I": 100000, "PAY-H": None}
 GC_KEY = {  # outcome, payable (None = not stated in the brief), reasons
     "GC-01": ("APPROVE", 25000, []), "GC-02": ("DENY", None, ["E6"]), "GC-03": ("DENY", None, ["E3"]), "GC-04": ("DENY", None, ["E2", "E7"]),
     "GC-05": ("REFER", 77500, ["E23"]), "GC-06": ("APPROVE", 0, []), "GC-07": ("PARTIAL", 30000, []), "GC-08": ("APPROVE", 46500, []),
@@ -127,6 +127,9 @@ class Ctx:
         if fn == "ratio_bps":
             n, m = g("num"), g("den")
             return None if n is None or m is None or m == 0 else q(Decimal(n) * 10000 / m)
+        if fn == "ratio_exceeds_bps":
+            n, m = g("num"), g("den")
+            return None if n is None or m is None else n * 10000 > a["bps"] * m
         if fn == "sum_prior_paid": return sum(p["paidCents"] for p in g("list"))
         if fn == "count_claims_in_window":
             anchor, peril = D(g("anchor")), self.get("claim.peril")

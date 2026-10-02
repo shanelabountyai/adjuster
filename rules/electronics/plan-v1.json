@@ -257,9 +257,9 @@
           "id": "path.replace",
           "when": [
             {
-              "fact": "d.repairRatioBps",
-              "op": "gt",
-              "value": 7000
+              "fact": "d.repairExceedsReplaceBps",
+              "op": "eq",
+              "value": true
             }
           ],
           "value": "replace"
@@ -268,15 +268,15 @@
           "id": "path.repair",
           "when": [
             {
-              "fact": "d.repairRatioBps",
-              "op": "lte",
-              "value": 7000
+              "fact": "d.repairExceedsReplaceBps",
+              "op": "eq",
+              "value": false
             }
           ],
           "value": "repair"
         }
       ],
-      "note": "C > 70% of R means replace (D17). ratio_bps rounds half up (D16), so C just above 70% of R can round to 7000 and read as repair."
+      "note": "C > 70% of R means replace (D17). Compared by integer cross-multiplication, not a rounded ratio (D26)."
     },
     {
       "id": "fulfillsOnReplace",
@@ -343,7 +343,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "CONTRACT_NOT_ACTIVE",
-            "clause": "§2.1",
+            "clause": "\u00a72.1",
             "claimantText": "Your contract was not active on the date of loss.",
             "noteText": "Contract status is {status}.",
             "bind": {
@@ -391,8 +391,8 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "OUTSIDE_TERM",
-            "clause": "§2.1",
-            "claimantText": "The loss occurred outside your coverage term ({start}–{end}).",
+            "clause": "\u00a72.1",
+            "claimantText": "The loss occurred outside your coverage term ({start}\u2013{end}).",
             "noteText": "Loss {dol} outside {start}-{end}.",
             "bind": {
               "start": "contract.termStart",
@@ -413,8 +413,8 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "OUTSIDE_TERM",
-            "clause": "§2.1",
-            "claimantText": "The loss occurred outside your coverage term ({start}–{end}).",
+            "clause": "\u00a72.1",
+            "claimantText": "The loss occurred outside your coverage term ({start}\u2013{end}).",
             "noteText": "Loss {dol} outside {start}-{end}.",
             "bind": {
               "start": "contract.termStart",
@@ -508,7 +508,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "WAITING_PERIOD",
-            "clause": "§2.2",
+            "clause": "\u00a72.2",
             "claimantText": "The loss occurred during the {N}-day waiting period.",
             "noteText": "Loss {days} days after start; waiting period {N}.",
             "params": {
@@ -539,7 +539,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "WAITING_PERIOD",
-            "clause": "§2.2",
+            "clause": "\u00a72.2",
             "claimantText": "The loss occurred during the {N}-day waiting period.",
             "noteText": "Loss {days} days after start; waiting period {N}.",
             "params": {
@@ -584,7 +584,7 @@
           "then": {
             "outcome": "REFER",
             "reasonCode": "LATE_REPORT",
-            "clause": "§2.3",
+            "clause": "\u00a72.3",
             "params": {
               "N": 30
             },
@@ -687,7 +687,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "PERIL_NOT_COVERED",
-            "clause": "§3.1",
+            "clause": "\u00a73.1",
             "claimantText": "Your plan does not cover {peril}.",
             "noteText": "Peril {peril} not in plan perils.",
             "bind": {
@@ -715,7 +715,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "PERIL_NOT_COVERED",
-            "clause": "§3.1",
+            "clause": "\u00a73.1",
             "claimantText": "Your plan does not cover {peril}.",
             "noteText": "Peril {peril} not in plan perils.",
             "bind": {
@@ -744,7 +744,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "PERIL_NOT_COVERED",
-            "clause": "§3.1",
+            "clause": "\u00a73.1",
             "claimantText": "Your plan does not cover {peril}.",
             "noteText": "Peril {peril} not in plan perils.",
             "bind": {
@@ -786,7 +786,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "COSMETIC_ONLY",
-            "clause": "§4.3",
+            "clause": "\u00a74.3",
             "claimantText": "Cosmetic damage that does not affect function is excluded.",
             "noteText": "Cosmetic only, function unaffected."
           }
@@ -825,7 +825,7 @@
           "then": {
             "outcome": "REFER",
             "reasonCode": "PRE_EXISTING",
-            "clause": "§4.1",
+            "clause": "\u00a74.1",
             "claimantText": "The condition existed before coverage began.",
             "claimantVisible": false,
             "noteText": "Pre-existing: refer, recommend deny."
@@ -901,7 +901,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "CONSUMABLE",
-            "clause": "§4.2",
+            "clause": "\u00a74.2",
             "claimantText": "Batteries, consumables and accessories are excluded.",
             "noteText": "Consumable or accessory."
           }
@@ -928,7 +928,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "CONSUMABLE",
-            "clause": "§4.2",
+            "clause": "\u00a74.2",
             "claimantText": "Batteries, consumables and accessories are excluded.",
             "noteText": "Consumable or accessory."
           }
@@ -960,7 +960,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "CONSUMABLE",
-            "clause": "§4.2",
+            "clause": "\u00a74.2",
             "claimantText": "Batteries, consumables and accessories are excluded.",
             "noteText": "Battery capacity {pct}% is not below 80%.",
             "bind": {
@@ -1002,7 +1002,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "UNAUTHORIZED_REPAIR",
-            "clause": "§4.4",
+            "clause": "\u00a74.4",
             "claimantText": "Repairs or modifications by a non-authorized servicer are excluded.",
             "noteText": "Declared unauthorized repair."
           }
@@ -1019,7 +1019,7 @@
           "then": {
             "outcome": "REFER",
             "reasonCode": "UNAUTHORIZED_REPAIR_SUSPECTED",
-            "clause": "§4.4",
+            "clause": "\u00a74.4",
             "claimantText": "Repairs or modifications by a non-authorized servicer are excluded.",
             "claimantVisible": false,
             "noteText": "Suspected unauthorized repair: refer."
@@ -1059,7 +1059,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "COMMERCIAL_USE",
-            "clause": "§4.5",
+            "clause": "\u00a74.5",
             "claimantText": "Products used commercially are excluded.",
             "noteText": "Commercial or rental use."
           }
@@ -1098,7 +1098,7 @@
           "then": {
             "outcome": "REFER",
             "reasonCode": "ABUSE",
-            "clause": "§4.6",
+            "clause": "\u00a74.6",
             "claimantText": "Damage from abuse or intentional acts is excluded.",
             "claimantVisible": false,
             "noteText": "Abuse or intentional damage alleged: refer."
@@ -1161,7 +1161,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "MFR_WARRANTY",
-            "clause": "§4.7",
+            "clause": "\u00a74.7",
             "claimantText": "This failure is covered by the manufacturer's warranty; please contact them.",
             "noteText": "Within manufacturer warranty or open recall."
           }
@@ -1200,7 +1200,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "LOSS_THEFT",
-            "clause": "§4.8",
+            "clause": "\u00a74.8",
             "claimantText": "Loss and theft are not covered.",
             "noteText": "Product lost, stolen or unavailable."
           }
@@ -1239,7 +1239,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "SOFTWARE_DATA",
-            "clause": "§4.9",
+            "clause": "\u00a74.9",
             "claimantText": "Software and data issues are excluded.",
             "noteText": "Software or data issue."
           }
@@ -1278,7 +1278,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "EXTERNAL_CAUSE",
-            "clause": "§4.10",
+            "clause": "\u00a74.10",
             "claimantText": "Damage from external events is excluded.",
             "noteText": "External cause."
           }
@@ -1309,7 +1309,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "FREQUENCY_LIMIT",
-            "clause": "§7.1",
+            "clause": "\u00a77.1",
             "params": {
               "N": 2
             },
@@ -1360,7 +1360,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "FREQUENCY_LIMIT",
-            "clause": "§7.1",
+            "clause": "\u00a77.1",
             "params": {
               "N": 2
             },
@@ -1435,7 +1435,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "FREQUENCY_LIMIT",
-            "clause": "§7.1",
+            "clause": "\u00a77.1",
             "params": {
               "N": 3
             },
@@ -1569,7 +1569,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "AGGREGATE_EXHAUSTED",
-            "clause": "§6.1",
+            "clause": "\u00a76.1",
             "claimantText": "Your contract's total limit has been reached.",
             "noteText": "Paid {paid} of aggregate {limit}.",
             "params": {
@@ -1597,7 +1597,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "AGGREGATE_EXHAUSTED",
-            "clause": "§6.1",
+            "clause": "\u00a76.1",
             "claimantText": "Your contract's total limit has been reached.",
             "noteText": "Paid {paid} of aggregate {limit}.",
             "params": {
@@ -1625,7 +1625,7 @@
           "then": {
             "outcome": "DENY",
             "reasonCode": "AGGREGATE_EXHAUSTED",
-            "clause": "§6.1",
+            "clause": "\u00a76.1",
             "claimantText": "Your contract's total limit has been reached.",
             "noteText": "Paid {paid} of aggregate {limit}.",
             "params": {

@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 export const OPERATORS = ['eq', 'neq', 'lt', 'lte', 'gt', 'gte', 'in', 'not_in', 'between', 'is_known'] as const;
 export const CALC_STEPS = ['start_from', 'subtract', 'apply_bps', 'cap_at', 'floor_at', 'min_of'] as const;
-export const DERIVED_FNS = ['days_between', 'full_years_between', 'ratio_bps', 'count_claims_in_window', 'sum_prior_paid'] as const;
+export const DERIVED_FNS = ['days_between', 'full_years_between', 'ratio_bps', 'ratio_exceeds_bps', 'count_claims_in_window', 'sum_prior_paid'] as const;
 export const FACT_TYPES = ['bool', 'int', 'cents', 'bps', 'date', 'string', 'enum', 'list'] as const;
 export const FACT_SOURCES = ['input', 'derived', 'lookup', 'calc'] as const;
 // Fixed stage order (D12). Stage logic is data; the order is code.

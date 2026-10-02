@@ -409,6 +409,18 @@
       }
     },
     {
+      "id": "d.repairExceedsReplaceBps",
+      "type": "bool",
+      "source": "derived",
+      "description": "True when covered repair cost is strictly more than 70% of replacement value, by integer cross-multiplication (D26): num*10000 > bps*den. No rounding.",
+      "fn": "ratio_exceeds_bps",
+      "args": {
+        "num": "claim.coveredRepairCents",
+        "den": "claim.replacementValueCents",
+        "bps": 7000
+      }
+    },
+    {
       "id": "d.estimateVsLimitBps",
       "type": "bps",
       "source": "derived",

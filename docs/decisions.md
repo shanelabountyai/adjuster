@@ -71,3 +71,17 @@ D1 and D17 close the vocabulary. Writing E1–E23 and the payout order as data n
 | P4 | One more fact type, `list` (prior claims), feeding the closed derived set | `count_claims_in_window` and `sum_prior_paid` need history in the frozen snapshot |
 | P5 | Contract carries `waitingEndsOn`; E5 and E22 are human-entered booleans | No fact-to-fact comparison and no date arithmetic in the vocabulary |
 | P6 | Rule-set rows carry `claimantVisible`; flags may never carry claimant text (validator enforces) | D19 and the brief disagree about E8/E12 (review item 3) |
+
+## Phase-1 review answers — 2026-10-02 (Shane; recommended option taken each time)
+
+| # | Decision | Review item | Fixture / data effect |
+|---|----------|-------------|-----------------------|
+| D23 | This file (D1–D22) is the authority. The brief's "D26" for the ACV outcome means open item O4, accepted as written. | 1 | none |
+| D24 | D19 wins: E8, E10, E12 reason text stays stored with `claimantVisible: false`; claimant letters show neutral wording only. | 3 | none (current encoding) |
+| D25 | F5 fires only below the limit: estimate ≥ 95% **and < 100%** of the per-claim limit. At or over the limit it is a plain cap → PARTIAL (GC-13 / PAY-G stands). | 4 | applied: F5.hit0 is 9500–9999 bps; rows F5.clear2/3 pass at ≥10000 |
+| D26 | Repair-vs-replace compares by integer cross-multiplication (cost × 10000 vs threshold bps × R), no rounded ratio. Implemented as derived fn `ratio_exceeds_bps` (bool: `num*10000 > bps*den`), fact `d.repairExceedsReplaceBps`; the `path` table tests it. Fixture PAY-I (77001 of 110000 → replace, payable 100000). | 11 | applied: new derived fn, PAY-I; F5's rounded ratio bands stay (provisional) |
+| D27 | O1 auto-deny on, O2 deductible before limit, O3 keep ACV schedule, O4 accept lesser payout, O7 E4 contractual — all defaults confirmed. | O1–O4, O7 | none |
+| D28 | The fact dictionary's hash is recorded in each rule-set envelope and checked at publish. | 21 | envelope schema + hash (task 1.6) |
+| D29 | Deferred or accepted as encoded: fact-to-fact operator (12, a seam); Premier battery stays `RULE_GAP` (17); history counting as encoded (15). | 12, 15, 17 | none |
+
+Still unanswered: P1–P6 above, and review items 5–10, 13, 14, 16, 18–20, 22 (all encoded provisionally; none moves a GC-01..10 fixture).

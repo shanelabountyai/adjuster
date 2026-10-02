@@ -63,6 +63,7 @@
               "days_between",
               "full_years_between",
               "ratio_bps",
+              "ratio_exceeds_bps",
               "count_claims_in_window",
               "sum_prior_paid"
             ]

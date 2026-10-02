@@ -113,7 +113,7 @@ def adjudicate(f):
         ("F2", count(60) >= 1),
         ("F3", (dol - D(f["evidence.proofOfPurchaseDate"])).days < 0),
         ("F4", (start - D(f["product.purchaseDate"])).days > 30 and since < 60),  # PROVISIONAL 30 / 60
-        ("F5", rhu(Fraction(C_ * 10000, t["pcl"])) >= 9500 or 6500 <= ratio <= 7000),  # PROVISIONAL band
+        ("F5", 9500 <= rhu(Fraction(C_ * 10000, t["pcl"])) < 10000 or 6500 <= ratio <= 7000),  # PROVISIONAL band; D25: below the limit only
         ("F6", f["history.claimantContractsWithClaims"] >= 3),
         ("F7", f["evidence.photoMetaDateBeforeLoss"] or f["evidence.documentHashOnOtherClaim"]),
         ("F8", not f["evidence.estimateFromNetwork"] and f["evidence.estimatorIsPayee"]),
@@ -153,7 +153,7 @@ def adjudicate(f):
 def valuate(f, t, C, R, ratio, paid, start, dol):
     """Domain brief s4, steps 1-9, emitting the calc-step trace in the same shape the engine must produce."""
     peril = f["claim.peril"]
-    path = "replace" if ratio > 7000 else "repair"  # C > 70% of R; ratio is half-up bps (D16/D17), see the review's boundary note
+    path = "replace" if C * 10000 > 7000 * R else "repair"  # C > 70% of R, exact cross-multiplication (D26)
     ret = 10000 if not t["acv"] else {0: 10000, 1: 8000, 2: 6000}.get(full_years(D(f["product.purchaseDate"]), dol), 4000)
     price, ded = f["product.purchasePriceCents"], t["ded"][peril]
     regs, steps = {}, []
@@ -271,6 +271,7 @@ def build_pay():
         ("PAY-E", "plus", "depreciation", dict(price=80000, R=90000, C=70000, start=dt.date(2023, 6, 10), dol=dt.date(2025, 7, 15))),
         ("PAY-F", "premier", "price cap", dict(price=100000, R=130000, C=130000, peril="adh")),
         ("PAY-G", "essential", "per-claim cap", dict(price=120000, R=100000, C=62000)),
+        ("PAY-I", "plus", "replace threshold boundary: 77001 of 110000 is 7000.09 bps, replace (D26)", dict(price=120000, R=110000, C=77001)),
     ]
     for pid, tier, what, kw in cases:
         f = facts(tier, **{**base, **kw})

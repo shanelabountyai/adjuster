@@ -5,7 +5,7 @@ Frozen expected values. Tests **read** these; product code must never generate t
 | Dir | Covers | Kind |
 |-----|--------|------|
 | `re/` | RE-01..RE-23, evaluator level: one per operator (01-10), validation failures (11-12), one per calc step (13-18), three-valued logic (19-22), rule gap (23) | `condition`, `condition-list`, `row`, `rule`, `calc`, `validate` |
-| `pay/` | PAY-A..PAY-G: facts in, calc-step trace and payable out. PAY-H is a pointer to GC-02 (a denial carries a null amount) | `valuation`, `ref` |
+| `pay/` | PAY-A..PAY-G and PAY-I (the D26 boundary): facts in, calc-step trace and payable out. PAY-H is a pointer to GC-02 (a denial carries a null amount) | `valuation`, `ref` |
 | `gc/` | GC-01..GC-10: a full fact snapshot in, outcome, reasons, every rule's result, calc trace and cents out | `decision` |
 
 Conventions: amounts are integer cents, rates are basis points, dates are ISO `YYYY-MM-DD`. Facts use the ids in `rules/electronics/facts-v1.json` (flat, dotted). A decision fixture's `expected.rules` lists every rule that ran; compare by `ruleId`, not position. `expected.skippedStages` is non-empty exactly when an objective denial stopped evidence, flags, valuation and authority from running.

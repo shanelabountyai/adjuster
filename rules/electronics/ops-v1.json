@@ -39,7 +39,7 @@
           "then": {
             "outcome": "REFER",
             "reasonCode": "DUPLICATE",
-            "clause": "§8.2",
+            "clause": "\u00a78.2",
             "claimantText": "This appears to duplicate claim {id}.",
             "noteText": "{n} prior claim(s) on this contract and peril within 7 days.",
             "bind": {
@@ -82,7 +82,7 @@
           "then": {
             "outcome": "REFER",
             "reasonCode": "SERIAL_MISMATCH",
-            "clause": "§8.2",
+            "clause": "\u00a78.2",
             "claimantText": "The product identified does not match the covered product.",
             "noteText": "Claimed serial does not match the contract."
           }
@@ -150,7 +150,7 @@
           "then": {
             "outcome": "PEND",
             "reasonCode": "TRANSFER_PROOF",
-            "clause": "§8.1",
+            "clause": "\u00a78.1",
             "claimantText": "We need proof the contract was transferred to you.",
             "noteText": "Claimant is not the holder; transfer proof not accepted."
           }
@@ -195,7 +195,7 @@
           "then": {
             "outcome": "PEND",
             "reasonCode": "DOCUMENT_REQUIRED",
-            "clause": "§8.1",
+            "clause": "\u00a78.1",
             "params": {
               "doc": "proof of purchase"
             },
@@ -246,7 +246,7 @@
           "then": {
             "outcome": "PEND",
             "reasonCode": "DOCUMENT_REQUIRED",
-            "clause": "§8.1",
+            "clause": "\u00a78.1",
             "params": {
               "doc": "repair estimate or diagnostic"
             },
@@ -316,7 +316,7 @@
           "then": {
             "outcome": "PEND",
             "reasonCode": "DOCUMENT_REQUIRED",
-            "clause": "§8.1",
+            "clause": "\u00a78.1",
             "params": {
               "doc": "damage photos"
             },
@@ -386,7 +386,7 @@
           "then": {
             "outcome": "PEND",
             "reasonCode": "DOCUMENT_REQUIRED",
-            "clause": "§8.1",
+            "clause": "\u00a78.1",
             "params": {
               "doc": "incident statement"
             },
@@ -460,7 +460,7 @@
           "then": {
             "outcome": "PEND",
             "reasonCode": "NETWORK_ESTIMATE",
-            "clause": "§8.1",
+            "clause": "\u00a78.1",
             "claimantText": "Please provide an estimate from an authorized servicer.",
             "noteText": "Estimate is not from a network servicer and no second estimate accepted."
           }
@@ -672,14 +672,17 @@
           "when": [
             {
               "fact": "d.estimateVsLimitBps",
-              "op": "gte",
-              "value": 9500
+              "op": "between",
+              "value": [
+                9500,
+                9999
+              ]
             }
           ],
           "then": {
             "outcome": "REFER",
             "reasonCode": "FLAG_F5",
-            "noteText": "Estimate is {r} bps of the per-claim limit.",
+            "noteText": "Estimate is {r} bps of the per-claim limit, just under it.",
             "bind": {
               "r": "d.estimateVsLimitBps"
             }
@@ -731,6 +734,42 @@
               "fact": "d.estimateVsLimitBps",
               "op": "lt",
               "value": 9500
+            },
+            {
+              "fact": "d.repairRatioBps",
+              "op": "gt",
+              "value": 7000
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "F5.clear2",
+          "when": [
+            {
+              "fact": "d.estimateVsLimitBps",
+              "op": "gte",
+              "value": 10000
+            },
+            {
+              "fact": "d.repairRatioBps",
+              "op": "lt",
+              "value": 6500
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "F5.clear3",
+          "when": [
+            {
+              "fact": "d.estimateVsLimitBps",
+              "op": "gte",
+              "value": 10000
             },
             {
               "fact": "d.repairRatioBps",
@@ -1022,7 +1061,7 @@
           "then": {
             "outcome": "REFER",
             "reasonCode": "ABOVE_AUTO_LIMIT",
-            "clause": "§8.3",
+            "clause": "\u00a78.3",
             "claimantVisible": false,
             "noteText": "Payable {amt} above auto-approve limit 50000.",
             "bind": {
