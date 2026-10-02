@@ -2,7 +2,7 @@
 
 ## ▶ Next session: task 1.2 is Shane's (by hand), then 1.7
 
-**2026-10-02 (later):** 1.6 done: `src/rules/canonical.ts` (`canonicalJson`, `sha256Hex`), D28 applied (`factDictionaryHash` in plan/ops, checked by `rules:lint`). `npm test` 200 pass. `docs/trace-by-hand.md` still empty. 1.7 (condition evaluator) does not depend on the trace shape for its cell results, so it can start before 1.2 lands if Shane says go.
+**2026-10-02 (later):** 1.6 done: `src/rules/canonical.ts` (`canonicalJson`, `sha256Hex`), D28 applied (`factDictionaryHash` in plan/ops, checked by `rules:lint`). `npm test` 200 pass. `docs/trace-by-hand.md` still empty. 1.7 (condition evaluator) does not depend on the trace shape for its cell results, so it can start before 1.2 lands. **Shane said go (2026-10-02): next session builds 1.7 now; 1.2 can reshape the trace later.**
 
 **2026-10-02:** Shane is doing 1.2 now; skeleton at `docs/trace-by-hand.md` (facts only, no answers). When it's filled in: compare it to the fixtures' trace shape, adjust `src/rules/schema.ts` + regenerate if they differ, then 1.6. Start sessions in `~/Projects/adjuster`, not `adjuster-kickoff`.
 
