@@ -1,6 +1,8 @@
 # NEXT
 
-## ▶ Next session: 1.12 (CI gate: `decisions:verify`, `fixtures:check`, `rules:lint`; prove it with one tampered decision on a throwaway branch); 1.2 still Shane's
+## ▶ Next session: Phase 1 exit check. 1.2 is still Shane's and blocks the gate. Also the "Before Phase 2" deductible-copy check, and the exit criteria in `docs/phase-1-tasks.md`
+
+**2026-10-02 (1.12 done):** CI runs `seed:decisions:test` → `decisions:verify:test` after vitest (`rules:lint` and `fixtures:check` were already in it). Proof: throwaway branch `tamper/1.12-proof` planted TM-04 (`payableCents + 1` on GC-01, triggers disabled) and CI run 37060007007 failed on that step with `EXPLANATION_INCONSISTENT … 1 failure(s) in 10 decision(s)`. Main run 37060005058 is green. Branch deleted. Weak spot: verify on an empty DB prints OK (0 decisions); CI always seeds first, so it is not guarded.
 
 **2026-10-02 (1.11 done):** `src/rules/adjudicate.ts`: the pure engine (snapshot + pinned plan/ops → `adjuster.trace/0`), GC-01..10 pass, PAY-H covered, a rule gap refers. `src/adjudication/decisions.ts`: `publishRuleSet`, `recordDecision` (the one writer until Phase 2), `verifyDecisions` (eight codes, defined in D30/D31). `scripts/seed-decisions.ts` (`seed:decisions[:test]`) is the clean seed and what CI should run before `decisions:verify:test`. TM-01..08 each fail with exactly their code; the CLI prints `CODE id detail` and exits 1, takes `--as-of`. `valuate` now also returns `calc` (the PAY test strips it). Seam: the "contract not found" short-circuit is still unbuilt (no GC exercises it). `npm test` 316 pass, tsc, eslint, `rules:lint`, `fixtures:check` clean.
 

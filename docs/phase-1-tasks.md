@@ -13,7 +13,7 @@ Nothing else until the invariant holds. No UI, pipeline stages, documents or ove
 - [x] **1.9 Calc-step evaluator.** Cents, bps, half-up. RE-13..RE-18 and PAY-A..PAY-H pass; no float in the module.
 - [x] **1.10 Persistence.** `RuleSetVersion` and `Decision` tables; immutability triggers; explanation NOT NULL + CHECK. VP-01 and PL-04 pass at the DB layer.
 - [x] **1.11 `decisions:verify`.** All eight codes. TM-01..TM-08 loaded below the service each fail with exactly their code; clean seed (GC-01..GC-10 decided) reports OK.
-- [ ] **1.12 CI gate.** Pipeline fails if `decisions:verify`, `fixtures:check` or `rules:lint` fails. Prove it on a throwaway branch with one tampered decision.
+- [x] **1.12 CI gate.** Pipeline fails if `decisions:verify`, `fixtures:check` or `rules:lint` fails. Prove it on a throwaway branch with one tampered decision.
 
 **Exit criteria:** RE, PAY and GC-01..GC-10 fixtures pass; `decisions:verify` OK on the clean seed and failing correctly on TM-01..TM-08; CI enforces it; `grep` finds no plan name, tier or threshold under `src/`.
 
