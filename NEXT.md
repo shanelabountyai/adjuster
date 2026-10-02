@@ -1,6 +1,8 @@
 # NEXT
 
-## ▶ Next session: 1.9 (calc-step evaluator); 1.2 still Shane's
+## ▶ Next session: 1.10 (persistence: RuleSetVersion + Decision tables, immutability triggers); 1.2 still Shane's
+
+**2026-10-02 (1.9 done):** `src/rules/money.ts` (`divHalfUp`, `applyBps`: the one rounding module, integer-only, throws past safe-integer range), `src/rules/calc.ts` (`runSteps`, `valuate`: path, step trace, payable, `contractFulfilled` null when a fulfillment row is UNKNOWN), `src/rules/derive.ts` (`resolveFacts`: all six derived fns + lookups, lazy and memoized; missing input → null). RE-13..18 and PAY-A..G, I pass. PAY-H (denial → null amount) is a decision-pipeline check: cover it when GC-01..10 are wired. Seam: `resolveFacts` turns a lookup PEND/GAP into null; the pipeline must call `evalLookup` itself to tell PEND from RULE_GAP. `npm test` 289 pass, `rules:lint` ok, `fixtures:check` OK.
 
 **2026-10-02 (1.8 done):** `evalLookup` (`unique`: one TRUE row decides even beside UNKNOWN rows; none → PEND or GAP; two → throws), `rootsOf(dict)` (derived → input roots; lookups are their own root, as in the oracle), `evalRule(rows, facts, roots)`. Publish check `OVERLAP` in `validate.ts`: per-fact candidate testing, may over-report for derived facts tied to the same input, never under-reports. RE-23 passes. `npm test` 270 pass, `rules:lint` ok, `fixtures:check` OK. 1.9 next: RE-13..18, PAY-A..I, no float; derived-fact computation (days_between etc.) is not built yet and has no task of its own — fold it into 1.9 or GC wiring.
 
