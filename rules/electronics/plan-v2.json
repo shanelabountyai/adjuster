@@ -1,0 +1,1824 @@
+{
+  "schema": "adjuster.ruleset/1",
+  "kind": "plan",
+  "product": "electronics",
+  "version": 2,
+  "effectiveFrom": "2026-01-01",
+  "factDictionary": "facts-v1",
+  "factDictionaryHash": "3fc666585d7c02bde18c5f73927e37cc5e7976f701e814cc6cec48ab3f551011",
+  "roundingMode": "half_up",
+  "lookups": [
+    {
+      "id": "deductibleCents",
+      "hitPolicy": "unique",
+      "rows": [
+        {
+          "id": "ded.essential",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "essential"
+            }
+          ],
+          "value": 10000
+        },
+        {
+          "id": "ded.plus",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "plus"
+            }
+          ],
+          "value": 7500
+        },
+        {
+          "id": "ded.premier.breakdown",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "breakdown"
+            }
+          ],
+          "value": 2500
+        },
+        {
+          "id": "ded.premier.adh",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "adh"
+            }
+          ],
+          "value": 9900
+        }
+      ],
+      "note": "No row for Premier battery_degradation: the domain brief gives no deductible for it, so that claim hits RULE_GAP."
+    },
+    {
+      "id": "perClaimLimitCents",
+      "hitPolicy": "unique",
+      "rows": [
+        {
+          "id": "pcl.essential",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "essential"
+            }
+          ],
+          "value": 50000
+        },
+        {
+          "id": "pcl.plus",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "plus"
+            }
+          ],
+          "value": 100000
+        },
+        {
+          "id": "pcl.premier",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            }
+          ],
+          "value": 200000
+        }
+      ]
+    },
+    {
+      "id": "aggregateLimitCents",
+      "hitPolicy": "unique",
+      "rows": [
+        {
+          "id": "agg.essential",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "essential"
+            }
+          ],
+          "value": 100000
+        },
+        {
+          "id": "agg.plus",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "plus"
+            }
+          ],
+          "value": 200000
+        },
+        {
+          "id": "agg.premier",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            }
+          ],
+          "value": 400000
+        }
+      ]
+    },
+    {
+      "id": "retentionBps",
+      "hitPolicy": "unique",
+      "rows": [
+        {
+          "id": "ret.acv.0",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "in",
+              "value": [
+                "essential",
+                "plus"
+              ]
+            },
+            {
+              "fact": "d.productAgeYears",
+              "op": "between",
+              "value": [
+                0,
+                0
+              ]
+            }
+          ],
+          "value": 10000
+        },
+        {
+          "id": "ret.acv.1",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "in",
+              "value": [
+                "essential",
+                "plus"
+              ]
+            },
+            {
+              "fact": "d.productAgeYears",
+              "op": "between",
+              "value": [
+                1,
+                1
+              ]
+            }
+          ],
+          "value": 8000
+        },
+        {
+          "id": "ret.acv.2",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "in",
+              "value": [
+                "essential",
+                "plus"
+              ]
+            },
+            {
+              "fact": "d.productAgeYears",
+              "op": "between",
+              "value": [
+                2,
+                2
+              ]
+            }
+          ],
+          "value": 6000
+        },
+        {
+          "id": "ret.acv.3plus",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "in",
+              "value": [
+                "essential",
+                "plus"
+              ]
+            },
+            {
+              "fact": "d.productAgeYears",
+              "op": "gte",
+              "value": 3
+            }
+          ],
+          "value": 4000
+        },
+        {
+          "id": "ret.rc",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            }
+          ],
+          "value": 10000
+        }
+      ],
+      "note": "ACV: retain 1 - 20% per full year, depreciation capped at 60% (domain brief s4 step 3). Replacement-cost plans retain 100%."
+    },
+    {
+      "id": "path",
+      "hitPolicy": "unique",
+      "rows": [
+        {
+          "id": "path.replace",
+          "when": [
+            {
+              "fact": "d.repairExceedsReplaceBps",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "value": "replace"
+        },
+        {
+          "id": "path.repair",
+          "when": [
+            {
+              "fact": "d.repairExceedsReplaceBps",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "value": "repair"
+        }
+      ],
+      "note": "C > 70% of R means replace (D17). Compared by integer cross-multiplication, not a rounded ratio (D26)."
+    },
+    {
+      "id": "fulfillsOnReplace",
+      "hitPolicy": "unique",
+      "rows": [
+        {
+          "id": "ful.es",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "in",
+              "value": [
+                "essential",
+                "plus"
+              ]
+            }
+          ],
+          "value": true
+        },
+        {
+          "id": "ful.premier",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            }
+          ],
+          "value": false
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "E1",
+      "name": "Contract active on date of loss",
+      "class": "C",
+      "stage": "coverage_period",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E1.pass",
+          "when": [
+            {
+              "fact": "contract.status",
+              "op": "eq",
+              "value": "active"
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E1.fail",
+          "when": [
+            {
+              "fact": "contract.status",
+              "op": "neq",
+              "value": "active"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "CONTRACT_NOT_ACTIVE",
+            "clause": "\u00a72.1",
+            "claimantText": "Your contract was not active on the date of loss.",
+            "noteText": "Contract status is {status}.",
+            "bind": {
+              "status": "contract.status"
+            }
+          }
+        }
+      ],
+      "note": "Status-based. If E1 also tested the term dates it would fire alongside E2 and GC-04 would cite three reasons."
+    },
+    {
+      "id": "E2",
+      "name": "Date of loss within term",
+      "class": "C",
+      "stage": "coverage_period",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E2.pass",
+          "when": [
+            {
+              "fact": "d.daysSinceStart",
+              "op": "gte",
+              "value": 0
+            },
+            {
+              "fact": "d.daysToTermEnd",
+              "op": "gte",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E2.before",
+          "when": [
+            {
+              "fact": "d.daysSinceStart",
+              "op": "lt",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "OUTSIDE_TERM",
+            "clause": "\u00a72.1",
+            "claimantText": "The loss occurred outside your coverage term ({start}\u2013{end}).",
+            "noteText": "Loss {dol} outside {start}-{end}.",
+            "bind": {
+              "start": "contract.termStart",
+              "end": "contract.termEnd",
+              "dol": "claim.dateOfLoss"
+            }
+          }
+        },
+        {
+          "id": "E2.after",
+          "when": [
+            {
+              "fact": "d.daysToTermEnd",
+              "op": "lt",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "OUTSIDE_TERM",
+            "clause": "\u00a72.1",
+            "claimantText": "The loss occurred outside your coverage term ({start}\u2013{end}).",
+            "noteText": "Loss {dol} outside {start}-{end}.",
+            "bind": {
+              "start": "contract.termStart",
+              "end": "contract.termEnd",
+              "dol": "claim.dateOfLoss"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E3",
+      "name": "Waiting period",
+      "class": "C",
+      "stage": "coverage_period",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E3.pass.es",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "in",
+              "value": [
+                "essential",
+                "plus"
+              ]
+            },
+            {
+              "fact": "d.daysSinceStart",
+              "op": "gte",
+              "value": 30
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E3.pass.pr",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "d.daysSinceStart",
+              "op": "gte",
+              "value": 14
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E3.before",
+          "when": [
+            {
+              "fact": "d.daysSinceStart",
+              "op": "lt",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "PASS",
+            "noteText": "Before term start: E2 decides."
+          }
+        },
+        {
+          "id": "E3.fail.es",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "in",
+              "value": [
+                "essential",
+                "plus"
+              ]
+            },
+            {
+              "fact": "d.daysSinceStart",
+              "op": "between",
+              "value": [
+                0,
+                29
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "WAITING_PERIOD",
+            "clause": "\u00a72.2",
+            "claimantText": "The loss occurred during the {N}-day waiting period.",
+            "noteText": "Loss {days} days after start; waiting period {N}.",
+            "params": {
+              "N": 30
+            },
+            "bind": {
+              "days": "d.daysSinceStart"
+            }
+          }
+        },
+        {
+          "id": "E3.fail.pr",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "d.daysSinceStart",
+              "op": "between",
+              "value": [
+                0,
+                13
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "WAITING_PERIOD",
+            "clause": "\u00a72.2",
+            "claimantText": "The loss occurred during the {N}-day waiting period.",
+            "noteText": "Loss {days} days after start; waiting period {N}.",
+            "params": {
+              "N": 14
+            },
+            "bind": {
+              "days": "d.daysSinceStart"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E4",
+      "name": "Reported within 30 days of loss",
+      "class": "C",
+      "stage": "coverage_period",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E4.pass",
+          "when": [
+            {
+              "fact": "d.daysReportLag",
+              "op": "lte",
+              "value": 30
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E4.fail",
+          "when": [
+            {
+              "fact": "d.daysReportLag",
+              "op": "gt",
+              "value": 30
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "LATE_REPORT",
+            "clause": "\u00a72.3",
+            "params": {
+              "N": 30
+            },
+            "claimantText": "Your claim was reported more than {N} days after the loss and needs review.",
+            "noteText": "Reported {lag} days after loss.",
+            "bind": {
+              "lag": "d.daysReportLag"
+            }
+          }
+        }
+      ],
+      "note": "Contractual by default (O7). Move to ops by moving this rule."
+    },
+    {
+      "id": "E6",
+      "name": "Peril is covered",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E6.pass.essential",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "essential"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "in",
+              "value": [
+                "breakdown"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E6.pass.plus",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "plus"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "in",
+              "value": [
+                "breakdown",
+                "adh"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E6.pass.premier",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "in",
+              "value": [
+                "breakdown",
+                "adh",
+                "battery_degradation"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E6.fail.essential",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "essential"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "not_in",
+              "value": [
+                "breakdown"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PERIL_NOT_COVERED",
+            "clause": "\u00a73.1",
+            "claimantText": "Your plan does not cover {peril}.",
+            "noteText": "Peril {peril} not in plan perils.",
+            "bind": {
+              "peril": "claim.peril"
+            }
+          }
+        },
+        {
+          "id": "E6.fail.plus",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "plus"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "not_in",
+              "value": [
+                "breakdown",
+                "adh"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PERIL_NOT_COVERED",
+            "clause": "\u00a73.1",
+            "claimantText": "Your plan does not cover {peril}.",
+            "noteText": "Peril {peril} not in plan perils.",
+            "bind": {
+              "peril": "claim.peril"
+            }
+          }
+        },
+        {
+          "id": "E6.fail.premier",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "not_in",
+              "value": [
+                "breakdown",
+                "adh",
+                "battery_degradation"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PERIL_NOT_COVERED",
+            "clause": "\u00a73.1",
+            "claimantText": "Your plan does not cover {peril}.",
+            "noteText": "Peril {peril} not in plan perils.",
+            "bind": {
+              "peril": "claim.peril"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E7",
+      "name": "Cosmetic only",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E7.pass",
+          "when": [
+            {
+              "fact": "claim.cosmeticOnly",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E7.fail",
+          "when": [
+            {
+              "fact": "claim.cosmeticOnly",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "COSMETIC_ONLY",
+            "clause": "\u00a74.3",
+            "claimantText": "Cosmetic damage that does not affect function is excluded.",
+            "noteText": "Cosmetic only, function unaffected."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E8",
+      "name": "Pre-existing condition",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E8.pass",
+          "when": [
+            {
+              "fact": "claim.preExisting",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E8.fail",
+          "when": [
+            {
+              "fact": "claim.preExisting",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "PRE_EXISTING",
+            "clause": "\u00a74.1",
+            "claimantText": "The condition existed before coverage began.",
+            "claimantVisible": false,
+            "noteText": "Pre-existing: refer, recommend deny."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E9",
+      "name": "Consumable or accessory",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E9.pass.none",
+          "when": [
+            {
+              "fact": "claim.consumableOrAccessory",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E9.pass.battery",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "claim.consumableOrAccessory",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "battery_degradation"
+            },
+            {
+              "fact": "claim.batteryCapacityPct",
+              "op": "lt",
+              "value": 80
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E9.fail.es",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "in",
+              "value": [
+                "essential",
+                "plus"
+              ]
+            },
+            {
+              "fact": "claim.consumableOrAccessory",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "CONSUMABLE",
+            "clause": "\u00a74.2",
+            "claimantText": "Batteries, consumables and accessories are excluded.",
+            "noteText": "Consumable or accessory."
+          }
+        },
+        {
+          "id": "E9.fail.pr",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "claim.consumableOrAccessory",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "fact": "claim.peril",
+              "op": "neq",
+              "value": "battery_degradation"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "CONSUMABLE",
+            "clause": "\u00a74.2",
+            "claimantText": "Batteries, consumables and accessories are excluded.",
+            "noteText": "Consumable or accessory."
+          }
+        },
+        {
+          "id": "E9.fail.pr.battery",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "claim.consumableOrAccessory",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "battery_degradation"
+            },
+            {
+              "fact": "claim.batteryCapacityPct",
+              "op": "gte",
+              "value": 80
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "CONSUMABLE",
+            "clause": "\u00a74.2",
+            "claimantText": "Batteries, consumables and accessories are excluded.",
+            "noteText": "Battery capacity {pct}% is not below 80%.",
+            "bind": {
+              "pct": "claim.batteryCapacityPct"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E10",
+      "name": "Unauthorized repair or modification",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E10.pass",
+          "when": [
+            {
+              "fact": "claim.unauthorizedRepair",
+              "op": "eq",
+              "value": "none"
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E10.declared",
+          "when": [
+            {
+              "fact": "claim.unauthorizedRepair",
+              "op": "eq",
+              "value": "declared"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "UNAUTHORIZED_REPAIR",
+            "clause": "\u00a74.4",
+            "claimantText": "Repairs or modifications by a non-authorized servicer are excluded.",
+            "noteText": "Declared unauthorized repair."
+          }
+        },
+        {
+          "id": "E10.suspected",
+          "when": [
+            {
+              "fact": "claim.unauthorizedRepair",
+              "op": "eq",
+              "value": "suspected"
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "UNAUTHORIZED_REPAIR_SUSPECTED",
+            "clause": "\u00a74.4",
+            "claimantText": "Repairs or modifications by a non-authorized servicer are excluded.",
+            "claimantVisible": false,
+            "noteText": "Suspected unauthorized repair: refer."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E11",
+      "name": "Commercial or rental use",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E11.pass",
+          "when": [
+            {
+              "fact": "claim.commercialUse",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E11.fail",
+          "when": [
+            {
+              "fact": "claim.commercialUse",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "COMMERCIAL_USE",
+            "clause": "\u00a74.5",
+            "claimantText": "Products used commercially are excluded.",
+            "noteText": "Commercial or rental use."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E12",
+      "name": "Intentional damage, abuse, misuse",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E12.pass",
+          "when": [
+            {
+              "fact": "claim.intentionalOrAbuse",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E12.fail",
+          "when": [
+            {
+              "fact": "claim.intentionalOrAbuse",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "ABUSE",
+            "clause": "\u00a74.6",
+            "claimantText": "Damage from abuse or intentional acts is excluded.",
+            "claimantVisible": false,
+            "noteText": "Abuse or intentional damage alleged: refer."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E13",
+      "name": "Manufacturer warranty or recall",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E13.pass.other",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "neq",
+              "value": "breakdown"
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E13.pass",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "breakdown"
+            },
+            {
+              "fact": "claim.inMfrWarrantyOrRecall",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E13.fail",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "breakdown"
+            },
+            {
+              "fact": "claim.inMfrWarrantyOrRecall",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "MFR_WARRANTY",
+            "clause": "\u00a74.7",
+            "claimantText": "This failure is covered by the manufacturer's warranty; please contact them.",
+            "noteText": "Within manufacturer warranty or open recall."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E14",
+      "name": "Lost, stolen or unavailable",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E14.pass",
+          "when": [
+            {
+              "fact": "claim.productUnavailable",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E14.fail",
+          "when": [
+            {
+              "fact": "claim.productUnavailable",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "LOSS_THEFT",
+            "clause": "\u00a74.8",
+            "claimantText": "Loss and theft are not covered.",
+            "noteText": "Product lost, stolen or unavailable."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E18",
+      "name": "Software, data or virus",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E18.pass",
+          "when": [
+            {
+              "fact": "claim.softwareOrData",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E18.fail",
+          "when": [
+            {
+              "fact": "claim.softwareOrData",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "SOFTWARE_DATA",
+            "clause": "\u00a74.9",
+            "claimantText": "Software and data issues are excluded.",
+            "noteText": "Software or data issue."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E19",
+      "name": "External cause",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E19.pass",
+          "when": [
+            {
+              "fact": "claim.externalCause",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E19.fail",
+          "when": [
+            {
+              "fact": "claim.externalCause",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "EXTERNAL_CAUSE",
+            "clause": "\u00a74.10",
+            "claimantText": "Damage from external events is excluded.",
+            "noteText": "External cause."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E15",
+      "name": "Claim frequency",
+      "class": "C",
+      "stage": "frequency_limits",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E15.fail.essential",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "essential"
+            },
+            {
+              "fact": "d.claims12mAll",
+              "op": "gte",
+              "value": 2
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "FREQUENCY_LIMIT",
+            "clause": "\u00a77.1",
+            "params": {
+              "N": 2
+            },
+            "claimantText": "You have reached the limit of {N} claims in 12 months.",
+            "noteText": "{count} prior claims in 12 months; limit {N}.",
+            "bind": {
+              "count": "d.claims12mAll"
+            }
+          }
+        },
+        {
+          "id": "E15.pass.essential",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "essential"
+            },
+            {
+              "fact": "d.claims12mAll",
+              "op": "lt",
+              "value": 2
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E15.fail.plus",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "plus"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "adh"
+            },
+            {
+              "fact": "d.claims12mAdh",
+              "op": "gte",
+              "value": 2
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "FREQUENCY_LIMIT",
+            "clause": "\u00a77.1",
+            "params": {
+              "N": 2
+            },
+            "claimantText": "You have reached the limit of {N} claims in 12 months.",
+            "noteText": "{count} prior claims in 12 months; limit {N}.",
+            "bind": {
+              "count": "d.claims12mAdh"
+            }
+          }
+        },
+        {
+          "id": "E15.pass.plus",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "plus"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "adh"
+            },
+            {
+              "fact": "d.claims12mAdh",
+              "op": "lt",
+              "value": 2
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E15.na.plus",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "plus"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "neq",
+              "value": "adh"
+            }
+          ],
+          "then": {
+            "outcome": "PASS",
+            "noteText": "Frequency limit counts ADH claims only."
+          }
+        },
+        {
+          "id": "E15.fail.premier",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "adh"
+            },
+            {
+              "fact": "d.claims12mAdh",
+              "op": "gte",
+              "value": 3
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "FREQUENCY_LIMIT",
+            "clause": "\u00a77.1",
+            "params": {
+              "N": 3
+            },
+            "claimantText": "You have reached the limit of {N} claims in 12 months.",
+            "noteText": "{count} prior claims in 12 months; limit {N}.",
+            "bind": {
+              "count": "d.claims12mAdh"
+            }
+          }
+        },
+        {
+          "id": "E15.pass.premier",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "adh"
+            },
+            {
+              "fact": "d.claims12mAdh",
+              "op": "lt",
+              "value": 3
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E15.na.premier",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "neq",
+              "value": "adh"
+            }
+          ],
+          "then": {
+            "outcome": "PASS",
+            "noteText": "Frequency limit counts ADH claims only."
+          }
+        }
+      ],
+      "note": "Counts prior APPROVE/PARTIAL claims within 365 days of the date of loss. Whether denied claims count is not stated in the brief."
+    },
+    {
+      "id": "E16",
+      "name": "Aggregate remaining above 0",
+      "class": "C",
+      "stage": "frequency_limits",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E16.pass.essential",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "essential"
+            },
+            {
+              "fact": "d.sumPriorPaid",
+              "op": "lt",
+              "value": 100000
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E16.pass.plus",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "plus"
+            },
+            {
+              "fact": "d.sumPriorPaid",
+              "op": "lt",
+              "value": 200000
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E16.pass.premier",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "d.sumPriorPaid",
+              "op": "lt",
+              "value": 400000
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E16.fail.essential",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "essential"
+            },
+            {
+              "fact": "d.sumPriorPaid",
+              "op": "gte",
+              "value": 100000
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "AGGREGATE_EXHAUSTED",
+            "clause": "\u00a76.1",
+            "claimantText": "Your contract's total limit has been reached.",
+            "noteText": "Paid {paid} of aggregate {limit}.",
+            "params": {
+              "limit": 100000
+            },
+            "bind": {
+              "paid": "d.sumPriorPaid"
+            }
+          }
+        },
+        {
+          "id": "E16.fail.plus",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "plus"
+            },
+            {
+              "fact": "d.sumPriorPaid",
+              "op": "gte",
+              "value": 200000
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "AGGREGATE_EXHAUSTED",
+            "clause": "\u00a76.1",
+            "claimantText": "Your contract's total limit has been reached.",
+            "noteText": "Paid {paid} of aggregate {limit}.",
+            "params": {
+              "limit": 200000
+            },
+            "bind": {
+              "paid": "d.sumPriorPaid"
+            }
+          }
+        },
+        {
+          "id": "E16.fail.premier",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "premier"
+            },
+            {
+              "fact": "d.sumPriorPaid",
+              "op": "gte",
+              "value": 400000
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "AGGREGATE_EXHAUSTED",
+            "clause": "\u00a76.1",
+            "claimantText": "Your contract's total limit has been reached.",
+            "noteText": "Paid {paid} of aggregate {limit}.",
+            "params": {
+              "limit": 400000
+            },
+            "bind": {
+              "paid": "d.sumPriorPaid"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "payout": {
+    "steps": [
+      {
+        "id": "c1",
+        "op": "start_from",
+        "operand": {
+          "fact": "claim.coveredRepairCents"
+        },
+        "reg": "L",
+        "when": [
+          {
+            "fact": "lookup.path",
+            "op": "eq",
+            "value": "repair"
+          }
+        ],
+        "label": "Loss = covered repair cost C (repair path)"
+      },
+      {
+        "id": "c2",
+        "op": "start_from",
+        "operand": {
+          "fact": "claim.replacementValueCents"
+        },
+        "reg": "L",
+        "when": [
+          {
+            "fact": "lookup.path",
+            "op": "eq",
+            "value": "replace"
+          }
+        ],
+        "label": "Loss = replacement value R (replace path)"
+      },
+      {
+        "id": "c3",
+        "op": "apply_bps",
+        "operand": {
+          "fact": "lookup.retentionBps"
+        },
+        "reg": "L",
+        "when": [
+          {
+            "fact": "lookup.path",
+            "op": "eq",
+            "value": "replace"
+          }
+        ],
+        "label": "Basis V: depreciate R on an ACV plan"
+      },
+      {
+        "id": "c4",
+        "op": "cap_at",
+        "operand": {
+          "fact": "product.purchasePriceCents"
+        },
+        "reg": "L",
+        "label": "Limit of liability: never above purchase price"
+      },
+      {
+        "id": "c5",
+        "op": "subtract",
+        "operand": {
+          "fact": "lookup.deductibleCents"
+        },
+        "reg": "L",
+        "label": "Deductible"
+      },
+      {
+        "id": "c6",
+        "op": "floor_at",
+        "operand": {
+          "const": 0
+        },
+        "reg": "L",
+        "label": "Under the deductible pays 0, not negative"
+      },
+      {
+        "id": "c7",
+        "op": "start_from",
+        "operand": {
+          "reg": "L"
+        },
+        "reg": "DED",
+        "label": "Remember the amount after deductible"
+      },
+      {
+        "id": "c8",
+        "op": "cap_at",
+        "operand": {
+          "fact": "lookup.perClaimLimitCents"
+        },
+        "reg": "L",
+        "label": "Per-claim limit"
+      },
+      {
+        "id": "c9",
+        "op": "start_from",
+        "operand": {
+          "fact": "lookup.aggregateLimitCents"
+        },
+        "reg": "AGG",
+        "label": "Aggregate limit"
+      },
+      {
+        "id": "c10",
+        "op": "subtract",
+        "operand": {
+          "fact": "d.sumPriorPaid"
+        },
+        "reg": "AGG",
+        "label": "less amounts already paid (deductibles never erode it)"
+      },
+      {
+        "id": "c11",
+        "op": "floor_at",
+        "operand": {
+          "const": 0
+        },
+        "reg": "AGG"
+      },
+      {
+        "id": "c12",
+        "op": "cap_at",
+        "operand": {
+          "reg": "AGG"
+        },
+        "reg": "L",
+        "label": "Aggregate remaining caps this payment"
+      },
+      {
+        "id": "c13",
+        "op": "start_from",
+        "operand": {
+          "reg": "AGG"
+        },
+        "reg": "AFTER"
+      },
+      {
+        "id": "c14",
+        "op": "subtract",
+        "operand": {
+          "reg": "L"
+        },
+        "reg": "AFTER",
+        "label": "Aggregate remaining after this payment"
+      }
+    ],
+    "outputs": {
+      "payableCents": "L",
+      "afterDeductibleCents": "DED",
+      "aggregateRemainingAfterCents": "AFTER"
+    }
+  },
+  "fulfillment": [
+    {
+      "id": "ful.replacement",
+      "when": [
+        {
+          "fact": "lookup.path",
+          "op": "eq",
+          "value": "replace"
+        },
+        {
+          "fact": "lookup.fulfillsOnReplace",
+          "op": "eq",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "ful.aggregate",
+      "when": [
+        {
+          "fact": "calc.aggregateRemainingAfterCents",
+          "op": "lte",
+          "value": 0
+        }
+      ]
+    }
+  ]
+}

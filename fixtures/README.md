@@ -6,7 +6,10 @@ Frozen expected values. Tests **read** these; product code must never generate t
 |-----|--------|------|
 | `re/` | RE-01..RE-23, evaluator level: one per operator (01-10), validation failures (11-12), one per calc step (13-18), three-valued logic (19-22), rule gap (23) | `condition`, `condition-list`, `row`, `rule`, `calc`, `validate` |
 | `pay/` | PAY-A..PAY-G and PAY-I (the D26 boundary): facts in, calc-step trace and payable out. PAY-H is a pointer to GC-02 (a denial carries a null amount) | `valuation`, `ref` |
-| `gc/` | GC-01..GC-10: a full fact snapshot in, outcome, reasons, every rule's result, calc trace and cents out | `decision` |
+| `gc/` | GC-01..GC-10 and GC-12..GC-14: a full fact snapshot in, outcome, reasons, every rule's result, calc trace and cents out. `plan` is the contract's pin; `ops` is the version in force on `asOf` (D35, so GC-04 names `ops-v2`) | `decision` |
+| `rv/` | RV-01: GC-01's loss under a contract sold before `plan-v2` and one sold after; each case is a `decision` fixture | `rule-version` |
+| `vp/` | VP-02..VP-04: version list + contract pin + `asOf` → `{plan, ops}`, or `{error: NO_EFFECTIVE_VERSION, kind}`. Dates of loss and report are there to be ignored | `selection` |
+| `pl/` | PL-06: a claim whose contract is not on file → no rule runs, no decision, claim `REFERRED` (D35). PL-01..05 are behaviours with no data of their own | `pipeline` |
 
 Conventions: amounts are integer cents, rates are basis points, dates are ISO `YYYY-MM-DD`. Facts use the ids in `rules/electronics/facts-v1.json` (flat, dotted). A decision fixture's `expected.rules` lists every rule that ran; compare by `ruleId`, not position. `expected.skippedStages` is non-empty exactly when an objective denial stopped evidence, flags, valuation and authority from running.
 

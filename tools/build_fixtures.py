@@ -26,6 +26,19 @@ TIER = {
 }
 DOC_OK = ("accepted", "waived")
 
+# D35: the second versions, one change each. Plan by the contract's pin; ops by asOf (D3).
+PLANS = {"plan-v1": dict(effective=dt.date(2025, 1, 1), tiers=TIER),
+         "plan-v2": dict(effective=dt.date(2026, 1, 1), tiers={**TIER, "essential": {**TIER["essential"], "ded": {"breakdown": 10000, "adh": 10000}}})}
+OPS = {"ops-v1": dict(effective=dt.date(2025, 1, 1), auto_limit=50000),
+       "ops-v2": dict(effective=dt.date(2026, 4, 1), auto_limit=75000)}
+
+
+def select_ops(asof, versions=None):
+    """Latest published ops with effectiveFrom <= asOf (inclusive); a draft is never selected. None = no effective version."""
+    versions = versions or [dict(name=n, kind="ops", status="published", effectiveFrom=iso(o["effective"])) for n, o in OPS.items()]
+    ok = [v for v in versions if v["kind"] == "ops" and v["status"] == "published" and D(v["effectiveFrom"]) <= asof]
+    return max(ok, key=lambda v: v["effectiveFrom"])["name"] if ok else None
+
 
 def rhu(x: Fraction) -> int:
     """The ONE rounding rule (D16): round half up, to integer cents. Non-negative inputs only."""
@@ -49,8 +62,8 @@ def full_years(a: dt.date, b: dt.date) -> int:
 
 # ------------------------------------------------------------------ the adjudicator
 
-def adjudicate(f):
-    t = TIER[f["contract.planCode"]]
+def adjudicate(f, plan="plan-v1", ops="ops-v1"):
+    t = PLANS[plan]["tiers"][f["contract.planCode"]]
     start, end, dol, rep = D(f["contract.termStart"]), D(f["contract.termEnd"]), D(f["claim.dateOfLoss"]), D(f["claim.dateReported"])
     peril = f["claim.peril"]
     since, to_end, lag = (dol - start).days, (end - dol).days, (rep - dol).days
@@ -131,7 +144,7 @@ def adjudicate(f):
     if not deny and not pend:
         valuation, payable, after_ded, agg_after = valuate(f, t, C_, R_, ratio, paid, start, dol)
         fulfilled = (valuation["path"] == "replace" and t["fulfills"]) or agg_after <= 0
-        add("authority", "E23", "REFER" if payable > 50000 else "PASS")
+        add("authority", "E23", "REFER" if payable > OPS[ops]["auto_limit"] else "PASS")
     out.sort(key=lambda x: STAGES.index(x[0]))  # stable: file order inside a stage
 
     if deny: outcome = "DENY"
@@ -214,9 +227,10 @@ def prior(cid, dol, peril, paid, outcome="APPROVE"):
     return dict(claimId=cid, dateOfLoss=iso(dol), peril=peril, outcome=outcome, paidCents=paid)
 
 
-def decision_fixture(fid, title, source, f, note=None):
+def decision_fixture(fid, title, source, f, note=None, plan="plan-v1"):
     asof = D(f["claim.dateOfLoss"]) + dt.timedelta(days=3)
-    doc = {"id": fid, "kind": "decision", "title": title, "source": source, "asOf": iso(asof), "plan": "plan-v1", "ops": "ops-v1", "facts": f, "expected": adjudicate(f)}
+    ops = select_ops(asof)
+    doc = {"id": fid, "kind": "decision", "title": title, "source": source, "asOf": iso(asof), "plan": plan, "ops": ops, "facts": f, "expected": adjudicate(f, plan, ops)}
     if note: doc["note"] = note
     return doc
 
@@ -257,8 +271,64 @@ def build_gc():
                       prior=[prior("GC-09-P1", d9 - dt.timedelta(days=100), "adh", 5000), prior("GC-09-P2", d9 - dt.timedelta(days=200), "adh", 5000)])))
     gcs.append(("GC-10", "Premier, estimate serial differs from the contract serial", "domain brief s11",
                 facts("premier", price=90000, R=80000, C=40000, **{"claim.serialMatchesContract": False})))
+    d12 = s + dt.timedelta(days=16)
+    gcs.append(("GC-12", "Premier, receipt dated after the date of loss; loss on day 16, two days after the waiting period", "domain brief s11",
+                facts("premier", dol=d12, price=90000, R=80000, C=40000, **{"evidence.proofOfPurchaseDate": iso(d12 + dt.timedelta(days=1))})))
+    gcs.append(("GC-13", "Essential, PAY-G: the per-claim limit caps the payment (no F5 at or over the limit, D25)", "domain brief s11 / PAY-G",
+                facts("essential", price=120000, R=100000, C=62000)))
+    gcs.append(("GC-14", "Essential, declared prior third-party repair and used in a cafe", "domain brief s11",
+                facts("essential", price=60000, R=60000, C=20000, **{"claim.unauthorizedRepair": "declared", "claim.commercialUse": True})))
     for gid, title, src, f in gcs:
         write("gc", decision_fixture(gid, title, src, f))
+
+
+# ------------------------------------------------------------------ Phase 2: RV, VP, PL (D35)
+
+def build_phase2():
+    dol = dt.date(2026, 8, 3)
+    cases = []
+    for plan, start in (("plan-v1", dt.date(2025, 12, 1)), ("plan-v2", dt.date(2026, 2, 1))):
+        doc = decision_fixture(None, None, None, facts("essential", start=start, dol=dol, price=90000, R=60000, C=30000), plan=plan)
+        cases.append({"contract": f"sold {iso(start)}, pins {plan}", **{k: doc[k] for k in ("asOf", "plan", "ops", "facts", "expected")}})
+    write("rv", {"id": "RV-01", "kind": "rule-version", "title": "The same loss under a contract sold before plan-v2 and one sold after: each keeps the terms it bought",
+                 "source": "PRD P0-2 / D3 / D35", "note": "GC-01's claim. Only the contract (dates, pin) differs; plan-v2 raised the Essential deductible.",
+                 "cases": cases})
+
+    versions = [dict(name=n, kind="plan", status="published", effectiveFrom=iso(p["effective"])) for n, p in PLANS.items()] + \
+               [dict(name=n, kind="ops", status="published", effectiveFrom=iso(o["effective"])) for n, o in OPS.items()] + \
+               [dict(name="ops-v3", kind="ops", status="draft", effectiveFrom="2026-06-01")]
+
+    def select(pin, asof, vs):
+        if D(next(v for v in vs if v["name"] == pin)["effectiveFrom"]) > asof: return {"error": "NO_EFFECTIVE_VERSION", "kind": "plan"}
+        o = select_ops(asof, vs)
+        return {"plan": pin, "ops": o} if o else {"error": "NO_EFFECTIVE_VERSION", "kind": "ops"}
+
+    def case(name, pin, dol, asof, vs=None):
+        c = {"name": name, "contract": {"planVersion": pin}, "dateOfLoss": dol, "dateReported": iso(D(dol) + dt.timedelta(days=2)), "asOf": asof}
+        if vs: c["versions"] = vs
+        c["expected"] = select(pin, D(asof), vs or versions)
+        return c
+
+    vp = [
+        ("VP-02", "The plan comes from the contract's pin, never the date of loss, the date reported or the latest version", [
+            case("v1 contract, everything after plan-v2's effective date", "plan-v1", "2026-08-03", "2026-08-06"),
+            case("v2 contract", "plan-v2", "2026-08-03", "2026-08-06")]),
+        ("VP-03", "Ops is the latest published version effective on asOf (inclusive), never by date of loss; a draft is never selected", [
+            case("day before ops-v2", "plan-v1", "2026-03-20", "2026-03-31"),
+            case("ops-v2's effective date, loss before it", "plan-v1", "2026-03-20", "2026-04-01"),
+            case("after the draft ops-v3's date", "plan-v1", "2026-03-20", "2026-07-01")]),
+        ("VP-04", "No effective version: no decision, a coded error naming the kind", [
+            case("pinned plan not yet effective on asOf", "plan-v2", "2025-12-20", "2025-12-31"),
+            case("only a draft ops exists", "plan-v1", "2025-06-01", "2025-06-04",
+                 vs=[v for v in versions if v["kind"] == "plan" or v["status"] == "draft"])]),
+    ]
+    for fid, title, cs in vp:
+        write("vp", {"id": fid, "kind": "selection", "title": title, "source": "PRD P0-2 / D3 / D35", "versions": versions, "cases": cs})
+
+    claim = {k: v for k, v in facts("essential", price=90000, R=60000, C=30000).items() if k.startswith("claim.")}
+    write("pl", {"id": "PL-06", "kind": "pipeline", "title": "Contract not found short-circuits: no rule runs, no decision row, the claim is referred",
+                 "source": "domain brief s2 / D12 / D35", "contracts": ["CT-0001"], "claim": {"contractId": "CT-0404", "facts": claim},
+                 "expected": {"error": "CONTRACT_NOT_FOUND", "decision": None, "claimStatus": "REFERRED", "rulesRun": []}})
 
 
 def build_pay():
@@ -411,5 +481,5 @@ def build_re():
 
 
 if __name__ == "__main__":
-    build_re(); build_pay(); build_gc()
+    build_re(); build_pay(); build_gc(); build_phase2()
     print("fixtures written to", os.path.normpath(ROOT))

@@ -30,8 +30,17 @@ GC_KEY = {  # outcome, payable (None = not stated in the brief), reasons
     "GC-01": ("APPROVE", 25000, []), "GC-02": ("DENY", None, ["E6"]), "GC-03": ("DENY", None, ["E3"]), "GC-04": ("DENY", None, ["E2", "E7"]),
     "GC-05": ("REFER", 77500, ["E23"]), "GC-06": ("APPROVE", 0, []), "GC-07": ("PARTIAL", 30000, []), "GC-08": ("APPROVE", 46500, []),
     "GC-09": ("DENY", None, ["E15"]), "GC-10": ("REFER", None, ["E5"]),
+    "GC-12": ("REFER", None, ["F1", "F3"]), "GC-13": ("PARTIAL", 50000, []), "GC-14": ("DENY", None, ["E10", "E11"]),
 }
-DENY_ONLY_PAYABLE_NULL = {"GC-02", "GC-03", "GC-04", "GC-09"}
+DENY_ONLY_PAYABLE_NULL = {"GC-02", "GC-03", "GC-04", "GC-09", "GC-14"}
+# D35, typed from decisions.md: GC-01's claim, 30000 less the deductible each contract bought (5000 / 10000)
+RV_KEY = [("plan-v1", "APPROVE", 25000), ("plan-v2", "APPROVE", 20000)]
+VP_KEY = {
+    "VP-02": [("plan-v1", "ops-v2"), ("plan-v2", "ops-v2")],
+    "VP-03": [("plan-v1", "ops-v1"), ("plan-v1", "ops-v2"), ("plan-v1", "ops-v2")],
+    "VP-04": [("NO_EFFECTIVE_VERSION", "plan"), ("NO_EFFECTIVE_VERSION", "ops")],
+}
+PL_KEY = {"PL-06": {"error": "CONTRACT_NOT_FOUND", "decision": None, "claimStatus": "REFERRED", "rulesRun": []}}
 
 STAGES = ["intake", "contract_verification", "coverage_period", "peril_exclusions", "frequency_limits", "evidence", "red_flags", "valuation", "deductible_limits", "authority", "decision"]
 SKIPPED_ON_DENY = ["evidence", "red_flags", "valuation", "deductible_limits", "authority"]
@@ -186,8 +195,33 @@ def decide(plan, ops, dic, facts):
 
 # ------------------------------------------------------------------ checks
 
-dic, plan, ops = load(f"{RULES}/facts-v1.json"), load(f"{RULES}/plan-v1.json"), load(f"{RULES}/ops-v1.json")
+dic = load(f"{RULES}/facts-v1.json")
+RS = {os.path.basename(p)[:-5]: load(p) for p in glob.glob(f"{RULES}/plan-*.json") + glob.glob(f"{RULES}/ops-*.json")}
+plan, ops = RS["plan-v1"], RS["ops-v1"]
 byid = {x["id"]: x for x in dic["facts"]}
+
+# D35: each v2 is its v1 plus exactly the typed edits, nothing else
+import copy
+p2 = copy.deepcopy(plan); p2.update(version=2, effectiveFrom="2026-01-01")
+next(r for r in next(l for l in p2["lookups"] if l["id"] == "deductibleCents")["rows"] if r["id"] == "ded.essential")["value"] = 10000
+chk(RS.get("plan-v2") == p2, "plan-v2 is not plan-v1 with only the Essential deductible at 10000 (D35)")
+o2 = copy.deepcopy(ops); o2.update(version=2, effectiveFrom="2026-04-01"); o2["authority"][0]["approveUpToCents"] = 75000
+e23v2 = next(r for r in o2["rules"] if r["id"] == "E23")
+for w in e23v2["rows"]: w["when"][0]["value"] = 75000
+e23v2["rows"][1]["then"]["noteText"] = "Payable {amt} above auto-approve limit 75000."
+e23v2["note"] = "75000 equals the system tier below; the two must move together."
+chk(RS.get("ops-v2") == o2, "ops-v2 is not ops-v1 with only the system limit (and E23) at 75000 (D35)")
+chk(sorted(RS) == ["ops-v1", "ops-v2", "plan-v1", "plan-v2"], f"rule set files: {sorted(RS)}")
+
+
+def pick_ops(asof, versions):
+    """Every rule file is published; walk newest first and take the first in force on asOf."""
+    for v in sorted((v for v in versions if v["kind"] == "ops" and v["status"] == "published"), key=lambda v: D(v["effectiveFrom"]), reverse=True):
+        if D(v["effectiveFrom"]) <= D(asof): return v["name"]
+    return None
+
+
+FILE_VERSIONS = [dict(name=n, kind=r["kind"], status="published", effectiveFrom=r["effectiveFrom"]) for n, r in RS.items()]
 
 # rule data against the brief's s1 table, typed here independently
 L = {l["id"]: {r["id"]: r for r in l["rows"]} for l in plan["lookups"]}
@@ -209,7 +243,7 @@ chk(plan["roundingMode"] == "half_up" and ops["outcomePolicy"]["autoDenyEnabled"
 chk(all(s["op"] in ("start_from", "subtract", "apply_bps", "cap_at", "floor_at", "min_of") for s in plan["payout"]["steps"]), "calc step vocabulary")
 
 fx = {os.path.basename(p)[:-5]: load(p) for p in sorted(glob.glob(f"{FIX}/*/*.json"))}
-want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY)
+want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY) + ["RV-01"] + sorted(VP_KEY) + sorted(PL_KEY)
 chk(sorted(fx) == sorted(want), f"fixture set differs: missing {sorted(set(want) - set(fx))}, extra {sorted(set(fx) - set(want))}")
 
 for fid, f in fx.items():
@@ -217,9 +251,10 @@ for fid, f in fx.items():
     if k in ("decision", "valuation"):
         inputs = [x for x in f["facts"] if byid.get(x, {}).get("source") != "input"]
         chk(not inputs, f"{fid}: facts not declared as inputs: {inputs}")
-        got = decide(plan, ops, dic, f["facts"])
+        got = decide(RS[f.get("plan", "plan-v1")], RS[f.get("ops", "ops-v1")], dic, f["facts"])
         e = f["expected"]
         if k == "decision":
+            chk(f["ops"] == pick_ops(f["asOf"], FILE_VERSIONS), f"{fid}: names {f['ops']}, but {pick_ops(f['asOf'], FILE_VERSIONS)} is in force on {f['asOf']}")
             chk(got == e, f"{fid}: interpreter disagrees with the oracle: " + "; ".join(x for x in e if got.get(x) != e[x]))
             o, p, rs = GC_KEY[fid]
             chk(e["outcome"] == o and e["reasons"] == rs, f"{fid}: outcome/reasons differ from the brief ({e['outcome']} {e['reasons']})")
@@ -230,6 +265,28 @@ for fid, f in fx.items():
             chk(got["payableCents"] == e["payableCents"] == PAY_KEY[fid], f"{fid}: payable {got['payableCents']} / {e['payableCents']} != brief {PAY_KEY[fid]}")
             chk(got["valuation"] == {"path": e["path"], "steps": e["steps"]}, f"{fid}: calc trace disagrees")
             chk(got["contractFulfilled"] == e["contractFulfilled"], f"{fid}: contractFulfilled")
+    elif k == "rule-version":
+        chk([c["plan"] for c in f["cases"]] == [p for p, _, _ in RV_KEY] and len({c["asOf"] for c in f["cases"]}) == 1, f"{fid}: one claim, one asOf, a v1 and a v2 contract")
+        claim = [{x: v for x, v in c["facts"].items() if x.startswith("claim.")} for c in f["cases"]]  # the loss; product dates follow each sale
+        chk(claim[0] == claim[1], f"{fid}: the claim facts differ between the two contracts")
+        for c, (p, o, amt) in zip(f["cases"], RV_KEY):
+            got = decide(RS[c["plan"]], RS[c["ops"]], dic, c["facts"])
+            chk(got == c["expected"], f"{fid} {p}: interpreter disagrees with the oracle")
+            chk(c["ops"] == pick_ops(c["asOf"], FILE_VERSIONS), f"{fid} {p}: wrong ops for {c['asOf']}")
+            chk((c["expected"]["outcome"], c["expected"]["payableCents"]) == (o, amt), f"{fid} {p}: {c['expected']['outcome']} {c['expected']['payableCents']} != {o} {amt}")
+    elif k == "selection":
+        for v in f["versions"]:
+            chk(v["name"] not in RS or v["effectiveFrom"] == RS[v["name"]]["effectiveFrom"], f"{fid}: {v['name']} effectiveFrom differs from the rule file")
+        for c, key in zip(f["cases"], VP_KEY[fid]):
+            vs = c.get("versions", f["versions"])
+            pin = next(v for v in vs if v["name"] == c["contract"]["planVersion"])
+            o = pick_ops(c["asOf"], vs)
+            got = {"error": "NO_EFFECTIVE_VERSION", "kind": "plan"} if D(pin["effectiveFrom"]) > D(c["asOf"]) else \
+                  {"plan": pin["name"], "ops": o} if o else {"error": "NO_EFFECTIVE_VERSION", "kind": "ops"}
+            chk(got == c["expected"] and tuple(c["expected"].values()) == key, f"{fid} '{c['name']}': {c['expected']} / {got} / key {key}")
+        chk(len(f["cases"]) == len(VP_KEY[fid]), f"{fid}: case count")
+    elif k == "pipeline":
+        chk(f["expected"] == PL_KEY[fid] and f["claim"]["contractId"] not in f["contracts"], f"{fid}: {f['expected']}")
     elif k == "ref":
         t = fx[f["ref"]]["expected"]
         chk(t["payableCents"] is None and t["valuation"] is None and f["expected"]["payableCents"] is None and PAY_KEY[fid] is None, f"{fid}: a denial carries a null amount and no valuation")
@@ -259,4 +316,5 @@ if fails:
     for m in fails: print(" -", m)
     sys.exit(1)
 print(f"OK ({len(fx)} fixtures: {sum(1 for f in fx.values() if f['id'].startswith('RE'))} RE, {sum(1 for f in fx.values() if f['id'].startswith('PAY'))} PAY, "
-      f"{sum(1 for f in fx.values() if f['id'].startswith('GC'))} GC; payables match the brief to the cent)")
+      f"{sum(1 for f in fx.values() if f['id'].startswith('GC'))} GC, {sum(1 for f in fx.values() if f['id'][:2] in ('RV', 'VP', 'PL'))} RV/VP/PL; "
+      "payables match the brief to the cent)")

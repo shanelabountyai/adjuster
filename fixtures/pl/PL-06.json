@@ -1,0 +1,38 @@
+{
+  "id": "PL-06",
+  "kind": "pipeline",
+  "title": "Contract not found short-circuits: no rule runs, no decision row, the claim is referred",
+  "source": "domain brief s2 / D12 / D35",
+  "contracts": [
+    "CT-0001"
+  ],
+  "claim": {
+    "contractId": "CT-0404",
+    "facts": {
+      "claim.peril": "breakdown",
+      "claim.dateOfLoss": "2025-09-15",
+      "claim.dateReported": "2025-09-17",
+      "claim.cosmeticOnly": false,
+      "claim.preExisting": false,
+      "claim.consumableOrAccessory": false,
+      "claim.unauthorizedRepair": "none",
+      "claim.commercialUse": false,
+      "claim.intentionalOrAbuse": false,
+      "claim.inMfrWarrantyOrRecall": false,
+      "claim.productUnavailable": false,
+      "claim.softwareOrData": false,
+      "claim.externalCause": false,
+      "claim.serialMatchesContract": true,
+      "claim.claimantIsHolder": true,
+      "claim.accountChanged": false,
+      "claim.coveredRepairCents": 30000,
+      "claim.replacementValueCents": 60000
+    }
+  },
+  "expected": {
+    "error": "CONTRACT_NOT_FOUND",
+    "decision": null,
+    "claimStatus": "REFERRED",
+    "rulesRun": []
+  }
+}

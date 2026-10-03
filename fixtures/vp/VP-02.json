@@ -1,0 +1,66 @@
+{
+  "id": "VP-02",
+  "kind": "selection",
+  "title": "The plan comes from the contract's pin, never the date of loss, the date reported or the latest version",
+  "source": "PRD P0-2 / D3 / D35",
+  "versions": [
+    {
+      "name": "plan-v1",
+      "kind": "plan",
+      "status": "published",
+      "effectiveFrom": "2025-01-01"
+    },
+    {
+      "name": "plan-v2",
+      "kind": "plan",
+      "status": "published",
+      "effectiveFrom": "2026-01-01"
+    },
+    {
+      "name": "ops-v1",
+      "kind": "ops",
+      "status": "published",
+      "effectiveFrom": "2025-01-01"
+    },
+    {
+      "name": "ops-v2",
+      "kind": "ops",
+      "status": "published",
+      "effectiveFrom": "2026-04-01"
+    },
+    {
+      "name": "ops-v3",
+      "kind": "ops",
+      "status": "draft",
+      "effectiveFrom": "2026-06-01"
+    }
+  ],
+  "cases": [
+    {
+      "name": "v1 contract, everything after plan-v2's effective date",
+      "contract": {
+        "planVersion": "plan-v1"
+      },
+      "dateOfLoss": "2026-08-03",
+      "dateReported": "2026-08-05",
+      "asOf": "2026-08-06",
+      "expected": {
+        "plan": "plan-v1",
+        "ops": "ops-v2"
+      }
+    },
+    {
+      "name": "v2 contract",
+      "contract": {
+        "planVersion": "plan-v2"
+      },
+      "dateOfLoss": "2026-08-03",
+      "dateReported": "2026-08-05",
+      "asOf": "2026-08-06",
+      "expected": {
+        "plan": "plan-v2",
+        "ops": "ops-v2"
+      }
+    }
+  ]
+}
