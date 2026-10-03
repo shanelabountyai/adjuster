@@ -98,6 +98,12 @@ D1 and D17 close the vocabulary. Writing E1–E23 and the payout order as data n
 | D32 | The claimant letter and the internal file note list only the rules that decided the claim (non-PASS). The stored trace keeps every rule's result, PASS included, so an audit or appeal can show a rule was checked; the explanation CHECK stays a non-empty `rules` array. | `adjuster.trace/0` unchanged, no fixture moves; letter/note rendering (Phase 2) filters to non-PASS |
 | D33 | Documents and information supplied on appeal are on record: an appeal is a new superseding decision whose row carries the document version ids it relied on (D4). No trace field is added now. | Phase 3 (evidence + appeal); seam already in D4 |
 
+## Phase 2
+
+| # | Decision | Applied |
+|---|----------|---------|
+| D34 | **Trace v1 is self-contained** (Shane, 2026-10-03). Each rule entry adds the deciding `rowId`, the facts read with their values, reason code, clause, and the claimant and note templates as stored; the trace adds `versions` (plan: version + hash, pinned by contract; ops: version + hash + effectiveFrom, selected by `asOf`). A letter and note render from the decision row alone, and the hand-recompute script needs nothing else. `/0` decisions are not migrated: synthetic seeds are reseeded, and `engineSemanticsVersion` moves to `adjuster.engine/2`, so a leftover `/0` row reports `SEMANTICS_UNSUPPORTED` instead of diverging. Rejected: storing only the row id and reading templates from the pinned version (smaller rows, but the explanation no longer stands alone). | Task 2.1 |
+
 Task 1.2 was closed with the worksheet's gut-check answers and D32, not a full run of the three claims by hand. Nothing else in the page moves the trace.
 
 Still unanswered: P1–P6 above, and review items 5–10, 13, 14, 16, 18–20, 22 (all encoded provisionally; none moves a GC-01..10 fixture).

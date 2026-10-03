@@ -2,7 +2,7 @@
 
 Learning project: rules engine as versioned data, explained adjudication pipeline, replayable decisions, evidence documents. **Synthetic data only. Never real claimants, contracts or money. No compliance claims.** Keep the scope-honesty banner verbatim in README.md.
 
-Read first: `prd-adjuster-insurance-claims.md` (what), `docs/decisions.md` (rules the PRD left open — authoritative), `docs/domain-brief.md` (plan terms, rule catalog E1–E23, flags F1–F10, payout order, golden claims), `fixtures/README.md` (frozen expected values). Current work: `docs/phase-1-tasks.md`.
+Read first: `prd-adjuster-insurance-claims.md` (what), `docs/decisions.md` (rules the PRD left open — authoritative), `docs/domain-brief.md` (plan terms, rule catalog E1–E23, flags F1–F10, payout order, golden claims), `fixtures/README.md` (frozen expected values). Current work: `docs/phase-2-tasks.md`.
 
 ## Non-negotiables
 1. **No plan, product or coverage-specific logic in code.** No plan names, tier checks, or dollar thresholds under `src/`. If a rule can't be expressed, stop and propose a vocabulary change in `docs/decisions.md`.
