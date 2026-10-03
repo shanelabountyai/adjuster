@@ -79,21 +79,25 @@ export const ruleSetSchema = z.object({
   outcomePolicy: z.object({ autoDenyEnabled: z.boolean() }).strict().optional(),
 }).strict();
 
-// ---- trace v0, confirmed against docs/trace-by-hand.md (D32: every rule stored; letters show non-PASS only).
+// ---- trace v1 (D34): self-contained. v0 was confirmed against docs/trace-by-hand.md (D32: every rule stored; letters
+// show non-PASS only); v1 adds each deciding row's resolved placeholders (`vars`) and visibility, and hashed versions,
+// so a letter and note render from the stored trace alone.
 const factsRead = z.record(z.string(), z.union([scalar, z.null()]));
 export const ruleResultSchema = z.object({
   ruleId: z.string(), stage: z.enum(STAGES), result: z.enum(['PASS', 'DENY', 'REFER', 'PEND', 'GAP']),
   rowIds: z.array(z.string()), reasonCode: z.string().nullable(), clause: z.string().nullable(),
   factsRead, missing: z.array(z.string()), claimantText: z.string().nullable(), noteText: z.string().nullable(),
+  claimantVisible: z.boolean(), vars: factsRead,
 }).strict();
+const versionRef = z.object({ name: z.string(), hash: z.string().regex(/^[0-9a-f]{64}$/), effectiveFrom: isoDate }).strict();
 export const calcStepTraceSchema = z.object({
   id: z.string(), op: z.enum(CALC_STEPS), reg: z.string(), applied: z.boolean(),
   operand: z.union([z.object({ kind: z.enum(['fact', 'const', 'reg']), name: z.string().nullable(), value: z.number().int() }).strict(), z.null()]),
   inputCents: z.number().int().nullable(), outputCents: z.number().int().nullable(),
 }).strict();
 export const traceSchema = z.object({
-  schema: z.literal('adjuster.trace/0'), asOf: isoDate,
-  planVersion: z.string(), opsVersion: z.string(),
+  schema: z.literal('adjuster.trace/1'), asOf: isoDate,
+  versions: z.object({ plan: versionRef, ops: versionRef }).strict(),
   skipped: z.array(z.enum(STAGES)),
   rules: z.array(ruleResultSchema),
   valuation: z.object({ path: z.enum(['repair', 'replace']), steps: z.array(calcStepTraceSchema) }).strict().nullable(),

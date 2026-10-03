@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import { valuate } from './calc';
+import { sha256Hex } from './canonical';
 import { resolveFacts, type Snapshot } from './derive';
 import { evalRule, rootsOf, type Facts } from './evaluate';
 import { STAGES, type Dictionary, type RuleSet, type ruleResultSchema, type traceSchema } from './schema';
@@ -13,7 +14,7 @@ export type Trace = z.infer<typeof traceSchema>;
 type RuleTrace = z.infer<typeof ruleResultSchema>;
 type Rule = RuleSet['rules'][number];
 
-export const ENGINE_SEMANTICS_VERSION = 'adjuster.engine/1';
+export const ENGINE_SEMANTICS_VERSION = 'adjuster.engine/2';
 const EARLY = STAGES.slice(0, 5) as readonly string[];
 const SKIPPED_ON_DENY = ['evidence', 'red_flags', 'valuation', 'deductible_limits', 'authority'] as const;
 
@@ -46,8 +47,8 @@ export function adjudicate(input: { plan: RuleSet; ops: RuleSet; dict: Dictionar
   const outcome = deny ? 'DENY' : pend ? 'PEND' : results.some((r) => r === 'REFER' || r === 'GAP') ? 'REFER' : partial ? 'PARTIAL' : 'APPROVE';
   const key = outcome === 'REFER' ? ['REFER', 'GAP'] : [outcome];
   return {
-    schema: 'adjuster.trace/0', asOf,
-    planVersion: `${plan.kind}-v${plan.version}`, opsVersion: `${ops.kind}-v${ops.version}`,
+    schema: 'adjuster.trace/1', asOf,
+    versions: { plan: ref(plan), ops: ref(ops) },
     skipped: deny ? [...SKIPPED_ON_DENY] : [],
     rules: all,
     valuation,
@@ -59,6 +60,8 @@ export function adjudicate(input: { plan: RuleSet; ops: RuleSet; dict: Dictionar
   };
 }
 
+const ref = (rs: RuleSet) => ({ name: `${rs.kind}-v${rs.version}`, hash: sha256Hex(rs), effectiveFrom: rs.effectiveFrom });
+
 // One rule's trace entry. The deciding row is the first TRUE row carrying the winning outcome; a gap has none.
 function trace(rule: Rule, facts: Facts, roots: ReturnType<typeof rootsOf>): RuleTrace {
   const r = evalRule(rule.rows, facts, roots);
@@ -69,5 +72,8 @@ function trace(rule: Rule, facts: Facts, roots: ReturnType<typeof rootsOf>): Rul
     reasonCode: r.result === 'GAP' ? 'RULE_GAP' : row?.reasonCode ?? null, clause: row?.clause ?? null,
     factsRead: Object.fromEntries(read.map((f) => [f, facts[f] ?? null])), missing: r.missing,
     claimantText: row?.claimantText ?? null, noteText: row?.noteText ?? null,
+    // The deciding row's placeholders, resolved now (D34): letters substitute from these and never re-read rules or facts.
+    claimantVisible: row?.claimantVisible ?? true,
+    vars: { ...row?.params, ...Object.fromEntries(Object.entries(row?.bind ?? {}).map(([k, f]) => [k, facts[f] ?? null])) },
   };
 }

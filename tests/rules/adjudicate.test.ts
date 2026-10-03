@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { adjudicate } from '@/rules/adjudicate';
+import { sha256Hex } from '@/rules/canonical';
 import { traceSchema } from '@/rules/schema';
 import { validateDictionary } from '@/rules/validate';
 
@@ -29,6 +30,16 @@ describe('GC-01..GC-10: golden claims', () => {
     const fx = read('fixtures/gc/GC-02.json');
     const t = adjudicate({ plan, ops, dict: dict!, snapshot: fx.facts, asOf: fx.asOf });
     expect([t.decision.outcome, t.decision.payableCents, t.valuation]).toEqual(['DENY', null, null]);
+  });
+
+  it('trace v1 is self-contained: hashed versions, resolved placeholders, visibility (D34)', () => {
+    const fx = read('fixtures/gc/GC-04.json');
+    const t = adjudicate({ plan, ops, dict: dict!, snapshot: fx.facts, asOf: fx.asOf });
+    expect(t.versions).toEqual({ plan: { name: 'plan-v1', hash: sha256Hex(plan), effectiveFrom: plan.effectiveFrom },
+      ops: { name: 'ops-v1', hash: sha256Hex(ops), effectiveFrom: ops.effectiveFrom } });
+    const e2 = t.rules.find((r) => r.ruleId === 'E2')!;
+    expect(e2.vars).toEqual({ start: fx.facts['contract.termStart'], end: fx.facts['contract.termEnd'], dol: fx.facts['claim.dateOfLoss'] });
+    expect([e2.claimantVisible, e2.clause]).toEqual([true, '§2.1']);
   });
 
   it('a rule gap refers, never approves', () => {

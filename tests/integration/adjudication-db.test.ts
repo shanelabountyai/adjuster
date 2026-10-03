@@ -35,7 +35,7 @@ const insertVersion = async (body: { kind: string; product: string; version: num
 };
 
 const h = 'a'.repeat(64);
-const trace = { schema: 'adjuster.trace/0', rules: [{ ruleId: 'E1' }] };
+const trace = { schema: 'adjuster.trace/1', rules: [{ ruleId: 'E1' }] };
 const insertDecision = (planId: string, opsId: string, over: Record<string, unknown> = {}) => {
   const d = { outcome: 'APPROVE', payableCents: 1000, explanation: trace, overridesId: null, overrideReasonCode: null, overrideReasonText: null, ...over };
   return run(

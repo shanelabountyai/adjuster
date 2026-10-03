@@ -10,7 +10,7 @@ Frozen expected values. Tests **read** these; product code must never generate t
 
 Conventions: amounts are integer cents, rates are basis points, dates are ISO `YYYY-MM-DD`. Facts use the ids in `rules/electronics/facts-v1.json` (flat, dotted). A decision fixture's `expected.rules` lists every rule that ran; compare by `ruleId`, not position. `expected.skippedStages` is non-empty exactly when an objective denial stopped evidence, flags, valuation and authority from running.
 
-**What is and is not in `expected`.** Outcome, reasons (rule ids), per-rule result, calc steps (input, operand, output cents) and payable are frozen. Prose (claimant letter, file note), `rowIds` and `factsRead` are not: they are the engine's own output, checked against the trace schema rather than a golden file. The trace shape is provisional (`adjuster.trace/0`) until the by-hand page (task 1.2) lands.
+**What is and is not in `expected`.** Outcome, reasons (rule ids), per-rule result, calc steps (input, operand, output cents) and payable are frozen. Prose (claimant letter, file note), `rowIds`, `factsRead`, `vars` and `versions` are not: they are the engine's own output, checked against the trace schema (`adjuster.trace/1`, D34) rather than a golden file.
 
 **RE-xx are a proposal.** The PRD and tasks name RE-01..RE-23 but nowhere define them; the mapping above is mine. Review it before task 1.7.
 
