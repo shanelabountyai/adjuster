@@ -16,15 +16,41 @@ model RuleSetVersion {
   createdAt     DateTime  @default(now()) @db.Timestamptz(6)
   planDecisions Decision[] @relation("planVersion")
   opsDecisions  Decision[] @relation("opsVersion")
+  contracts     Contract[]
 
   @@unique([kind, product, version])
+}
+
+// Task 2.3, D36. Seeded, then read-only (trigger). Pins the plan version it was sold under (D3).
+// `facts` holds the contract.* and product.* facts as the fact dictionary names them.
+model Contract {
+  id            String         @id // e.g. CT-0001
+  planVersionId String         @db.Uuid
+  planVersion   RuleSetVersion @relation(fields: [planVersionId], references: [id], onDelete: Restrict)
+  facts         Json
+  createdAt     DateTime       @default(now()) @db.Timestamptz(6)
+}
+
+// Task 2.3, D36. Status and payment status are separate fields; the outcome stays on Decision.
+// `contractId` is what the claimant quoted, so it has no FK: an unknown one is PL-06, not an insert error.
+// `facts` holds the claim's own facts (claim.*, history.*, evidence.*, docs.*).
+model Claim {
+  id            String     @id
+  contractId    String
+  facts         Json
+  status        String     @default("OPEN")
+  paymentStatus String     @default("NONE")
+  createdAt     DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime   @default(now()) @updatedAt @db.Timestamptz(6)
+  decisions     Decision[]
 }
 
 // D4, D13, D18: append-only. A correction is a new row that supersedes; an override is a new row that overrides.
 // Seam: document version ids relied on (D4) arrive with evidence in Phase 3, as a new column.
 model Decision {
   id                     String         @id @default(uuid()) @db.Uuid
-  claimId                String // seam: no Claim table until the Phase 2 pipeline
+  claimId                String
+  claim                  Claim          @relation(fields: [claimId], references: [id], onDelete: Restrict)
   planVersionId          String         @db.Uuid
   planVersion            RuleSetVersion @relation("planVersion", fields: [planVersionId], references: [id], onDelete: Restrict)
   planHash               String

@@ -4,7 +4,7 @@ import plan from '../../rules/electronics/plan-v1.json';
 import ops from '../../rules/electronics/ops-v1.json';
 import { sha256Hex } from '@/rules/canonical';
 
-// Task 1.10: VP-01 and PL-04 hold at the database. Raw SQL on its own connection, so nothing in src/ can
+// Tasks 1.10 and 2.3: VP-01, PL-04 and the contract and claim rules hold at the database. Raw SQL on its own connection, so nothing in src/ can
 // catch a case first. Each rejection is read from the error's constraint field.
 
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -12,7 +12,7 @@ const connected = client.connect();
 afterAll(() => client.end());
 beforeEach(async () => {
   await connected;
-  await client.query('TRUNCATE "Decision", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
+  await client.query('TRUNCATE "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
 });
 
 /** The constraint the database refused `sql` with, or 'accepted'. */
@@ -36,13 +36,19 @@ const insertVersion = async (body: { kind: string; product: string; version: num
 
 const h = 'a'.repeat(64);
 const trace = { schema: 'adjuster.trace/1', rules: [{ ruleId: 'E1' }] };
+const insertContract = (id: string, planId: string) =>
+  run(`INSERT INTO "Contract" ("id", "planVersionId", "facts") VALUES ($1, $2, '{}')`, [id, planId]);
+const insertClaim = (id: string, contractId: string, over: Record<string, unknown> = {}) =>
+  run(`INSERT INTO "Claim" ("id", "contractId", "facts", "status", "paymentStatus") VALUES ($1, $2, '{}', $3, $4)`,
+    [id, contractId, over.status ?? 'OPEN', over.paymentStatus ?? 'NONE']);
+
 const insertDecision = (planId: string, opsId: string, over: Record<string, unknown> = {}) => {
   const d = { outcome: 'APPROVE', payableCents: 1000, explanation: trace, overridesId: null, overrideReasonCode: null, overrideReasonText: null, ...over };
   return run(
     `INSERT INTO "Decision" ("id", "claimId", "planVersionId", "planHash", "opsVersionId", "opsHash", "asOf", "facts", "inputHash", "outputHash",
        "engineSemanticsVersion", "outcome", "payableCents", "explanation", "overridesId", "overrideReasonCode", "overrideReasonText")
-     VALUES (gen_random_uuid(), 'C-1', $1, $2, $3, $2, '2026-06-01', '{}', $2, $2, '1', $4, $5, $6, $7, $8, $9)`,
-    [planId, h, opsId, d.outcome, d.payableCents, d.explanation, d.overridesId, d.overrideReasonCode, d.overrideReasonText],
+     VALUES (gen_random_uuid(), $10, $1, $2, $3, $2, '2026-06-01', '{}', $2, $2, '1', $4, $5, $6, $7, $8, $9)`,
+    [planId, h, opsId, d.outcome, d.payableCents, d.explanation, d.overridesId, d.overrideReasonCode, d.overrideReasonText, over.claimId ?? 'C-1'],
   );
 };
 
@@ -72,6 +78,11 @@ describe('Decision rows', () => {
   beforeEach(async () => {
     planId = await insertVersion(plan);
     opsId = await insertVersion(ops);
+    await insertClaim('C-1', 'CT-1');
+  });
+
+  it('belongs to a claim that exists', async () => {
+    expect(await insertDecision(planId, opsId, { claimId: 'C-404' })).toBe('Decision_claimId_fkey');
   });
 
   it('PL-04: an insert without a non-empty trace fails', async () => {
@@ -99,5 +110,29 @@ describe('Decision rows', () => {
     expect(await insertDecision(planId, opsId, { outcome: 'DENY', payableCents: null })).toBe('accepted');
     expect(await insertDecision(planId, opsId, { payableCents: -1 })).toBe('decision_amount_non_negative');
     expect(await insertDecision(planId, opsId, { overrideReasonCode: 'X' })).toBe('decision_override_reason');
+  });
+});
+
+describe('Contract and Claim rows (2.3, D36)', () => {
+  let planId: string;
+  beforeEach(async () => {
+    planId = await insertVersion(plan);
+  });
+
+  it('a contract pins a published plan version, then is read-only', async () => {
+    const draft = await insertVersion({ ...plan, version: 99 }, 'draft');
+    expect(await insertContract('CT-1', draft)).toBe('contract_pins_plan');
+    expect(await insertContract('CT-1', await insertVersion(ops))).toBe('contract_pins_plan');
+    expect(await insertContract('CT-1', planId)).toBe('accepted');
+    expect(await run(`UPDATE "Contract" SET "facts" = '{"contract.status": "cancelled"}'`)).toBe('contract_read_only');
+    expect(await run(`DELETE FROM "Contract"`)).toBe('contract_read_only');
+    expect(await run(`DELETE FROM "RuleSetVersion" WHERE "id" = $1`, [planId])).toBe('ruleset_immutable');
+  });
+
+  it('a claim may quote an unknown contract (PL-06 is the pipeline\'s call), and its two statuses are closed sets', async () => {
+    expect(await insertClaim('C-1', 'CT-0404')).toBe('accepted');
+    expect(await insertClaim('C-2', 'CT-1', { status: 'APPROVED' })).toBe('claim_status');
+    expect(await insertClaim('C-2', 'CT-1', { paymentStatus: 'DECIDED' })).toBe('claim_payment_status');
+    expect(await run(`UPDATE "Claim" SET "status" = 'IN_REVIEW', "paymentStatus" = 'PENDING' WHERE "id" = 'C-1'`)).toBe('accepted');
   });
 });
