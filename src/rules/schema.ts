@@ -79,7 +79,7 @@ export const ruleSetSchema = z.object({
   outcomePolicy: z.object({ autoDenyEnabled: z.boolean() }).strict().optional(),
 }).strict();
 
-// ---- trace (provisional v0). The by-hand page (task 1.2) is the real reference and may change this.
+// ---- trace v0, confirmed against docs/trace-by-hand.md (D32: every rule stored; letters show non-PASS only).
 const factsRead = z.record(z.string(), z.union([scalar, z.null()]));
 export const ruleResultSchema = z.object({
   ruleId: z.string(), stage: z.enum(STAGES), result: z.enum(['PASS', 'DENY', 'REFER', 'PEND', 'GAP']),

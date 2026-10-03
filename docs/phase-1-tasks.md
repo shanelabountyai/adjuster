@@ -3,7 +3,7 @@
 Nothing else until the invariant holds. No UI, pipeline stages, documents or overrides in this phase.
 
 - [x] **1.1 Scaffold.** Commands in CLAUDE.md exist (verify may be a placeholder that exits 1). Scope banner verbatim in README. Clone row in `saas-foundation/CLONES.md`. `.claude/settings.json` model pin.
-- [ ] **1.2 By hand first (Shane).** Adjudicate GC-01, GC-04 and GC-08 on paper from `docs/domain-brief.md` alone and write the explanation you would want. Check in as `docs/trace-by-hand.md` — the trace schema reference.
+- [x] **1.2 By hand first (Shane).** *(Closed 2026-10-03 on the gut-check answers + D32/D33; trace unchanged.)* Adjudicate GC-01, GC-04 and GC-08 on paper from `docs/domain-brief.md` alone and write the explanation you would want. Check in as `docs/trace-by-hand.md` — the trace schema reference.
 - [x] **1.3 Schemas.** JSON schemas for fact dictionary, decision tables, calc steps, rule-set envelope, trace. Tests reject an unknown operator, an unknown fact, a type mismatch.
 - [x] **1.4 Rule data.** `rules/electronics/plan-v1.json` and `ops-v1.json` encoding E1–E23, F1–F10, the three tiers and payout order D15. Passes `rules:lint`.
 - [x] **1.5 Fixtures.** `tools/build_fixtures.py` + `tools/verify_fixtures.py` (second derivation) produce RE-01..RE-23, PAY-A..PAY-H and GC-01..GC-10 (engine-level: facts in → outcome, reasons, cents, trace out). Both agree; fixtures frozen; CI fails if product code writes to `fixtures/`.

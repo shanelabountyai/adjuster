@@ -1,6 +1,8 @@
 # NEXT
 
-## ▶ Next session: Phase 1 gate waits only on 1.2 (Shane fills `docs/trace-by-hand.md`). Then compare it to `adjuster.trace/0`, reshape + regenerate if it differs, re-run this check, and open Phase 2.
+## ▶ Next session: Phase 1 is closed. Open Phase 2: write `docs/phase-2-tasks.md` (versioning + pipeline + explanations) from the PRD, in the shape of `phase-1-tasks.md`, then start its first task. Letter/note rendering must follow D32: show only non-PASS rules.
+
+**2026-10-03 (1.2 closed, Phase 1 gate passed):** Shane answered the worksheet's gut check and chose D32: letters and notes list only the rules that decided the claim, and the stored trace keeps every check. D33: appeal documents are recorded through D4 document version ids (Phase 3). `adjuster.trace/0` unchanged, no fixture moved. The three claim sections in `trace-by-hand.md` were left blank; recorded as such in decisions.md.
 
 **2026-10-02 (Phase 1 exit check, all but 1.2):** RE/PAY/GC-01..10 pass; `seed:decisions:test` → `decisions:verify:test` OK (10 decisions); TM-01..08 covered by `decisions-verify.test.ts`; CI enforces it (main run 37060363989 green, tamper run 37060007007 red); `rules:lint` finds no plan identifier in 53 `src` files; `fixtures:check` OK. **Before Phase 2 check done:** an in-memory copy of `plan-v1.json` with `ded.essential` 5000 → 30000 moved GC-01 from APPROVE/25000 to APPROVE/0 (under deductible approves at 0), the other nine unchanged, no code or file change. Full `npm test` had 2 failures, both in template-owned `tests/invariants/inv-01-04-22-actions` (a 20s timeout, then an `Org_pkey` collision from the leftover fixture) while `bookable_test` held 16 PG connections; the file passed 14/14 alone. Second time this file has flaked under contention (also in 1.7): a template issue, not adjuster's.
 

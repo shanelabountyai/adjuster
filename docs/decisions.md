@@ -91,4 +91,13 @@ D1 and D17 close the vocabulary. Writing E1–E23 and the payout order as data n
 | D30 | `inputHash` = `sha256Hex({asOf, facts, planHash, opsHash})`; `outputHash` = `sha256Hex(explanation)`; `engineSemanticsVersion` = `adjuster.engine/1`. A rule gap (`GAP`, reason code `RULE_GAP`) ranks with REFER in the outcome. | `src/rules/adjudicate.ts`, `src/adjudication/decisions.ts` |
 | D31 | Per decision, in order: **SEMANTICS_UNSUPPORTED** (version is not this engine's; nothing else checked) · **RULESET_HASH_MISMATCH** (a pinned body no longer hashes to its `contentHash`, its dictionary no longer matches `factDictionaryHash`, or the decision's pin differs) · **FACTS_HASH_MISMATCH** (`inputHash` does not recompute) · **EXPLANATION_INCONSISTENT** (explanation not a trace, not hashing to `outputHash`, `asOf` differs, or outcome/amount columns differ; override rows skip the column check) · **REPLAY_DIVERGED** (replay hash ≠ `outputHash`; run *only* when the inputs verified, so a tampered input reports its cause, not a downstream divergence) · **VERSION_NOT_EFFECTIVE** (plan `effectiveFrom` after `asOf`, or the pinned ops is not the latest non-draft ops effective on `asOf`) · **CHAIN_BROKEN** (a supersession across claims or plan versions, onto an unchanged `inputHash`, backwards in time, or a claim with two unchained decisions) · **OVERRIDE_INVALID** (target missing, an override itself, another claim's, or with a different `inputHash`/`outputHash`: the engine result must be preserved). | TM-01..TM-08 in `tests/integration/decisions-verify.test.ts`, each exactly one code |
 
+## Task 1.2 — trace shape confirmed (2026-10-03, Shane)
+
+| # | Decision | Applied |
+|---|----------|---------|
+| D32 | The claimant letter and the internal file note list only the rules that decided the claim (non-PASS). The stored trace keeps every rule's result, PASS included, so an audit or appeal can show a rule was checked; the explanation CHECK stays a non-empty `rules` array. | `adjuster.trace/0` unchanged, no fixture moves; letter/note rendering (Phase 2) filters to non-PASS |
+| D33 | Documents and information supplied on appeal are on record: an appeal is a new superseding decision whose row carries the document version ids it relied on (D4). No trace field is added now. | Phase 3 (evidence + appeal); seam already in D4 |
+
+Task 1.2 was closed with the worksheet's gut-check answers and D32, not a full run of the three claims by hand. Nothing else in the page moves the trace.
+
 Still unanswered: P1–P6 above, and review items 5–10, 13, 14, 16, 18–20, 22 (all encoded provisionally; none moves a GC-01..10 fixture).
