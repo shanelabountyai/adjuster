@@ -1,6 +1,8 @@
 # NEXT
 
-## ▶ Next session: Phase 1 is closed. Open Phase 2: write `docs/phase-2-tasks.md` (versioning + pipeline + explanations) from the PRD, in the shape of `phase-1-tasks.md`, then start its first task. Letter/note rendering must follow D32: show only non-PASS rules.
+## ▶ Next session: Phase 2, task 2.2 (fixtures for this phase), from `docs/phase-2-tasks.md`. Record D35 first: `plan-v2` (default: one Essential deductible change, `effectiveFrom` after every GC contract's purchase date) and `ops-v2` (default: system authority limit change). Both defaults are reversible, so take them unless Shane says otherwise. Then the oracle builds GC-12..14, RV-01, VP-02..04 and PL-06. `verify_fixtures.py` needs a GC_KEY entry for each new golden, typed from the brief.
+
+**2026-10-03 (Phase 2 opened, 2.1 done):** `docs/phase-2-tasks.md` written (2.1–2.11). D34 (Shane): trace v1 is self-contained. The `/0` engine trace already carried row ids, clause, facts read and templates. `/1` adds `vars` (the row's params plus its bind facts, resolved at decision time), `claimantVisible` and hashed `versions`. Engine `adjuster.engine/2`. No fixture moved (fixtures freeze a projection). Gate: `npm test` 317 pass, `rules:lint`, `fixtures:check` OK, seed then `decisions:verify:test` OK (10), eslint clean. The selection reason (contract pin / `asOf`) goes into `versions` in 2.4.
 
 **2026-10-03 (1.2 closed, Phase 1 gate passed):** Shane answered the worksheet's gut check and chose D32: letters and notes list only the rules that decided the claim, and the stored trace keeps every check. D33: appeal documents are recorded through D4 document version ids (Phase 3). `adjuster.trace/0` unchanged, no fixture moved. The three claim sections in `trace-by-hand.md` were left blank; recorded as such in decisions.md.
 
