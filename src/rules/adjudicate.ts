@@ -8,7 +8,7 @@ import { STAGES, type Dictionary, type RuleSet, type ruleResultSchema, type trac
 // The engine: a frozen fact snapshot and two pinned rule sets in, a trace out (D12, D8). Pure: no clock, database or
 // randomness; `asOf` is recorded, never read from a clock. Stage order is code, stage logic is data.
 // Stages 1-5 always all run; an objective denial skips the rest. A pend stops valuation. A rule gap refers.
-// Seam (P0-4): "contract not found" short-circuit arrives with the Phase 2 pipeline; no golden claim exercises it.
+// "Contract not found" never reaches the engine: the pipeline short-circuits it (D39, PL-06).
 
 export type Trace = z.infer<typeof traceSchema>;
 type RuleTrace = z.infer<typeof ruleResultSchema>;

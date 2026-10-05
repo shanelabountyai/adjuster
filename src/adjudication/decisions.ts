@@ -7,7 +7,7 @@ import { selectVersions } from '@/rules/select';
 import { checkDictionaryHash, validateDictionary } from '@/rules/validate';
 
 // Writing decisions and proving them (D6, P0-3). Raw SQL on a `pg` client, so the verifier reads exactly what is
-// stored, with nothing in between. `recordDecision` is the one writer until the Phase 2 pipeline replaces it.
+// stored, with nothing in between. `recordDecision` is the one writer; the pipeline (pipeline.ts) is its caller.
 
 export type Db = { query: <R = Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<{ rows: R[] }> };
 
@@ -36,7 +36,7 @@ export async function publishRuleSet(db: Db, body: RuleSet): Promise<string> {
   return rows[0]!.id;
 }
 
-const loadVersions = async (db: Db) => new Map((await db.query<Version>(
+export const loadVersions = async (db: Db) => new Map((await db.query<Version>(
   `SELECT "id", "kind", "product", "version", "status", "effectiveFrom"::text AS "effectiveFrom", "body", "contentHash" FROM "RuleSetVersion"`,
 )).rows.map((v) => [v.id, v]));
 
