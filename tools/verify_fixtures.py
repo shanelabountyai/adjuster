@@ -51,6 +51,22 @@ PL_KEY = {"PL-06": {"error": "CONTRACT_NOT_FOUND", "decision": None, "claimStatu
 PL_RUNS_KEY = {"PL-02": [("APPROVE", 25000, 0, None), ("APPROVE", 25000, 0, None)],
                "PL-03": [("PEND", None, 0, None), ("APPROVE", 25000, 1, 0)]}
 PL_STATUS_FOR = {"APPROVE": "DECIDED", "PARTIAL": "DECIDED", "DENY": "DECIDED", "PEND": "PENDING_EVIDENCE", "REFER": "REFERRED"}
+# Phase 3 (D47-D52). OV: whether each case is allowed, typed from domain brief s7's table.
+OV_KEY = {"OV-01": [True, True, False, True, True], "OV-02": [False, True, True, False], "OV-03": [True, True, True, False, False, False, False]}
+# Claim lives. rows: every decision row in order (E engine / O override, outcome, cents). end: claim status, payment status, cents paid.
+P, E_, O_ = ("E", "PEND", None), "E", "O"
+LIFE_KEY = {
+    "EV-01": dict(rows=[P], end=("PENDING_EVIDENCE", "NONE", 0)),
+    "EV-02": dict(rows=[(E_, "DENY", None)], end=("DECIDED", "NONE", 0)),
+    "EV-03": dict(rows=[P, P], end=("PENDING_EVIDENCE", "NONE", 0)),
+    "EV-04": dict(rows=[P, P, P], end=("PENDING_EVIDENCE", "NONE", 0)),
+    "EV-05": dict(rows=[P, P, P, P, (E_, "APPROVE", 25000)], end=("DECIDED", "NONE", 0)),
+    "GC-11": dict(rows=[P, P, P, P, (E_, "APPROVE", 22500)], end=("DECIDED", "NONE", 0)),
+    "GC-15": dict(rows=[P, P, P, P, P, (E_, "REFER", 85100), (O_, "APPROVE", 85100), (E_, "REFER", 170100), (O_, "APPROVE", 170100)], end=("CLOSED", "PAID", 170100)),
+}
+# GC-15, typed from domain brief s11: how each numbered step ends (claim status, the current decision's outcome and cents, cents paid so far)
+GC15_KEY = {1: ("PENDING_EVIDENCE", "PEND", None, 0), 2: ("PENDING_EVIDENCE", "PEND", None, 0), 3: ("PENDING_EVIDENCE", "PEND", None, 0),
+            5: ("REFERRED", "REFER", 85100, 0), 6: ("DECIDED", "APPROVE", 85100, 0), 7: ("CLOSED", "APPROVE", 85100, 85100), 8: ("CLOSED", "APPROVE", 170100, 170100)}
 
 STAGES = ["intake", "contract_verification", "coverage_period", "peril_exclusions", "frequency_limits", "evidence", "red_flags", "valuation", "deductible_limits", "authority", "decision"]
 SKIPPED_ON_DENY = ["evidence", "red_flags", "valuation", "deductible_limits", "authority"]
@@ -80,7 +96,8 @@ def rule(r, get, roots=lambda f: [f]):
         return dict(result=max((w["then"]["outcome"] for w in hits), key=SEVERITY.get), hits=[w["id"] for w in hits], missing=[])
     unknown = [w for w, v in rows if v is None]
     if unknown:
-        missing = sorted({x for w in unknown for c in w["when"] if cell(c, get) is None for x in roots(c["fact"])})
+        # D51: of the facts an unknown cell is computed from, name the ones that are themselves unknown
+        missing = sorted({x for w in unknown for c in w["when"] if cell(c, get) is None for x in roots(c["fact"]) if get(x) is None})
         return dict(result="PEND", hits=[], missing=missing)
     return dict(result="GAP", hits=[], missing=[])
 
@@ -252,8 +269,157 @@ chk(ops["reminders"] == {"firstDay": 10, "secondDay": 20, "closeDay": 30}, "remi
 chk(plan["roundingMode"] == "half_up" and ops["outcomePolicy"]["autoDenyEnabled"] is True and ops["factDictionary"] == dic["id"], "envelope defaults (half_up, auto_deny_enabled, dictionary id)")
 chk(all(s["op"] in ("start_from", "subtract", "apply_bps", "cap_at", "floor_at", "min_of") for s in plan["payout"]["steps"]), "calc step vocabulary")
 
+# ------------------------------------------------------------------ Phase 3: authority and claim lives, replayed from the actions alone
+
+def authority(ops_name, tier, power, paid, amount):
+    """From ops rule data: the tier's limit against total incurred, and its powers plus those of every tier below it."""
+    tiers = RS[ops_name]["authority"]
+    i = next(n for n, t in enumerate(tiers) if t["code"] == tier)
+    total, limit = max(paid, amount), tiers[i]["approveUpToCents"]
+    held = {p for t in tiers[:i + 1] for p in t["powers"]}
+    lacks = [w for w, bad in (("amount", limit is not None and total > limit), ("power", power is not None and power not in held)) if bad]
+    return {"totalIncurredCents": total, "allowed": not lacks, "lacks": lacks}
+
+
+def replay(fid, f):
+    """Second derivation of a claim's life. State comes only from each event's action; every event's expected block must equal it."""
+    doc_types = [x["id"][5:] for x in dic["facts"] if x["id"].startswith("docs.")]
+    flag_ids = {r["id"] for r in RS["ops-v1"]["rules"] if r["kind"] == "flag"}
+    edges = {(t["from"], t["to"]) for t in fx["PL-01"]["transitions"]}
+    s = dict(status=None, intake={}, vers={}, waived=[], rows=[], eng=None, cur=None, paid=0, pay="NONE", level=0, pend_on=None, last=None)
+    of = lambda ver: ver.split("/")[0]
+
+    def doc(d):
+        mine = [v["status"] for k, v in s["vers"].items() if of(k) == d]
+        return "waived" if d in s["waived"] else mine[-1] if mine else "requested"
+
+    def move(i, *path):
+        for to in path:
+            chk((s["status"], to) in edges, f"{fid} event {i}: {s['status']} -> {to} is not in PL-01")
+            s["status"] = to
+
+    def run(i, asof):
+        facts = {**s["intake"], **{f"docs.{d}": doc(d) for d in doc_types}}
+        relied = sorted(k for k, v in s["vers"].items() if v["status"] == "accepted")
+        for k in relied: facts.update(s["vers"][k]["facts"])
+        if s["last"] == (asof, facts, relied): return
+        ops_name = pick_ops(asof, FILE_VERSIONS)
+        got = decide(RS[f["plan"]], RS[ops_name], dic, facts)
+        chk(not any(r["result"] == "GAP" for r in got["rules"]), f"{fid} event {i}: a rule had no matching row")
+        move(i, "IN_REVIEW", PL_STATUS_FOR[got["outcome"]])
+        v = got["valuation"]
+        s["rows"].append({"kind": "engine", "ops": ops_name, "outcome": got["outcome"], "reasons": got["reasons"], "payableCents": got["payableCents"],
+                          "path": v and v["path"], "aggregateRemainingAfterCents": v and v["steps"][-1]["outputCents"], "contractFulfilled": got["contractFulfilled"],
+                          "notPassed": [r for r in got["rules"] if r["result"] != "PASS"], "supersedes": s["eng"], "documentVersions": relied})
+        s.update(last=(asof, facts, relied), eng=len(s["rows"]) - 1, cur=len(s["rows"]) - 1, level=0, pend_on=asof if got["outcome"] == "PEND" else None)
+
+    for i, ev in enumerate(f["events"]):
+        a, asof, extra = ev["action"], ev["asOf"], {}
+        t = a["type"]
+        chk(i == 0 or asof >= f["events"][i - 1]["asOf"], f"{fid} event {i}: goes back in time")
+        if t == "open":
+            chk(i == 0 and all(byid.get(x, {}).get("source") == "input" for x in a["facts"]), f"{fid}: open is first and carries input facts only")
+            s.update(status="OPEN", intake=a["facts"])
+            run(i, asof)
+        elif t == "upload":
+            for k, v in s["vers"].items():
+                if of(k) == a["doc"]: v["status"] = "superseded"
+            chk(a["version"] == f"{a['doc']}/{1 + sum(of(k) == a['doc'] for k in s['vers'])}", f"{fid} event {i}: version number")
+            s["vers"][a["version"]] = {"status": "received", "facts": {}}
+            if s["status"] == "CLOSED_NO_RESPONSE": move(i, "REOPENED")
+        elif t in ("reject", "accept"):
+            v = s["vers"][a["version"]]
+            chk(v["status"] == "received", f"{fid} event {i}: only a received version is accepted or rejected")
+            v["status"] = t + "ed"
+            if t == "accept":
+                chk(all(byid.get(x, {}).get("source") == "input" for x in a["facts"]), f"{fid} event {i}: entered facts must be input facts")
+                v["facts"] = a["facts"]
+                run(i, asof)
+        elif t == "waive":
+            chk(authority(pick_ops(asof, FILE_VERSIONS), a["by"], "waive_documents", s["paid"], 0)["allowed"] and a["reasonText"], f"{fid} event {i}: waiver without the power or a reason")
+            s["waived"].append(a["doc"])
+            run(i, asof)
+        elif t == "tick":
+            if s["status"] == "PENDING_EVIDENCE":
+                rem, days = RS[pick_ops(asof, FILE_VERSIONS)]["reminders"], (D(asof) - D(s["pend_on"])).days
+                if days >= rem["closeDay"]: move(i, "CLOSED_NO_RESPONSE")
+                else: s["level"] = max(s["level"], 2 if days >= rem["secondDay"] else 1 if days >= rem["firstDay"] else 0)
+        elif t == "override":
+            e = s["rows"][s["eng"]]
+            ops_name = pick_ops(asof, FILE_VERSIONS)
+            au = authority(ops_name, a["by"], "clear_flags" if flag_ids & set(e["reasons"]) else None, s["paid"], a["amountCents"])
+            chk(s["cur"] == s["eng"] and e["outcome"] == "REFER" and au["allowed"] and a["reasonCode"] and a["reasonText"], f"{fid} event {i}: override of a non-referral, out of authority, or without a reason")
+            chk(a["amountCents"] == e["payableCents"], f"{fid} event {i}: these fixtures approve the engine's calculated amount")
+            s["rows"].append({"kind": "override", "ops": ops_name, "outcome": a["outcome"], "payableCents": a["amountCents"], "overrides": s["eng"], "by": a["by"],
+                              "totalIncurredCents": au["totalIncurredCents"], "documentVersions": e["documentVersions"]})
+            s["cur"] = len(s["rows"]) - 1
+            move(i, "DECIDED")
+        elif t == "pay":
+            d = s["rows"][s["cur"]]
+            due = (d["payableCents"] or 0) - s["paid"]
+            chk(d["outcome"] in ("APPROVE", "PARTIAL") and due > 0, f"{fid} event {i}: nothing to pay")
+            move(i, "PAYMENT_PENDING", "PAID", "CLOSED")
+            s.update(paid=s["paid"] + due, pay="PAID")
+            extra = {"paymentCents": due}
+        elif t == "reopen":
+            move(i, "REOPENED")
+        else:
+            chk(False, f"{fid} event {i}: unknown action {t}")
+        got = {"claimStatus": s["status"], "paymentStatus": s["pay"], "paidCents": s["paid"], "reminderLevel": s["level"], "docs": {d: doc(d) for d in doc_types},
+               "versions": {k: v["status"] for k, v in s["vers"].items()}, "decisionRows": len(s["rows"]), "decision": {"row": s["cur"], **s["rows"][s["cur"]]}, **extra}
+        e = ev["expected"]
+        chk(got == e, f"{fid} event {i} ({t}): replay disagrees with the oracle on " + ", ".join(k for k in sorted(set(got) | set(e)) if got.get(k) != e.get(k)))
+
+    key = LIFE_KEY[fid]
+    chk([("E" if r["kind"] == "engine" else "O", r["outcome"], r["payableCents"]) for r in s["rows"]] == key["rows"], f"{fid}: decision rows differ from the key")
+    chk((s["status"], s["pay"], s["paid"]) == key["end"], f"{fid}: ends {s['status']} {s['pay']} {s['paid']}, key {key['end']}")
+    chk(all(r["outcome"] != "DENY" for r in s["rows"]) or fid == "EV-02", f"{fid}: a denial where none belongs")
+    return s
+
+
+def check_lives():
+    ev = lambda fid, i: fx[fid]["events"][i]["expected"]
+    # EV-01: every required document for the peril is its own reason. EV-02: the denial never reaches the evidence stage.
+    chk({"E20.proofOfPurchase", "E20.repairEstimate", "E20.damagePhotos", "E20.incidentStatement"} <= set(ev("EV-01", 0)["decision"]["reasons"]), "EV-01: four documents, four reasons")
+    chk(ev("EV-02", 0)["decision"]["reasons"] == ["E6"] and set(ev("EV-02", 0)["docs"].values()) == {"requested"}, "EV-02: denied on E6, nothing asked for")
+    chk(ev("EV-03", -1)["versions"] == {"repairEstimate/1": "superseded", "repairEstimate/2": "accepted"}, "EV-03: the first version is superseded, not gone")
+    a, b = ev("EV-04", 2)["decision"], ev("EV-04", -1)["decision"]
+    chk(fx["EV-04"]["events"][2]["action"]["facts"] == fx["EV-04"]["events"][-1]["action"]["facts"] and len({e["asOf"] for e in fx["EV-04"]["events"]}) == 1
+        and {k: v for k, v in a.items() if k not in ("row", "supersedes", "documentVersions")} == {k: v for k, v in b.items() if k not in ("row", "supersedes", "documentVersions")}
+        and (a["documentVersions"], b["documentVersions"], b["supersedes"]) == (["repairEstimate/1"], ["repairEstimate/2"], a["row"]),
+        "EV-04: same date, facts and outcome; only the version relied on differs, and the later decision supersedes")
+    chk(ev("EV-05", -2)["decision"]["outcome"] == "PEND" and len(ev("EV-05", -1)["decision"]["documentVersions"]) == 4, "EV-05: the last acceptance decides, on four versions")
+    # GC-11, typed from domain brief s6 and s11: reminder on day 10 and 20, closed on day 30, no denial, reopened by the document
+    ticks = [(e["asOf"], e["expected"]["reminderLevel"], e["expected"]["claimStatus"], e["expected"]["decisionRows"]) for e in fx["GC-11"]["events"] if e["action"]["type"] == "tick"]
+    pend = next(e["asOf"] for e in reversed(fx["GC-11"]["events"]) if e["action"]["type"] == "accept" and e["expected"]["decision"]["outcome"] == "PEND")
+    chk([((D(d) - D(pend)).days, lv, st) for d, lv, st, _ in ticks] == [(9, 0, "PENDING_EVIDENCE"), (10, 1, "PENDING_EVIDENCE"), (20, 2, "PENDING_EVIDENCE"), (30, 2, "CLOSED_NO_RESPONSE")]
+        and len({n for *_, n in ticks}) == 1 and ev("GC-11", len(fx["GC-11"]["events"]) - 3)["decision"]["reasons"][0] == "E20.proofOfPurchase",
+        f"GC-11: reminders and close differ from the brief: {ticks}")
+    chk(ev("GC-11", -2)["claimStatus"] == "REOPENED", "GC-11: the arriving document reopens the claim")
+    # GC-15: the last event of each numbered step against the brief
+    last = {}
+    for e in fx["GC-15"]["events"]:
+        for n in (e["step"] if isinstance(e["step"], list) else [e["step"]]): last[n] = e["expected"]
+    got = {n: (x["claimStatus"], x["decision"]["outcome"], x["decision"]["payableCents"], x["paidCents"]) for n, x in last.items() if n != 4}
+    chk(got == GC15_KEY, f"GC-15: steps differ from the brief: {got}")
+    chk(last[2]["reminderLevel"] == 1 and last[2]["decision"]["reasons"][:2] == ["E5", "E20.repairEstimate"] and last[3]["decision"]["reasons"] == ["E21"], "GC-15 steps 2-3: estimate missing with one reminder, then E21")
+    chk(last[4]["docs"]["secondEstimate"] == "waived" and last[5]["decision"]["reasons"] == ["F2", "E23"] and last[5]["decision"]["path"] == "repair", "GC-15 steps 4-5: waiver, then a repair referred on F2 and E23")
+    chk((last[6]["decision"]["by"], last[6]["decision"]["totalIncurredCents"]) == ("adjuster", 85100), "GC-15 step 6: adjuster, 85100 incurred")
+    pays = [e["expected"]["paymentCents"] for e in fx["GC-15"]["events"] if e["action"]["type"] == "pay"]
+    eng8 = next(e["expected"]["decision"] for e in fx["GC-15"]["events"] if e["action"].get("version") == "repairEstimate/2" and e["action"]["type"] == "accept")
+    chk(pays == [85100, 85000] and (eng8["path"], eng8["aggregateRemainingAfterCents"], eng8["contractFulfilled"]) == ("replace", 209900, False)
+        and (last[8]["decision"]["by"], last[8]["decision"]["totalIncurredCents"]) == ("senior", 170100)
+        and not authority("ops-v1", "adjuster", "clear_flags", 85100, 170100)["allowed"],
+        f"GC-15 step 8: supplemental 85000 on a 170100 replacement, 209900 left, senior adjuster: {pays} {eng8['path']} {eng8['aggregateRemainingAfterCents']}")
+    # GC-05's sign-off: the referral is approved at the engine's 77500 by an adjuster
+    so, g5 = fx["GC-05"]["signoff"], fx["GC-05"]["expected"]
+    au = authority(pick_ops(so["asOf"], FILE_VERSIONS), so["by"], "clear_flags" if any(r.startswith("F") for r in g5["reasons"]) else None, so["paidCents"], so["amountCents"])
+    chk(so["asOf"] > fx["GC-05"]["asOf"] and so["expected"] == {"kind": "override", "ops": pick_ops(so["asOf"], FILE_VERSIONS), "outcome": "APPROVE", "payableCents": 77500, "claimStatus": "DECIDED", "authority": au}
+        and au["allowed"] and so["amountCents"] == g5["payableCents"] == 77500 and so["reasonCode"] and so["reasonText"], f"GC-05 sign-off: {so['expected']} / {au}")
+
+
 fx = {os.path.basename(p)[:-5]: load(p) for p in sorted(glob.glob(f"{FIX}/*/*.json"))}
-want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY) + ["RV-01"] + sorted(VP_KEY) + sorted(PL_KEY) + sorted(PL_RUNS_KEY) + ["PL-01"]
+want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY) + ["RV-01"] + sorted(VP_KEY) + sorted(PL_KEY) + sorted(PL_RUNS_KEY) + ["PL-01"] + sorted(OV_KEY) + sorted(LIFE_KEY)
 chk(sorted(fx) == sorted(want), f"fixture set differs: missing {sorted(set(want) - set(fx))}, extra {sorted(set(fx) - set(want))}")
 
 for fid, f in fx.items():
@@ -320,6 +486,13 @@ for fid, f in fx.items():
             chk((e["outcome"], e["payableCents"], e["decision"], e["supersedes"]) == key, f"{fid} run {i}: {e} != key {key}")
             chk(e["decisionRows"] == rows and e["claimStatus"] == PL_STATUS_FOR[e["outcome"]], f"{fid} run {i}: row count or claim status")
             status = e["claimStatus"]
+    elif k == "authority":
+        chk(len(f["cases"]) == len(OV_KEY[fid]), f"{fid}: case count")
+        for c, allowed in zip(f["cases"], OV_KEY[fid]):
+            got = authority(f["ops"], c["tier"], c["power"], c["paidCents"], c["amountCents"])
+            chk(got == c["expected"] and got["allowed"] is allowed, f"{fid} '{c['name']}': {c['expected']} / {got} / key {allowed}")
+    elif k == "lifecycle":
+        replay(fid, f)
     elif k == "pipeline":
         chk(f["expected"] == PL_KEY[fid] and f["claim"]["contractId"] not in f["contracts"], f"{fid}: {f['expected']}")
     elif k == "ref":
@@ -346,10 +519,12 @@ for fid, f in fx.items():
     else:
         chk(False, f"{fid}: unknown fixture kind {k}")
 
+check_lives()
+
 if fails:
     print("FAIL")
     for m in fails: print(" -", m)
     sys.exit(1)
 print(f"OK ({len(fx)} fixtures: {sum(1 for f in fx.values() if f['id'].startswith('RE'))} RE, {sum(1 for f in fx.values() if f['id'].startswith('PAY'))} PAY, "
-      f"{sum(1 for f in fx.values() if f['id'].startswith('GC'))} GC, {sum(1 for f in fx.values() if f['id'][:2] in ('RV', 'VP', 'PL'))} RV/VP/PL; "
+      f"{sum(1 for f in fx.values() if f['id'].startswith('GC'))} GC, {sum(1 for f in fx.values() if f['id'][:2] in ('RV', 'VP', 'PL', 'EV', 'OV'))} RV/VP/PL/EV/OV; "
       "payables match the brief to the cent)")

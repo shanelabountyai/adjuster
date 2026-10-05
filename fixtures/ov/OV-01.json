@@ -1,0 +1,71 @@
+{
+  "id": "OV-01",
+  "kind": "authority",
+  "title": "The tier's limit is inclusive, and a tier with no limit approves anything",
+  "source": "domain brief s7 / D18 / D50 / D51",
+  "ops": "ops-v1",
+  "cases": [
+    {
+      "name": "GC-05's sign-off",
+      "tier": "adjuster",
+      "power": null,
+      "paidCents": 0,
+      "amountCents": 77500,
+      "expected": {
+        "totalIncurredCents": 77500,
+        "allowed": true,
+        "lacks": []
+      }
+    },
+    {
+      "name": "at the limit",
+      "tier": "adjuster",
+      "power": null,
+      "paidCents": 0,
+      "amountCents": 100000,
+      "expected": {
+        "totalIncurredCents": 100000,
+        "allowed": true,
+        "lacks": []
+      }
+    },
+    {
+      "name": "one cent over",
+      "tier": "adjuster",
+      "power": null,
+      "paidCents": 0,
+      "amountCents": 100001,
+      "expected": {
+        "totalIncurredCents": 100001,
+        "allowed": false,
+        "lacks": [
+          "amount"
+        ]
+      }
+    },
+    {
+      "name": "the next tier takes it",
+      "tier": "senior",
+      "power": null,
+      "paidCents": 0,
+      "amountCents": 100001,
+      "expected": {
+        "totalIncurredCents": 100001,
+        "allowed": true,
+        "lacks": []
+      }
+    },
+    {
+      "name": "no limit",
+      "tier": "manager",
+      "power": null,
+      "paidCents": 0,
+      "amountCents": 99999999,
+      "expected": {
+        "totalIncurredCents": 99999999,
+        "allowed": true,
+        "lacks": []
+      }
+    }
+  ]
+}

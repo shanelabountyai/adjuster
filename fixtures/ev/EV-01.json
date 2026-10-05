@@ -1,0 +1,156 @@
+{
+  "id": "EV-01",
+  "kind": "lifecycle",
+  "title": "FNOL on an accidental-damage claim: PEND, and each of the four required documents is a reason",
+  "source": "PRD P0-6 / D51",
+  "note": "Facts that only a document can supply are unknown at FNOL, so the rules that read them pend too (notPassed[].missing).",
+  "plan": "plan-v1",
+  "events": [
+    {
+      "asOf": "2025-09-17",
+      "action": {
+        "type": "open",
+        "facts": {
+          "contract.planCode": "plus",
+          "contract.status": "active",
+          "contract.termStart": "2025-01-15",
+          "contract.termEnd": "2028-01-14",
+          "contract.waitingEndsOn": "2025-02-14",
+          "product.purchaseDate": "2025-01-15",
+          "product.purchasePriceCents": 80000,
+          "claim.peril": "adh",
+          "claim.dateOfLoss": "2025-09-15",
+          "claim.dateReported": "2025-09-17",
+          "claim.cosmeticOnly": false,
+          "claim.preExisting": false,
+          "claim.consumableOrAccessory": false,
+          "claim.unauthorizedRepair": "none",
+          "claim.commercialUse": false,
+          "claim.intentionalOrAbuse": false,
+          "claim.inMfrWarrantyOrRecall": false,
+          "claim.productUnavailable": false,
+          "claim.softwareOrData": false,
+          "claim.externalCause": false,
+          "claim.claimantIsHolder": true,
+          "claim.replacementValueCents": 70000,
+          "history.priorClaims": [],
+          "history.claimantContractsWithClaims": 1
+        }
+      },
+      "expected": {
+        "claimStatus": "PENDING_EVIDENCE",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "requested",
+          "damagePhotos": "requested",
+          "incidentStatement": "requested",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {},
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "PEND",
+          "reasons": [
+            "E5",
+            "E20.proofOfPurchase",
+            "E20.repairEstimate",
+            "E20.damagePhotos",
+            "E20.incidentStatement",
+            "E21",
+            "F3",
+            "F5",
+            "F7",
+            "F8",
+            "F10"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E20.proofOfPurchase",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "E20.repairEstimate",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "E20.damagePhotos",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "E20.incidentStatement",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "E21",
+              "result": "PEND",
+              "missing": [
+                "evidence.estimateFromNetwork"
+              ]
+            },
+            {
+              "ruleId": "F3",
+              "result": "PEND",
+              "missing": [
+                "evidence.proofOfPurchaseDate"
+              ]
+            },
+            {
+              "ruleId": "F5",
+              "result": "PEND",
+              "missing": [
+                "claim.coveredRepairCents"
+              ]
+            },
+            {
+              "ruleId": "F7",
+              "result": "PEND",
+              "missing": [
+                "evidence.documentHashOnOtherClaim",
+                "evidence.photoMetaDateBeforeLoss"
+              ]
+            },
+            {
+              "ruleId": "F8",
+              "result": "PEND",
+              "missing": [
+                "evidence.estimateFromNetwork",
+                "evidence.estimatorIsPayee"
+              ]
+            },
+            {
+              "ruleId": "F10",
+              "result": "PEND",
+              "missing": [
+                "claim.accountChanged"
+              ]
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    }
+  ]
+}

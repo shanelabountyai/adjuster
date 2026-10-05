@@ -1,0 +1,87 @@
+{
+  "id": "EV-02",
+  "kind": "lifecycle",
+  "title": "A claim deniable at FNOL is denied without asking for documents: the evidence stage does not run",
+  "source": "PRD P0-6 / D8",
+  "note": "GC-02's claim.",
+  "plan": "plan-v1",
+  "events": [
+    {
+      "asOf": "2025-09-17",
+      "action": {
+        "type": "open",
+        "facts": {
+          "contract.planCode": "essential",
+          "contract.status": "active",
+          "contract.termStart": "2025-01-15",
+          "contract.termEnd": "2027-01-14",
+          "contract.waitingEndsOn": "2025-02-14",
+          "product.purchaseDate": "2025-01-15",
+          "product.purchasePriceCents": 60000,
+          "claim.peril": "adh",
+          "claim.dateOfLoss": "2025-09-15",
+          "claim.dateReported": "2025-09-17",
+          "claim.cosmeticOnly": false,
+          "claim.preExisting": false,
+          "claim.consumableOrAccessory": false,
+          "claim.unauthorizedRepair": "none",
+          "claim.commercialUse": false,
+          "claim.intentionalOrAbuse": false,
+          "claim.inMfrWarrantyOrRecall": false,
+          "claim.productUnavailable": false,
+          "claim.softwareOrData": false,
+          "claim.externalCause": false,
+          "claim.claimantIsHolder": true,
+          "claim.replacementValueCents": 60000,
+          "history.priorClaims": [],
+          "history.claimantContractsWithClaims": 1
+        }
+      },
+      "expected": {
+        "claimStatus": "DECIDED",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "requested",
+          "damagePhotos": "requested",
+          "incidentStatement": "requested",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {},
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "DENY",
+          "reasons": [
+            "E6"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E6",
+              "result": "DENY",
+              "missing": []
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    }
+  ]
+}

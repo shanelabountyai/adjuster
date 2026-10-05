@@ -80,12 +80,16 @@ def adjudicate(f, plan="plan-v1", ops="ops-v1"):
         return n
 
     paid = sum(p["paidCents"] for p in prior)
-    R_, C_ = f["claim.replacementValueCents"], f["claim.coveredRepairCents"]
-    ratio = rhu(Fraction(C_ * 10000, R_))
+    R_, C_ = f["claim.replacementValueCents"], f.get("claim.coveredRepairCents")
+    ratio = None if C_ is None else rhu(Fraction(C_ * 10000, R_))
     docs_ok = lambda k: f.get(f"docs.{k}") in DOC_OK
-    out = []  # (stage, ruleId, result)
+    out = []  # (stage, ruleId, result, missing)
 
-    def add(stage, rid, result): out.append((stage, rid, result))
+    def add(stage, rid, result, missing=()): out.append((stage, rid, result, list(missing)))
+
+    def tri(stage, rid, hit, names, yes="REFER"):
+        """hit is True, False or None. None = a fact no document has supplied yet: PEND naming the unknown ones (D9, D51)."""
+        add(stage, rid, "PEND" if hit is None else yes if hit else "PASS", sorted(n for n in names if f.get(n) is None) if hit is None else [])
 
     # ---- plan rules (class C), file order
     add("coverage_period", "E1", "PASS" if f["contract.status"] == "active" else "DENY")
@@ -113,32 +117,37 @@ def adjudicate(f, plan="plan-v1", ops="ops-v1"):
     add("frequency_limits", "E16", "DENY" if paid >= t["agg"] else "PASS")
     # ---- ops rules (class O), file order
     add("intake", "E17", "REFER" if count(7, same=True) > 0 else "PASS")
-    add("contract_verification", "E5", "PASS" if f["claim.serialMatchesContract"] else "REFER")
+    serial = f.get("claim.serialMatchesContract")
+    tri("contract_verification", "E5", None if serial is None else not serial, ["claim.serialMatchesContract"])
     add("evidence", "E22", "PASS" if f["claim.claimantIsHolder"] or docs_ok("transferProof") else "PEND")
     add("evidence", "E20.proofOfPurchase", "PASS" if docs_ok("proofOfPurchase") else "PEND")
     add("evidence", "E20.repairEstimate", "PASS" if docs_ok("repairEstimate") else "PEND")
     add("evidence", "E20.damagePhotos", "PASS" if peril != "adh" or docs_ok("damagePhotos") else "PEND")
     add("evidence", "E20.incidentStatement", "PASS" if peril != "adh" or docs_ok("incidentStatement") else "PEND")
-    add("evidence", "E21", "PASS" if f["evidence.estimateFromNetwork"] or docs_ok("secondEstimate") else "PEND")
+    net, payee = f.get("evidence.estimateFromNetwork"), f.get("evidence.estimatorIsPayee")
+    tri("evidence", "E21", None if net is None else not (net or docs_ok("secondEstimate")), ["evidence.estimateFromNetwork"], yes="PEND")
     wait_end = (D(f["contract.waitingEndsOn"]) - dol).days  # F1 reads the date seeded on the contract
+    pop, photo, dup = f.get("evidence.proofOfPurchaseDate"), f.get("evidence.photoMetaDateBeforeLoss"), f.get("evidence.documentHashOnOtherClaim")
     flags = [
-        ("F1", 0 <= -wait_end <= 7),
-        ("F2", count(60) >= 1),
-        ("F3", (dol - D(f["evidence.proofOfPurchaseDate"])).days < 0),
-        ("F4", (start - D(f["product.purchaseDate"])).days > 30 and since < 60),  # PROVISIONAL 30 / 60
-        ("F5", 9500 <= rhu(Fraction(C_ * 10000, t["pcl"])) < 10000 or 6500 <= ratio <= 7000),  # PROVISIONAL band; D25: below the limit only
-        ("F6", f["history.claimantContractsWithClaims"] >= 3),
-        ("F7", f["evidence.photoMetaDateBeforeLoss"] or f["evidence.documentHashOnOtherClaim"]),
-        ("F8", not f["evidence.estimateFromNetwork"] and f["evidence.estimatorIsPayee"]),
-        ("F9", 0 <= to_end <= 30),
-        ("F10", f["claim.accountChanged"]),
+        ("F1", 0 <= -wait_end <= 7, []),
+        ("F2", count(60) >= 1, []),
+        ("F3", None if pop is None else (dol - D(pop)).days < 0, ["evidence.proofOfPurchaseDate"]),
+        ("F4", (start - D(f["product.purchaseDate"])).days > 30 and since < 60, []),  # PROVISIONAL 30 / 60
+        ("F5", None if C_ is None else 9500 <= rhu(Fraction(C_ * 10000, t["pcl"])) < 10000 or 6500 <= ratio <= 7000,  # PROVISIONAL band; D25: below the limit only
+         ["claim.coveredRepairCents"]),
+        ("F6", f["history.claimantContractsWithClaims"] >= 3, []),
+        # one known hit decides; otherwise every part must be known to clear
+        ("F7", True if True in (photo, dup) else None if None in (photo, dup) else False, ["evidence.photoMetaDateBeforeLoss", "evidence.documentHashOnOtherClaim"]),
+        ("F8", True if (net is False and payee is True) else False if (net is True or payee is False) else None, ["evidence.estimateFromNetwork", "evidence.estimatorIsPayee"]),
+        ("F9", 0 <= to_end <= 30, []),
+        ("F10", f.get("claim.accountChanged"), ["claim.accountChanged"]),
     ]
-    for rid, hit in flags: add("red_flags", rid, "REFER" if hit else "PASS")
+    for rid, hit, names in flags: tri("red_flags", rid, hit, names)
 
-    deny = any(r == "DENY" for _, _, r in out)  # auto_deny_enabled = true (O1 default)
+    deny = any(x[2] == "DENY" for x in out)  # auto_deny_enabled = true (O1 default)
     skipped = list(SKIPPED_ON_DENY) if deny else []
     out = [x for x in out if x[0] not in skipped]
-    pend = any(r == "PEND" for _, _, r in out)
+    pend = any(x[2] == "PEND" for x in out)
 
     valuation, payable, fulfilled = None, None, None
     if not deny and not pend:
@@ -149,16 +158,16 @@ def adjudicate(f, plan="plan-v1", ops="ops-v1"):
 
     if deny: outcome = "DENY"
     elif pend: outcome = "PEND"
-    elif any(r == "REFER" for _, _, r in out): outcome = "REFER"
+    elif any(x[2] == "REFER" for x in out): outcome = "REFER"
     else: outcome = "PARTIAL" if payable < after_ded else "APPROVE"
     key = {"DENY": "DENY", "PEND": "PEND", "REFER": "REFER"}.get(outcome)
     return {
         "outcome": outcome,
-        "reasons": [rid for _, rid, r in out if r == key] if key else [],
+        "reasons": [rid for _, rid, r, _ in out if r == key] if key else [],
         "payableCents": payable,
         "contractFulfilled": fulfilled,
         "skippedStages": skipped,
-        "rules": [{"ruleId": rid, "result": r, "missing": []} for _, rid, r in out],
+        "rules": [{"ruleId": rid, "result": r, "missing": m} for _, rid, r, m in out],
         "valuation": valuation,
     }
 
@@ -282,6 +291,17 @@ def build_gc():
         write("gc", decision_fixture(gid, title, src, f))
 
 
+# PL-01 (D38): domain brief s7's status line as a table. A third element names what the claim's current decision must be.
+PRE = ["OPEN", "PENDING_EVIDENCE", "IN_REVIEW", "REFERRED"]
+EDGES = [("OPEN", "PENDING_EVIDENCE"), ("OPEN", "IN_REVIEW"), ("PENDING_EVIDENCE", "IN_REVIEW"), ("IN_REVIEW", "PENDING_EVIDENCE"),
+         ("IN_REVIEW", "REFERRED"), ("IN_REVIEW", "DECIDED"), ("REFERRED", "DECIDED"), ("REFERRED", "PENDING_EVIDENCE"),
+         ("PENDING_EVIDENCE", "CLOSED_NO_RESPONSE")] + [(s, "WITHDRAWN") for s in PRE] + [
+         ("DECIDED", "PAYMENT_PENDING", "payable"), ("DECIDED", "UNDER_APPEAL", "denied"), ("DECIDED", "CLOSED", "denied_or_zero"),
+         ("UNDER_APPEAL", "DECIDED"), ("PAYMENT_PENDING", "PAID"), ("PAID", "CLOSED"),
+         ("CLOSED", "REOPENED"), ("CLOSED_NO_RESPONSE", "REOPENED"), ("REOPENED", "IN_REVIEW")]
+STATUS_FOR = {"APPROVE": "DECIDED", "PARTIAL": "DECIDED", "DENY": "DECIDED", "PEND": "PENDING_EVIDENCE", "REFER": "REFERRED"}
+
+
 # ------------------------------------------------------------------ Phase 2: RV, VP, PL (D35)
 
 def build_phase2():
@@ -330,14 +350,7 @@ def build_phase2():
                  "source": "domain brief s2 / D12 / D35", "contracts": ["CT-0001"], "claim": {"contractId": "CT-0404", "facts": claim},
                  "expected": {"error": "CONTRACT_NOT_FOUND", "decision": None, "claimStatus": "REFERRED", "rulesRun": []}})
 
-    # PL-01 (D38): domain brief s7's status line as a table. `when` names what the claim's current decision must be.
-    pre = ["OPEN", "PENDING_EVIDENCE", "IN_REVIEW", "REFERRED"]
-    edges = [("OPEN", "PENDING_EVIDENCE"), ("OPEN", "IN_REVIEW"), ("PENDING_EVIDENCE", "IN_REVIEW"), ("IN_REVIEW", "PENDING_EVIDENCE"),
-             ("IN_REVIEW", "REFERRED"), ("IN_REVIEW", "DECIDED"), ("REFERRED", "DECIDED"), ("REFERRED", "PENDING_EVIDENCE"),
-             ("PENDING_EVIDENCE", "CLOSED_NO_RESPONSE")] + [(s, "WITHDRAWN") for s in pre] + [
-             ("DECIDED", "PAYMENT_PENDING", "payable"), ("DECIDED", "UNDER_APPEAL", "denied"), ("DECIDED", "CLOSED", "denied_or_zero"),
-             ("UNDER_APPEAL", "DECIDED"), ("PAYMENT_PENDING", "PAID"), ("PAID", "CLOSED"),
-             ("CLOSED", "REOPENED"), ("CLOSED_NO_RESPONSE", "REOPENED"), ("REOPENED", "IN_REVIEW")]
+    pre, edges = PRE, EDGES
     gcase = lambda name, decision, legal: {"name": name, "from": "DECIDED", "decision": decision, "legal": legal}
     write("pl", {"id": "PL-01", "kind": "transitions", "title": "Claim status moves only along the table; anything else throws",
                  "source": "domain brief s7 / D38",
@@ -352,7 +365,7 @@ def build_phase2():
 
     # PL-02 / PL-03 (D13, D40): one claim run more than once. `change` is what was entered on the claim before the run.
     # A run on the asOf and facts of the claim's last decision writes nothing; any other needs a status that can move to IN_REVIEW.
-    status_for = {"APPROVE": "DECIDED", "PARTIAL": "DECIDED", "DENY": "DECIDED", "PEND": "PENDING_EVIDENCE", "REFER": "REFERRED"}
+    status_for = STATUS_FOR
 
     def reruns(fid, title, f0, runs):
         f, last, exp, status, rows, out = f0, None, None, "OPEN", 0, []
@@ -376,6 +389,223 @@ def build_phase2():
     reruns("PL-03", "Changed facts supersede under the same plan version and the ops version in force on the new asOf",
            facts("essential", start=dt.date(2025, 7, 20), price=90000, R=60000, C=30000, **{"docs.repairEstimate": "requested"}),
            [("2026-03-25", {}), ("2026-04-02", {"docs.repairEstimate": "accepted"})])
+
+
+# ------------------------------------------------------------------ Phase 3: authority (OV), claim lives (EV, GC-11, GC-15)  D47-D52
+
+# domain brief s7, typed here; verify_fixtures.py reads the same table from ops rule data. Powers accumulate up the list (D51).
+AUTH = [("system", {"ops-v1": 50000, "ops-v2": 75000}, []), ("adjuster", 100000, ["clear_flags", "waive_documents"]),
+        ("senior", 250000, ["decide_appeals"]), ("manager", None, ["ex_gratia", "publish_rules"])]
+REMIND = dict(firstDay=10, secondDay=20, closeDay=30)
+DOCS = ["proofOfPurchase", "repairEstimate", "damagePhotos", "incidentStatement", "secondEstimate", "transferProof"]
+# which facts a person enters from which document (D51). Fixture input, not a rule: the accept action carries them.
+FROM_DOC = {"proofOfPurchase": ["evidence.proofOfPurchaseDate"],
+            "repairEstimate": ["claim.coveredRepairCents", "claim.serialMatchesContract", "evidence.estimateFromNetwork", "evidence.estimatorIsPayee"],
+            "damagePhotos": ["evidence.photoMetaDateBeforeLoss", "evidence.documentHashOnOtherClaim"],
+            "incidentStatement": ["claim.accountChanged"]}
+
+
+def authority(ops, tier, power, paid, amount):
+    """Tested on total incurred = the larger of what the claim has been paid and the amount now being approved (D50)."""
+    i = [c for c, _, _ in AUTH].index(tier)
+    limit = AUTH[i][1][ops] if isinstance(AUTH[i][1], dict) else AUTH[i][1]
+    total = max(paid, amount)
+    lacks = (["amount"] if limit is not None and total > limit else []) + (["power"] if power and power not in sum((p for _, _, p in AUTH[:i + 1]), []) else [])
+    return {"totalIncurredCents": total, "allowed": not lacks, "lacks": lacks}
+
+
+def legal(a, b): return any(e[0] == a and e[1] == b for e in EDGES)
+
+
+class Life:
+    """One claim from FNOL on, as a list of events: one action each, and the state it must leave behind."""
+
+    def __init__(self, full, plan="plan-v1"):
+        from_docs = {n for ns in FROM_DOC.values() for n in ns}
+        self.full, self.plan = full, plan
+        self.intake = {k: v for k, v in full.items() if k not in from_docs and not k.startswith("docs.")}
+        self.versions, self.waived, self.rows, self.events = {}, set(), [], []
+        self.status, self.engine, self.current, self.paid, self.pay_status, self.level, self.pend_on = None, None, None, 0, "NONE", 0, None
+
+    def doc(self, d):
+        if d in self.waived: return "waived"
+        vs = [v["status"] for k, v in self.versions.items() if k.split("/")[0] == d]
+        return vs[-1] if vs else "requested"
+
+    def snapshot(self):
+        f = {**self.intake, **{f"docs.{d}": self.doc(d) for d in DOCS}}
+        for v in self.versions.values():
+            if v["status"] == "accepted": f.update(v["facts"])
+        return f
+
+    def move(self, *path):
+        for to in path:
+            assert legal(self.status, to), f"{self.status} -> {to}"
+            self.status = to
+
+    def run(self, asof):
+        """D40 with D47: the input is asOf, the facts and the accepted document versions. Unchanged = nothing written."""
+        f, relied = self.snapshot(), sorted(k for k, v in self.versions.items() if v["status"] == "accepted")
+        if self.engine is not None and self.rows[self.engine]["input"] == (asof, f, relied): return
+        ops = select_ops(D(asof))
+        e = adjudicate(f, self.plan, ops)
+        self.move("IN_REVIEW", STATUS_FOR[e["outcome"]])
+        self.rows.append(dict(input=(asof, f, relied), shown={
+            "kind": "engine", "ops": ops, "outcome": e["outcome"], "reasons": e["reasons"], "payableCents": e["payableCents"],
+            "path": e["valuation"] and e["valuation"]["path"], "aggregateRemainingAfterCents": e["valuation"] and e["valuation"]["steps"][-1]["outputCents"],
+            "contractFulfilled": e["contractFulfilled"], "notPassed": [r for r in e["rules"] if r["result"] != "PASS"],
+            "supersedes": self.engine, "documentVersions": relied}))
+        self.engine = self.current = len(self.rows) - 1
+        self.level, self.pend_on = 0, asof if e["outcome"] == "PEND" else None
+
+    def ev(self, asof, action, step=None, **extra):
+        e = {"asOf": asof, "action": action, "expected": {
+            "claimStatus": self.status, "paymentStatus": self.pay_status, "paidCents": self.paid, "reminderLevel": self.level,
+            "docs": {d: self.doc(d) for d in DOCS}, "versions": {k: v["status"] for k, v in self.versions.items()},
+            "decisionRows": len(self.rows), "decision": {"row": self.current, **self.rows[self.current]["shown"]}, **extra}}
+        self.events.append({"step": step, **e} if step else e)
+
+    # ---- actions
+    def open(self, asof, step=None):
+        self.status = "OPEN"
+        self.run(asof)
+        self.ev(asof, {"type": "open", "facts": self.intake}, step)
+
+    def upload(self, asof, d, step=None):
+        for k, v in self.versions.items():
+            if k.split("/")[0] == d: v["status"] = "superseded"
+        ver = f"{d}/{1 + sum(k.split('/')[0] == d for k in self.versions)}"
+        self.versions[ver] = dict(status="received", facts={})
+        if self.status == "CLOSED_NO_RESPONSE": self.move("REOPENED")
+        self.ev(asof, {"type": "upload", "doc": d, "version": ver}, step)
+        return ver
+
+    def reject(self, asof, ver, reason, step=None):
+        assert self.versions[ver]["status"] == "received"
+        self.versions[ver]["status"] = "rejected"
+        self.ev(asof, {"type": "reject", "version": ver, "reason": reason}, step)
+
+    def accept(self, asof, ver, step=None, **entered):
+        v = self.versions[ver]
+        assert v["status"] == "received"
+        v.update(status="accepted", facts={n: entered.get(n, self.full[n]) for n in FROM_DOC[ver.split("/")[0]]})
+        self.run(asof)
+        self.ev(asof, {"type": "accept", "version": ver, "facts": v["facts"]}, step)
+
+    def file(self, asof, *docs, step=None):
+        for d in docs: self.accept(asof, self.upload(asof, d, step), step)
+
+    def waive(self, asof, d, tier, text, step=None):
+        a = authority(select_ops(D(asof)), tier, "waive_documents", self.paid, 0)
+        assert a["allowed"]
+        self.waived.add(d)
+        self.run(asof)
+        self.ev(asof, {"type": "waive", "doc": d, "by": tier, "reasonText": text}, step)
+
+    def tick(self, asof, step=None):
+        """The no-response job on the injected date, counted from the current PEND decision's asOf (D51). At most one reminder a run."""
+        if self.status == "PENDING_EVIDENCE":
+            days = (D(asof) - D(self.pend_on)).days
+            if days >= REMIND["closeDay"]: self.move("CLOSED_NO_RESPONSE")
+            else: self.level = max(self.level, (days >= REMIND["firstDay"]) + (days >= REMIND["secondDay"]))
+        self.ev(asof, {"type": "tick"}, step)
+
+    def override(self, asof, tier, code, text, step=None):
+        e = self.rows[self.engine]["shown"]
+        assert self.current == self.engine and e["outcome"] == "REFER"
+        ops = select_ops(D(asof))
+        a = authority(ops, tier, "clear_flags" if any(r.startswith("F") for r in e["reasons"]) else None, self.paid, e["payableCents"])
+        assert a["allowed"], a
+        self.rows.append(dict(shown={"kind": "override", "ops": ops, "outcome": "APPROVE", "payableCents": e["payableCents"], "overrides": self.engine,
+                                     "by": tier, "totalIncurredCents": a["totalIncurredCents"], "documentVersions": e["documentVersions"]}))
+        self.current = len(self.rows) - 1
+        self.move("DECIDED")
+        self.ev(asof, {"type": "override", "by": tier, "outcome": "APPROVE", "amountCents": e["payableCents"], "reasonCode": code, "reasonText": text}, step)
+
+    def pay(self, asof, step=None):
+        """The current decision's amount is the claim's total; what goes out is the part not yet paid, so the deductible is taken once."""
+        due = self.rows[self.current]["shown"]["payableCents"] - self.paid
+        assert due > 0
+        self.move("PAYMENT_PENDING", "PAID", "CLOSED")
+        self.paid, self.pay_status = self.paid + due, "PAID"
+        self.ev(asof, {"type": "pay"}, step, paymentCents=due)
+
+    def reopen(self, asof, reason, step=None):
+        self.move("REOPENED")
+        self.ev(asof, {"type": "reopen", "reason": reason}, step)
+
+    def write(self, sub, fid, title, source, note=None):
+        write(sub, {"id": fid, "kind": "lifecycle", "title": title, "source": source, **({"note": note} if note else {}), "plan": self.plan, "events": self.events})
+
+
+def build_phase3():
+    case = lambda name, tier, amount, power=None, paid=0: {"name": name, "tier": tier, "power": power, "paidCents": paid, "amountCents": amount,
+                                                             "expected": authority("ops-v1", tier, power, paid, amount)}
+    ov = [
+        ("OV-01", "The tier's limit is inclusive, and a tier with no limit approves anything", [
+            case("GC-05's sign-off", "adjuster", 77500), case("at the limit", "adjuster", 100000), case("one cent over", "adjuster", 100001),
+            case("the next tier takes it", "senior", 100001), case("no limit", "manager", 99999999)]),
+        ("OV-02", "Authority is tested on total incurred on the claim, never on the payment about to go out", [
+            case("GC-15 step 8: 85000 more would fit, the 170100 total does not", "adjuster", 170100, paid=85100),
+            case("GC-15 step 8, senior adjuster", "senior", 170100, paid=85100),
+            case("a supplement that keeps the total inside the limit", "adjuster", 95000, paid=60000),
+            case("a recomputed total below what was paid: paid money stays incurred", "adjuster", 60000, paid=120000)]),
+        ("OV-03", "A power belongs to its tier and every tier above it", [
+            case("adjuster clears a flag", "adjuster", 85100, "clear_flags"), case("adjuster waives a document", "adjuster", 0, "waive_documents"),
+            case("senior adjuster clears a flag (GC-15 step 8)", "senior", 170100, "clear_flags", 85100),
+            case("adjuster cannot decide an appeal", "adjuster", 0, "decide_appeals"), case("the system tier has no powers", "system", 0, "waive_documents"),
+            case("power held, amount not", "adjuster", 100001, "clear_flags"), case("neither", "system", 60000, "clear_flags")]),
+    ]
+    for fid, title, cases in ov:
+        write("ov", {"id": fid, "kind": "authority", "title": title, "source": "domain brief s7 / D18 / D50 / D51", "ops": "ops-v1", "cases": cases})
+
+    gc01 = lambda: facts("essential", price=90000, R=60000, C=30000)
+    day = "2025-09-17"  # the default claim's date reported
+
+    c = Life(facts("plus", price=80000, R=70000, C=20000, peril="adh")); c.open(day)
+    c.write("ev", "EV-01", "FNOL on an accidental-damage claim: PEND, and each of the four required documents is a reason", "PRD P0-6 / D51",
+            "Facts that only a document can supply are unknown at FNOL, so the rules that read them pend too (notPassed[].missing).")
+    c = Life(facts("essential", price=60000, R=60000, C=25000, peril="adh")); c.open(day)
+    c.write("ev", "EV-02", "A claim deniable at FNOL is denied without asking for documents: the evidence stage does not run", "PRD P0-6 / D8", "GC-02's claim.")
+    c = Life(gc01()); c.open(day)
+    v = c.upload(day, "repairEstimate"); c.reject(day, v, "illegible"); c.accept(day, c.upload(day, "repairEstimate"))
+    c.write("ev", "EV-03", "A new upload supersedes; the rejected version is still there", "PRD P0-6 / D51")
+    c = Life(gc01()); c.open(day); c.file(day, "repairEstimate", "repairEstimate")
+    c.write("ev", "EV-04", "Each decision names the document versions it relied on, and a replacement with the same content is a new input", "PRD P0-6 / D4 / D47",
+            "Same asOf, same facts, same outcome: only documentVersions differs between the last two decisions, and the later one supersedes.")
+    c = Life(gc01()); c.open(day); c.file(day, "damagePhotos", "incidentStatement", "repairEstimate", "proofOfPurchase")
+    c.write("ev", "EV-05", "Accepting the last missing document re-adjudicates: PEND becomes APPROVE 25000", "PRD P0-6 / D51", "GC-01's claim.")
+
+    c = Life(facts("plus", price=120000, R=110000, C=30000)); c.open(day); c.file(day, "repairEstimate", "damagePhotos", "incidentStatement")
+    for d in ("2025-09-26", "2025-09-27", "2025-10-07", "2025-10-17"): c.tick(d)
+    c.file("2025-11-03", "proofOfPurchase")
+    c.write("gc", "GC-11", "Plus, no proof of purchase and no response: reminders on day 10 and 20, closed on day 30, reopened when it arrives", "domain brief s11 / s6",
+            "Closing writes no decision: the claim's decision is still the PEND, never a denial. PAY-A's numbers once the receipt is in.")
+
+    s = dt.date(2025, 1, 15)
+    dol = s + dt.timedelta(days=200)
+    c = Life(facts("premier", dol=dol, price=180000, R=190000, C=95000, peril="adh", prior=[prior("GC-15-P1", dol - dt.timedelta(days=45), "breakdown", 20000)],
+                   **{"evidence.estimateFromNetwork": False}))
+    c.open("2025-08-05", 1)
+    c.file("2025-08-06", "proofOfPurchase", "damagePhotos", "incidentStatement", step=2); c.tick("2025-08-16", 2)
+    c.file("2025-08-18", "repairEstimate", step=3)
+    c.waive("2025-08-19", "secondEstimate", "adjuster", "No network servicer within 50 miles; estimate itemized and consistent with parts catalog", [4, 5])
+    c.override("2025-08-20", "adjuster", "FLAG_CLEARED", "F2: unrelated failure, network-repaired", 6)
+    c.pay("2025-08-21", 7)
+    c.reopen("2025-09-10", "supplemental", 8)
+    c.accept("2025-09-10", c.upload("2025-09-10", "repairEstimate", 8), 8, **{"claim.coveredRepairCents": 145000})
+    c.override("2025-09-11", "senior", "FLAG_CLEARED", "F2: unrelated failure, network-repaired; teardown estimate reviewed", 8)
+    c.pay("2025-09-12", 8)
+    c.write("gc", "GC-15", "Capstone: a Premier laptop claim from FNOL to a supplemental that turns a repair into a replacement", "domain brief s11",
+            "step is the brief's step number. The engine's amount is always the claim's total; a payment is the part of it not yet paid.")
+
+    gc5 = json.load(open(os.path.join(ROOT, "gc", "GC-05.json")))
+    asof = iso(D(gc5["asOf"]) + dt.timedelta(days=1))
+    gc5["signoff"] = {"asOf": asof, "by": "adjuster", "outcome": "APPROVE", "amountCents": gc5["expected"]["payableCents"], "reasonCode": "SIGN_OFF",
+                      "reasonText": "Replacement value checked against the catalog", "paidCents": 0,
+                      "expected": {"kind": "override", "ops": select_ops(D(asof)), "outcome": "APPROVE", "payableCents": gc5["expected"]["payableCents"], "claimStatus": "DECIDED",
+                                   "authority": authority(select_ops(D(asof)), "adjuster", None, 0, gc5["expected"]["payableCents"])}}
+    write("gc", gc5)
 
 
 def build_pay():
@@ -528,5 +758,5 @@ def build_re():
 
 
 if __name__ == "__main__":
-    build_re(); build_pay(); build_gc(); build_phase2()
+    build_re(); build_pay(); build_gc(); build_phase2(); build_phase3()
     print("fixtures written to", os.path.normpath(ROOT))

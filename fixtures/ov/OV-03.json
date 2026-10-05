@@ -1,0 +1,102 @@
+{
+  "id": "OV-03",
+  "kind": "authority",
+  "title": "A power belongs to its tier and every tier above it",
+  "source": "domain brief s7 / D18 / D50 / D51",
+  "ops": "ops-v1",
+  "cases": [
+    {
+      "name": "adjuster clears a flag",
+      "tier": "adjuster",
+      "power": "clear_flags",
+      "paidCents": 0,
+      "amountCents": 85100,
+      "expected": {
+        "totalIncurredCents": 85100,
+        "allowed": true,
+        "lacks": []
+      }
+    },
+    {
+      "name": "adjuster waives a document",
+      "tier": "adjuster",
+      "power": "waive_documents",
+      "paidCents": 0,
+      "amountCents": 0,
+      "expected": {
+        "totalIncurredCents": 0,
+        "allowed": true,
+        "lacks": []
+      }
+    },
+    {
+      "name": "senior adjuster clears a flag (GC-15 step 8)",
+      "tier": "senior",
+      "power": "clear_flags",
+      "paidCents": 85100,
+      "amountCents": 170100,
+      "expected": {
+        "totalIncurredCents": 170100,
+        "allowed": true,
+        "lacks": []
+      }
+    },
+    {
+      "name": "adjuster cannot decide an appeal",
+      "tier": "adjuster",
+      "power": "decide_appeals",
+      "paidCents": 0,
+      "amountCents": 0,
+      "expected": {
+        "totalIncurredCents": 0,
+        "allowed": false,
+        "lacks": [
+          "power"
+        ]
+      }
+    },
+    {
+      "name": "the system tier has no powers",
+      "tier": "system",
+      "power": "waive_documents",
+      "paidCents": 0,
+      "amountCents": 0,
+      "expected": {
+        "totalIncurredCents": 0,
+        "allowed": false,
+        "lacks": [
+          "power"
+        ]
+      }
+    },
+    {
+      "name": "power held, amount not",
+      "tier": "adjuster",
+      "power": "clear_flags",
+      "paidCents": 0,
+      "amountCents": 100001,
+      "expected": {
+        "totalIncurredCents": 100001,
+        "allowed": false,
+        "lacks": [
+          "amount"
+        ]
+      }
+    },
+    {
+      "name": "neither",
+      "tier": "system",
+      "power": "clear_flags",
+      "paidCents": 0,
+      "amountCents": 60000,
+      "expected": {
+        "totalIncurredCents": 60000,
+        "allowed": false,
+        "lacks": [
+          "amount",
+          "power"
+        ]
+      }
+    }
+  ]
+}

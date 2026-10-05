@@ -1,0 +1,61 @@
+{
+  "id": "OV-02",
+  "kind": "authority",
+  "title": "Authority is tested on total incurred on the claim, never on the payment about to go out",
+  "source": "domain brief s7 / D18 / D50 / D51",
+  "ops": "ops-v1",
+  "cases": [
+    {
+      "name": "GC-15 step 8: 85000 more would fit, the 170100 total does not",
+      "tier": "adjuster",
+      "power": null,
+      "paidCents": 85100,
+      "amountCents": 170100,
+      "expected": {
+        "totalIncurredCents": 170100,
+        "allowed": false,
+        "lacks": [
+          "amount"
+        ]
+      }
+    },
+    {
+      "name": "GC-15 step 8, senior adjuster",
+      "tier": "senior",
+      "power": null,
+      "paidCents": 85100,
+      "amountCents": 170100,
+      "expected": {
+        "totalIncurredCents": 170100,
+        "allowed": true,
+        "lacks": []
+      }
+    },
+    {
+      "name": "a supplement that keeps the total inside the limit",
+      "tier": "adjuster",
+      "power": null,
+      "paidCents": 60000,
+      "amountCents": 95000,
+      "expected": {
+        "totalIncurredCents": 95000,
+        "allowed": true,
+        "lacks": []
+      }
+    },
+    {
+      "name": "a recomputed total below what was paid: paid money stays incurred",
+      "tier": "adjuster",
+      "power": null,
+      "paidCents": 120000,
+      "amountCents": 60000,
+      "expected": {
+        "totalIncurredCents": 120000,
+        "allowed": false,
+        "lacks": [
+          "amount"
+        ]
+      }
+    }
+  ]
+}

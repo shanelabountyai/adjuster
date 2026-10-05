@@ -1,0 +1,969 @@
+{
+  "id": "GC-11",
+  "kind": "lifecycle",
+  "title": "Plus, no proof of purchase and no response: reminders on day 10 and 20, closed on day 30, reopened when it arrives",
+  "source": "domain brief s11 / s6",
+  "note": "Closing writes no decision: the claim's decision is still the PEND, never a denial. PAY-A's numbers once the receipt is in.",
+  "plan": "plan-v1",
+  "events": [
+    {
+      "asOf": "2025-09-17",
+      "action": {
+        "type": "open",
+        "facts": {
+          "contract.planCode": "plus",
+          "contract.status": "active",
+          "contract.termStart": "2025-01-15",
+          "contract.termEnd": "2028-01-14",
+          "contract.waitingEndsOn": "2025-02-14",
+          "product.purchaseDate": "2025-01-15",
+          "product.purchasePriceCents": 120000,
+          "claim.peril": "breakdown",
+          "claim.dateOfLoss": "2025-09-15",
+          "claim.dateReported": "2025-09-17",
+          "claim.cosmeticOnly": false,
+          "claim.preExisting": false,
+          "claim.consumableOrAccessory": false,
+          "claim.unauthorizedRepair": "none",
+          "claim.commercialUse": false,
+          "claim.intentionalOrAbuse": false,
+          "claim.inMfrWarrantyOrRecall": false,
+          "claim.productUnavailable": false,
+          "claim.softwareOrData": false,
+          "claim.externalCause": false,
+          "claim.claimantIsHolder": true,
+          "claim.replacementValueCents": 110000,
+          "history.priorClaims": [],
+          "history.claimantContractsWithClaims": 1
+        }
+      },
+      "expected": {
+        "claimStatus": "PENDING_EVIDENCE",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "requested",
+          "damagePhotos": "requested",
+          "incidentStatement": "requested",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {},
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "PEND",
+          "reasons": [
+            "E5",
+            "E20.proofOfPurchase",
+            "E20.repairEstimate",
+            "E21",
+            "F3",
+            "F5",
+            "F7",
+            "F8",
+            "F10"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E20.proofOfPurchase",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "E20.repairEstimate",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "E21",
+              "result": "PEND",
+              "missing": [
+                "evidence.estimateFromNetwork"
+              ]
+            },
+            {
+              "ruleId": "F3",
+              "result": "PEND",
+              "missing": [
+                "evidence.proofOfPurchaseDate"
+              ]
+            },
+            {
+              "ruleId": "F5",
+              "result": "PEND",
+              "missing": [
+                "claim.coveredRepairCents"
+              ]
+            },
+            {
+              "ruleId": "F7",
+              "result": "PEND",
+              "missing": [
+                "evidence.documentHashOnOtherClaim",
+                "evidence.photoMetaDateBeforeLoss"
+              ]
+            },
+            {
+              "ruleId": "F8",
+              "result": "PEND",
+              "missing": [
+                "evidence.estimateFromNetwork",
+                "evidence.estimatorIsPayee"
+              ]
+            },
+            {
+              "ruleId": "F10",
+              "result": "PEND",
+              "missing": [
+                "claim.accountChanged"
+              ]
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-17",
+      "action": {
+        "type": "upload",
+        "doc": "repairEstimate",
+        "version": "repairEstimate/1"
+      },
+      "expected": {
+        "claimStatus": "PENDING_EVIDENCE",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "received",
+          "damagePhotos": "requested",
+          "incidentStatement": "requested",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "repairEstimate/1": "received"
+        },
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "PEND",
+          "reasons": [
+            "E5",
+            "E20.proofOfPurchase",
+            "E20.repairEstimate",
+            "E21",
+            "F3",
+            "F5",
+            "F7",
+            "F8",
+            "F10"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E20.proofOfPurchase",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "E20.repairEstimate",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "E21",
+              "result": "PEND",
+              "missing": [
+                "evidence.estimateFromNetwork"
+              ]
+            },
+            {
+              "ruleId": "F3",
+              "result": "PEND",
+              "missing": [
+                "evidence.proofOfPurchaseDate"
+              ]
+            },
+            {
+              "ruleId": "F5",
+              "result": "PEND",
+              "missing": [
+                "claim.coveredRepairCents"
+              ]
+            },
+            {
+              "ruleId": "F7",
+              "result": "PEND",
+              "missing": [
+                "evidence.documentHashOnOtherClaim",
+                "evidence.photoMetaDateBeforeLoss"
+              ]
+            },
+            {
+              "ruleId": "F8",
+              "result": "PEND",
+              "missing": [
+                "evidence.estimateFromNetwork",
+                "evidence.estimatorIsPayee"
+              ]
+            },
+            {
+              "ruleId": "F10",
+              "result": "PEND",
+              "missing": [
+                "claim.accountChanged"
+              ]
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-17",
+      "action": {
+        "type": "accept",
+        "version": "repairEstimate/1",
+        "facts": {
+          "claim.coveredRepairCents": 30000,
+          "claim.serialMatchesContract": true,
+          "evidence.estimateFromNetwork": true,
+          "evidence.estimatorIsPayee": false
+        }
+      },
+      "expected": {
+        "claimStatus": "PENDING_EVIDENCE",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "accepted",
+          "damagePhotos": "requested",
+          "incidentStatement": "requested",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "repairEstimate/1": "accepted"
+        },
+        "decisionRows": 2,
+        "decision": {
+          "row": 1,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "PEND",
+          "reasons": [
+            "E20.proofOfPurchase",
+            "F3",
+            "F7",
+            "F10"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E20.proofOfPurchase",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "F3",
+              "result": "PEND",
+              "missing": [
+                "evidence.proofOfPurchaseDate"
+              ]
+            },
+            {
+              "ruleId": "F7",
+              "result": "PEND",
+              "missing": [
+                "evidence.documentHashOnOtherClaim",
+                "evidence.photoMetaDateBeforeLoss"
+              ]
+            },
+            {
+              "ruleId": "F10",
+              "result": "PEND",
+              "missing": [
+                "claim.accountChanged"
+              ]
+            }
+          ],
+          "supersedes": 0,
+          "documentVersions": [
+            "repairEstimate/1"
+          ]
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-17",
+      "action": {
+        "type": "upload",
+        "doc": "damagePhotos",
+        "version": "damagePhotos/1"
+      },
+      "expected": {
+        "claimStatus": "PENDING_EVIDENCE",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "accepted",
+          "damagePhotos": "received",
+          "incidentStatement": "requested",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "repairEstimate/1": "accepted",
+          "damagePhotos/1": "received"
+        },
+        "decisionRows": 2,
+        "decision": {
+          "row": 1,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "PEND",
+          "reasons": [
+            "E20.proofOfPurchase",
+            "F3",
+            "F7",
+            "F10"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E20.proofOfPurchase",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "F3",
+              "result": "PEND",
+              "missing": [
+                "evidence.proofOfPurchaseDate"
+              ]
+            },
+            {
+              "ruleId": "F7",
+              "result": "PEND",
+              "missing": [
+                "evidence.documentHashOnOtherClaim",
+                "evidence.photoMetaDateBeforeLoss"
+              ]
+            },
+            {
+              "ruleId": "F10",
+              "result": "PEND",
+              "missing": [
+                "claim.accountChanged"
+              ]
+            }
+          ],
+          "supersedes": 0,
+          "documentVersions": [
+            "repairEstimate/1"
+          ]
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-17",
+      "action": {
+        "type": "accept",
+        "version": "damagePhotos/1",
+        "facts": {
+          "evidence.photoMetaDateBeforeLoss": false,
+          "evidence.documentHashOnOtherClaim": false
+        }
+      },
+      "expected": {
+        "claimStatus": "PENDING_EVIDENCE",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "accepted",
+          "damagePhotos": "accepted",
+          "incidentStatement": "requested",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "repairEstimate/1": "accepted",
+          "damagePhotos/1": "accepted"
+        },
+        "decisionRows": 3,
+        "decision": {
+          "row": 2,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "PEND",
+          "reasons": [
+            "E20.proofOfPurchase",
+            "F3",
+            "F10"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E20.proofOfPurchase",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "F3",
+              "result": "PEND",
+              "missing": [
+                "evidence.proofOfPurchaseDate"
+              ]
+            },
+            {
+              "ruleId": "F10",
+              "result": "PEND",
+              "missing": [
+                "claim.accountChanged"
+              ]
+            }
+          ],
+          "supersedes": 1,
+          "documentVersions": [
+            "damagePhotos/1",
+            "repairEstimate/1"
+          ]
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-17",
+      "action": {
+        "type": "upload",
+        "doc": "incidentStatement",
+        "version": "incidentStatement/1"
+      },
+      "expected": {
+        "claimStatus": "PENDING_EVIDENCE",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "accepted",
+          "damagePhotos": "accepted",
+          "incidentStatement": "received",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "repairEstimate/1": "accepted",
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "received"
+        },
+        "decisionRows": 3,
+        "decision": {
+          "row": 2,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "PEND",
+          "reasons": [
+            "E20.proofOfPurchase",
+            "F3",
+            "F10"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E20.proofOfPurchase",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "F3",
+              "result": "PEND",
+              "missing": [
+                "evidence.proofOfPurchaseDate"
+              ]
+            },
+            {
+              "ruleId": "F10",
+              "result": "PEND",
+              "missing": [
+                "claim.accountChanged"
+              ]
+            }
+          ],
+          "supersedes": 1,
+          "documentVersions": [
+            "damagePhotos/1",
+            "repairEstimate/1"
+          ]
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-17",
+      "action": {
+        "type": "accept",
+        "version": "incidentStatement/1",
+        "facts": {
+          "claim.accountChanged": false
+        }
+      },
+      "expected": {
+        "claimStatus": "PENDING_EVIDENCE",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "accepted",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "repairEstimate/1": "accepted",
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted"
+        },
+        "decisionRows": 4,
+        "decision": {
+          "row": 3,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "PEND",
+          "reasons": [
+            "E20.proofOfPurchase",
+            "F3"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E20.proofOfPurchase",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "F3",
+              "result": "PEND",
+              "missing": [
+                "evidence.proofOfPurchaseDate"
+              ]
+            }
+          ],
+          "supersedes": 2,
+          "documentVersions": [
+            "damagePhotos/1",
+            "incidentStatement/1",
+            "repairEstimate/1"
+          ]
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-26",
+      "action": {
+        "type": "tick"
+      },
+      "expected": {
+        "claimStatus": "PENDING_EVIDENCE",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "accepted",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "repairEstimate/1": "accepted",
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted"
+        },
+        "decisionRows": 4,
+        "decision": {
+          "row": 3,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "PEND",
+          "reasons": [
+            "E20.proofOfPurchase",
+            "F3"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E20.proofOfPurchase",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "F3",
+              "result": "PEND",
+              "missing": [
+                "evidence.proofOfPurchaseDate"
+              ]
+            }
+          ],
+          "supersedes": 2,
+          "documentVersions": [
+            "damagePhotos/1",
+            "incidentStatement/1",
+            "repairEstimate/1"
+          ]
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-27",
+      "action": {
+        "type": "tick"
+      },
+      "expected": {
+        "claimStatus": "PENDING_EVIDENCE",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 1,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "accepted",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "repairEstimate/1": "accepted",
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted"
+        },
+        "decisionRows": 4,
+        "decision": {
+          "row": 3,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "PEND",
+          "reasons": [
+            "E20.proofOfPurchase",
+            "F3"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E20.proofOfPurchase",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "F3",
+              "result": "PEND",
+              "missing": [
+                "evidence.proofOfPurchaseDate"
+              ]
+            }
+          ],
+          "supersedes": 2,
+          "documentVersions": [
+            "damagePhotos/1",
+            "incidentStatement/1",
+            "repairEstimate/1"
+          ]
+        }
+      }
+    },
+    {
+      "asOf": "2025-10-07",
+      "action": {
+        "type": "tick"
+      },
+      "expected": {
+        "claimStatus": "PENDING_EVIDENCE",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 2,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "accepted",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "repairEstimate/1": "accepted",
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted"
+        },
+        "decisionRows": 4,
+        "decision": {
+          "row": 3,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "PEND",
+          "reasons": [
+            "E20.proofOfPurchase",
+            "F3"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E20.proofOfPurchase",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "F3",
+              "result": "PEND",
+              "missing": [
+                "evidence.proofOfPurchaseDate"
+              ]
+            }
+          ],
+          "supersedes": 2,
+          "documentVersions": [
+            "damagePhotos/1",
+            "incidentStatement/1",
+            "repairEstimate/1"
+          ]
+        }
+      }
+    },
+    {
+      "asOf": "2025-10-17",
+      "action": {
+        "type": "tick"
+      },
+      "expected": {
+        "claimStatus": "CLOSED_NO_RESPONSE",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 2,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "accepted",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "repairEstimate/1": "accepted",
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted"
+        },
+        "decisionRows": 4,
+        "decision": {
+          "row": 3,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "PEND",
+          "reasons": [
+            "E20.proofOfPurchase",
+            "F3"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E20.proofOfPurchase",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "F3",
+              "result": "PEND",
+              "missing": [
+                "evidence.proofOfPurchaseDate"
+              ]
+            }
+          ],
+          "supersedes": 2,
+          "documentVersions": [
+            "damagePhotos/1",
+            "incidentStatement/1",
+            "repairEstimate/1"
+          ]
+        }
+      }
+    },
+    {
+      "asOf": "2025-11-03",
+      "action": {
+        "type": "upload",
+        "doc": "proofOfPurchase",
+        "version": "proofOfPurchase/1"
+      },
+      "expected": {
+        "claimStatus": "REOPENED",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 2,
+        "docs": {
+          "proofOfPurchase": "received",
+          "repairEstimate": "accepted",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "repairEstimate/1": "accepted",
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted",
+          "proofOfPurchase/1": "received"
+        },
+        "decisionRows": 4,
+        "decision": {
+          "row": 3,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "PEND",
+          "reasons": [
+            "E20.proofOfPurchase",
+            "F3"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E20.proofOfPurchase",
+              "result": "PEND",
+              "missing": []
+            },
+            {
+              "ruleId": "F3",
+              "result": "PEND",
+              "missing": [
+                "evidence.proofOfPurchaseDate"
+              ]
+            }
+          ],
+          "supersedes": 2,
+          "documentVersions": [
+            "damagePhotos/1",
+            "incidentStatement/1",
+            "repairEstimate/1"
+          ]
+        }
+      }
+    },
+    {
+      "asOf": "2025-11-03",
+      "action": {
+        "type": "accept",
+        "version": "proofOfPurchase/1",
+        "facts": {
+          "evidence.proofOfPurchaseDate": "2025-01-15"
+        }
+      },
+      "expected": {
+        "claimStatus": "DECIDED",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "accepted",
+          "repairEstimate": "accepted",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "repairEstimate/1": "accepted",
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted",
+          "proofOfPurchase/1": "accepted"
+        },
+        "decisionRows": 5,
+        "decision": {
+          "row": 4,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "APPROVE",
+          "reasons": [],
+          "payableCents": 22500,
+          "path": "repair",
+          "aggregateRemainingAfterCents": 177500,
+          "contractFulfilled": false,
+          "notPassed": [],
+          "supersedes": 3,
+          "documentVersions": [
+            "damagePhotos/1",
+            "incidentStatement/1",
+            "proofOfPurchase/1",
+            "repairEstimate/1"
+          ]
+        }
+      }
+    }
+  ]
+}

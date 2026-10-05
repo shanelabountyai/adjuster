@@ -417,5 +417,26 @@
         }
       ]
     }
+  },
+  "signoff": {
+    "asOf": "2025-09-19",
+    "by": "adjuster",
+    "outcome": "APPROVE",
+    "amountCents": 77500,
+    "reasonCode": "SIGN_OFF",
+    "reasonText": "Replacement value checked against the catalog",
+    "paidCents": 0,
+    "expected": {
+      "kind": "override",
+      "ops": "ops-v1",
+      "outcome": "APPROVE",
+      "payableCents": 77500,
+      "claimStatus": "DECIDED",
+      "authority": {
+        "totalIncurredCents": 77500,
+        "allowed": true,
+        "lacks": []
+      }
+    }
   }
 }
