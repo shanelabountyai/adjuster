@@ -9,7 +9,7 @@ Frozen expected values. Tests **read** these; product code must never generate t
 | `gc/` | GC-01..GC-10 and GC-12..GC-14: a full fact snapshot in, outcome, reasons, every rule's result, calc trace and cents out. `plan` is the contract's pin; `ops` is the version in force on `asOf` (D35, so GC-04 names `ops-v2`) | `decision` |
 | `rv/` | RV-01: GC-01's loss under a contract sold before `plan-v2` and one sold after; each case is a `decision` fixture | `rule-version` |
 | `vp/` | VP-02..VP-04: version list + contract pin + `asOf` → `{plan, ops}`, or `{error: NO_EFFECTIVE_VERSION, kind}`. Dates of loss and report are there to be ignored | `selection` |
-| `pl/` | PL-06: a claim whose contract is not on file → no rule runs, no decision, claim `REFERRED` (D35). PL-01..05 are behaviours with no data of their own | `pipeline` |
+| `pl/` | PL-01: the claim status table (statuses, legal moves, and which decision each guarded move out of `DECIDED` needs; D38). PL-06: a claim whose contract is not on file → no rule runs, no decision, claim `REFERRED` (D35). PL-02..05 are behaviours with no data of their own | `transitions`, `pipeline` |
 
 Conventions: amounts are integer cents, rates are basis points, dates are ISO `YYYY-MM-DD`. Facts use the ids in `rules/electronics/facts-v1.json` (flat, dotted). A decision fixture's `expected.rules` lists every rule that ran; compare by `ruleId`, not position. `expected.skippedStages` is non-empty exactly when an objective denial stopped evidence, flags, valuation and authority from running.
 

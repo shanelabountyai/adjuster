@@ -1,7 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import plan from '../../rules/electronics/plan-v1.json';
 import ops from '../../rules/electronics/ops-v1.json';
+import { IllegalTransitionError, transitionClaim } from '@/adjudication/claim-status';
 import { sha256Hex } from '@/rules/canonical';
 
 // Tasks 1.10 and 2.3: VP-01, PL-04 and the contract and claim rules hold at the database. Raw SQL on its own connection, so nothing in src/ can
@@ -134,5 +136,57 @@ describe('Contract and Claim rows (2.3, D36)', () => {
     expect(await insertClaim('C-2', 'CT-1', { status: 'APPROVED' })).toBe('claim_status');
     expect(await insertClaim('C-2', 'CT-1', { paymentStatus: 'DECIDED' })).toBe('claim_payment_status');
     expect(await run(`UPDATE "Claim" SET "status" = 'IN_REVIEW', "paymentStatus" = 'PENDING' WHERE "id" = 'C-1'`)).toBe('accepted');
+  });
+});
+
+describe('PL-01 claim transitions at the database (2.5, D38)', () => {
+  const events = async (id: string) => (await client.query(
+    `SELECT "actorUserId", "action", "data" FROM "AuditEvent" WHERE "targetType" = 'Claim' AND "targetId" = $1 ORDER BY "id"`, [id])).rows;
+  const statusOf = async (id: string) => (await client.query(`SELECT "status" FROM "Claim" WHERE "id" = $1`, [id])).rows[0].status;
+  const fresh = async (status = 'OPEN') => {
+    const id = `C-${randomUUID()}`; // audit rows outlive the TRUNCATE above, so each test gets its own claim id
+    await insertClaim(id, 'CT-1', { status });
+    return id;
+  };
+
+  it('a legal move changes the status and appends one audit event', async () => {
+    const id = await fresh();
+    await transitionClaim(client, id, 'IN_REVIEW', { userId: null, reason: 'adjudication started' });
+    expect(await statusOf(id)).toBe('IN_REVIEW');
+    expect(await events(id)).toEqual([{ actorUserId: null, action: 'claim.status_changed',
+      data: { from: 'OPEN', to: 'IN_REVIEW', decisionId: null, reason: 'adjudication started' } }]);
+  });
+
+  it('an illegal move throws and leaves no trace', async () => {
+    const id = await fresh();
+    await expect(transitionClaim(client, id, 'PAID', { userId: null })).rejects.toBeInstanceOf(IllegalTransitionError);
+    await expect(transitionClaim(client, 'C-none', 'IN_REVIEW', { userId: null })).rejects.toThrow(/not found/);
+    expect(await statusOf(id)).toBe('OPEN');
+    expect(await events(id)).toEqual([]);
+  });
+
+  it('leaving DECIDED reads the current decision: a denial may close, a payable approval may not, no decision may do neither', async () => {
+    const [planId, opsId] = [await insertVersion(plan), await insertVersion(ops)];
+    const [denied, paid, none] = [await fresh('DECIDED'), await fresh('DECIDED'), await fresh('DECIDED')];
+    expect(await insertDecision(planId, opsId, { claimId: denied, outcome: 'DENY', payableCents: null })).toBe('accepted');
+    expect(await insertDecision(planId, opsId, { claimId: paid })).toBe('accepted');
+    await transitionClaim(client, denied, 'CLOSED', { userId: null });
+    expect(await statusOf(denied)).toBe('CLOSED');
+    await expect(transitionClaim(client, paid, 'CLOSED', { userId: null })).rejects.toBeInstanceOf(IllegalTransitionError);
+    await transitionClaim(client, paid, 'PAYMENT_PENDING', { userId: null });
+    for (const to of ['CLOSED', 'PAYMENT_PENDING', 'UNDER_APPEAL'] as const)
+      await expect(transitionClaim(client, none, to, { userId: null })).rejects.toBeInstanceOf(IllegalTransitionError);
+  });
+
+  it('a claim moved by someone else between the check and the write is not moved again', async () => {
+    const id = await fresh();
+    const racing = { query: async (sql: string, params?: unknown[]) => {
+      const r = await client.query(sql, params);
+      if (sql.startsWith('SELECT')) await client.query(`UPDATE "Claim" SET "status" = 'WITHDRAWN' WHERE "id" = $1`, [id]);
+      return r;
+    } };
+    await expect(transitionClaim(racing as never, id, 'IN_REVIEW', { userId: null })).rejects.toThrow(/left OPEN/);
+    expect(await statusOf(id)).toBe('WITHDRAWN');
+    expect(await events(id)).toEqual([]);
   });
 });

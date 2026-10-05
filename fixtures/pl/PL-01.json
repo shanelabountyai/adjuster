@@ -1,0 +1,166 @@
+{
+  "id": "PL-01",
+  "kind": "transitions",
+  "title": "Claim status moves only along the table; anything else throws",
+  "source": "domain brief s7 / D38",
+  "statuses": [
+    "OPEN",
+    "PENDING_EVIDENCE",
+    "IN_REVIEW",
+    "REFERRED",
+    "DECIDED",
+    "PAYMENT_PENDING",
+    "PAID",
+    "CLOSED",
+    "CLOSED_NO_RESPONSE",
+    "WITHDRAWN",
+    "UNDER_APPEAL",
+    "REOPENED"
+  ],
+  "transitions": [
+    {
+      "from": "OPEN",
+      "to": "PENDING_EVIDENCE"
+    },
+    {
+      "from": "OPEN",
+      "to": "IN_REVIEW"
+    },
+    {
+      "from": "PENDING_EVIDENCE",
+      "to": "IN_REVIEW"
+    },
+    {
+      "from": "IN_REVIEW",
+      "to": "PENDING_EVIDENCE"
+    },
+    {
+      "from": "IN_REVIEW",
+      "to": "REFERRED"
+    },
+    {
+      "from": "IN_REVIEW",
+      "to": "DECIDED"
+    },
+    {
+      "from": "REFERRED",
+      "to": "DECIDED"
+    },
+    {
+      "from": "REFERRED",
+      "to": "PENDING_EVIDENCE"
+    },
+    {
+      "from": "PENDING_EVIDENCE",
+      "to": "CLOSED_NO_RESPONSE"
+    },
+    {
+      "from": "OPEN",
+      "to": "WITHDRAWN"
+    },
+    {
+      "from": "PENDING_EVIDENCE",
+      "to": "WITHDRAWN"
+    },
+    {
+      "from": "IN_REVIEW",
+      "to": "WITHDRAWN"
+    },
+    {
+      "from": "REFERRED",
+      "to": "WITHDRAWN"
+    },
+    {
+      "from": "DECIDED",
+      "to": "PAYMENT_PENDING",
+      "when": "payable"
+    },
+    {
+      "from": "DECIDED",
+      "to": "UNDER_APPEAL",
+      "when": "denied"
+    },
+    {
+      "from": "DECIDED",
+      "to": "CLOSED",
+      "when": "denied_or_zero"
+    },
+    {
+      "from": "UNDER_APPEAL",
+      "to": "DECIDED"
+    },
+    {
+      "from": "PAYMENT_PENDING",
+      "to": "PAID"
+    },
+    {
+      "from": "PAID",
+      "to": "CLOSED"
+    },
+    {
+      "from": "CLOSED",
+      "to": "REOPENED"
+    },
+    {
+      "from": "CLOSED_NO_RESPONSE",
+      "to": "REOPENED"
+    },
+    {
+      "from": "REOPENED",
+      "to": "IN_REVIEW"
+    }
+  ],
+  "guardCases": [
+    {
+      "name": "denied",
+      "from": "DECIDED",
+      "decision": {
+        "outcome": "DENY",
+        "payableCents": null
+      },
+      "legal": [
+        "CLOSED",
+        "UNDER_APPEAL"
+      ]
+    },
+    {
+      "name": "approved at 0",
+      "from": "DECIDED",
+      "decision": {
+        "outcome": "APPROVE",
+        "payableCents": 0
+      },
+      "legal": [
+        "CLOSED"
+      ]
+    },
+    {
+      "name": "approved with an amount",
+      "from": "DECIDED",
+      "decision": {
+        "outcome": "APPROVE",
+        "payableCents": 25000
+      },
+      "legal": [
+        "PAYMENT_PENDING"
+      ]
+    },
+    {
+      "name": "partial with an amount",
+      "from": "DECIDED",
+      "decision": {
+        "outcome": "PARTIAL",
+        "payableCents": 50000
+      },
+      "legal": [
+        "PAYMENT_PENDING"
+      ]
+    },
+    {
+      "name": "no current decision is not a pass",
+      "from": "DECIDED",
+      "decision": null,
+      "legal": []
+    }
+  ]
+}

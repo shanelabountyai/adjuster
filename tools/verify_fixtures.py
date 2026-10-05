@@ -7,7 +7,7 @@ arithmetic and Kleene three-valued logic, and checks the result against the fixt
 in below straight from the brief. So it proves two things at once: the fixtures are right, and the rule data encodes
 the brief. It is a test oracle in tools/, not product code. Stdlib only.
 """
-import datetime as dt, glob, json, os, sys
+import datetime as dt, glob, json, os, re, sys
 from decimal import Decimal, ROUND_HALF_UP, getcontext
 
 getcontext().prec = 60
@@ -40,6 +40,12 @@ VP_KEY = {
     "VP-03": [("plan-v1", "ops-v1"), ("plan-v1", "ops-v2"), ("plan-v1", "ops-v2")],
     "VP-04": [("NO_EFFECTIVE_VERSION", "plan"), ("NO_EFFECTIVE_VERSION", "ops")],
 }
+# D38, typed from domain brief s7's status line, plus OPEN>IN_REVIEW (task 2.5) and the three guards on leaving DECIDED
+PL01_KEY = ("OPEN>PENDING_EVIDENCE OPEN>IN_REVIEW PENDING_EVIDENCE>IN_REVIEW IN_REVIEW>PENDING_EVIDENCE IN_REVIEW>REFERRED REFERRED>DECIDED "
+            "DECIDED>PAYMENT_PENDING?payable PAYMENT_PENDING>PAID PAID>CLOSED IN_REVIEW>DECIDED REFERRED>PENDING_EVIDENCE "
+            "PENDING_EVIDENCE>CLOSED_NO_RESPONSE OPEN>WITHDRAWN PENDING_EVIDENCE>WITHDRAWN IN_REVIEW>WITHDRAWN REFERRED>WITHDRAWN "
+            "DECIDED>UNDER_APPEAL?denied UNDER_APPEAL>DECIDED DECIDED>CLOSED?denied_or_zero CLOSED>REOPENED CLOSED_NO_RESPONSE>REOPENED REOPENED>IN_REVIEW")
+PL01_GUARD = {"UNDER_APPEAL": lambda o, amt: o == "DENY", "CLOSED": lambda o, amt: o == "DENY" or amt == 0, "PAYMENT_PENDING": lambda o, amt: bool(amt)}
 PL_KEY = {"PL-06": {"error": "CONTRACT_NOT_FOUND", "decision": None, "claimStatus": "REFERRED", "rulesRun": []}}
 
 STAGES = ["intake", "contract_verification", "coverage_period", "peril_exclusions", "frequency_limits", "evidence", "red_flags", "valuation", "deductible_limits", "authority", "decision"]
@@ -243,7 +249,7 @@ chk(plan["roundingMode"] == "half_up" and ops["outcomePolicy"]["autoDenyEnabled"
 chk(all(s["op"] in ("start_from", "subtract", "apply_bps", "cap_at", "floor_at", "min_of") for s in plan["payout"]["steps"]), "calc step vocabulary")
 
 fx = {os.path.basename(p)[:-5]: load(p) for p in sorted(glob.glob(f"{FIX}/*/*.json"))}
-want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY) + ["RV-01"] + sorted(VP_KEY) + sorted(PL_KEY)
+want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY) + ["RV-01"] + sorted(VP_KEY) + sorted(PL_KEY) + ["PL-01"]
 chk(sorted(fx) == sorted(want), f"fixture set differs: missing {sorted(set(want) - set(fx))}, extra {sorted(set(fx) - set(want))}")
 
 for fid, f in fx.items():
@@ -285,6 +291,15 @@ for fid, f in fx.items():
                   {"plan": pin["name"], "ops": o} if o else {"error": "NO_EFFECTIVE_VERSION", "kind": "ops"}
             chk(got == c["expected"] and tuple(c["expected"].values()) == key, f"{fid} '{c['name']}': {c['expected']} / {got} / key {key}")
         chk(len(f["cases"]) == len(VP_KEY[fid]), f"{fid}: case count")
+    elif k == "transitions":
+        got = {f"{t['from']}>{t['to']}" + (f"?{t['when']}" if "when" in t else "") for t in f["transitions"]}
+        chk(got == set(PL01_KEY.split()) and len(f["transitions"]) == len(got), f"{fid}: table differs from the key: {sorted(got ^ set(PL01_KEY.split()))}")
+        sql = open(os.path.join(HERE, "..", "prisma/migrations/20261003000000_contract_claim/migration.sql")).read()
+        chk(sorted(f["statuses"]) == sorted(re.findall(r"'([A-Z_]+)'", sql.split("claim_status CHECK")[1].split("))")[0])), f"{fid}: statuses differ from the claim_status CHECK")
+        for c in f["guardCases"]:
+            d = c["decision"]
+            legal = sorted(to for to, g in PL01_GUARD.items() if d and g(d["outcome"], d["payableCents"]))
+            chk(legal == sorted(c["legal"]), f"{fid} '{c['name']}': {c['legal']} != {legal}")
     elif k == "pipeline":
         chk(f["expected"] == PL_KEY[fid] and f["claim"]["contractId"] not in f["contracts"], f"{fid}: {f['expected']}")
     elif k == "ref":

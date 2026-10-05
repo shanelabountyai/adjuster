@@ -9,7 +9,7 @@ import { checkDictionaryHash, validateDictionary } from '@/rules/validate';
 // Writing decisions and proving them (D6, P0-3). Raw SQL on a `pg` client, so the verifier reads exactly what is
 // stored, with nothing in between. `recordDecision` is the one writer until the Phase 2 pipeline replaces it.
 
-type Db = { query: <R = Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<{ rows: R[] }> };
+export type Db = { query: <R = Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<{ rows: R[] }> };
 
 export const FAILURE_CODES = ['RULESET_HASH_MISMATCH', 'FACTS_HASH_MISMATCH', 'REPLAY_DIVERGED', 'EXPLANATION_INCONSISTENT',
   'VERSION_NOT_EFFECTIVE', 'CHAIN_BROKEN', 'OVERRIDE_INVALID', 'SEMANTICS_UNSUPPORTED'] as const;

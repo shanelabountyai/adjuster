@@ -330,6 +330,26 @@ def build_phase2():
                  "source": "domain brief s2 / D12 / D35", "contracts": ["CT-0001"], "claim": {"contractId": "CT-0404", "facts": claim},
                  "expected": {"error": "CONTRACT_NOT_FOUND", "decision": None, "claimStatus": "REFERRED", "rulesRun": []}})
 
+    # PL-01 (D38): domain brief s7's status line as a table. `when` names what the claim's current decision must be.
+    pre = ["OPEN", "PENDING_EVIDENCE", "IN_REVIEW", "REFERRED"]
+    edges = [("OPEN", "PENDING_EVIDENCE"), ("OPEN", "IN_REVIEW"), ("PENDING_EVIDENCE", "IN_REVIEW"), ("IN_REVIEW", "PENDING_EVIDENCE"),
+             ("IN_REVIEW", "REFERRED"), ("IN_REVIEW", "DECIDED"), ("REFERRED", "DECIDED"), ("REFERRED", "PENDING_EVIDENCE"),
+             ("PENDING_EVIDENCE", "CLOSED_NO_RESPONSE")] + [(s, "WITHDRAWN") for s in pre] + [
+             ("DECIDED", "PAYMENT_PENDING", "payable"), ("DECIDED", "UNDER_APPEAL", "denied"), ("DECIDED", "CLOSED", "denied_or_zero"),
+             ("UNDER_APPEAL", "DECIDED"), ("PAYMENT_PENDING", "PAID"), ("PAID", "CLOSED"),
+             ("CLOSED", "REOPENED"), ("CLOSED_NO_RESPONSE", "REOPENED"), ("REOPENED", "IN_REVIEW")]
+    gcase = lambda name, decision, legal: {"name": name, "from": "DECIDED", "decision": decision, "legal": legal}
+    write("pl", {"id": "PL-01", "kind": "transitions", "title": "Claim status moves only along the table; anything else throws",
+                 "source": "domain brief s7 / D38",
+                 "statuses": pre + ["DECIDED", "PAYMENT_PENDING", "PAID", "CLOSED", "CLOSED_NO_RESPONSE", "WITHDRAWN", "UNDER_APPEAL", "REOPENED"],
+                 "transitions": [{"from": e[0], "to": e[1], **({"when": e[2]} if len(e) > 2 else {})} for e in edges],
+                 "guardCases": [
+                     gcase("denied", {"outcome": "DENY", "payableCents": None}, ["CLOSED", "UNDER_APPEAL"]),
+                     gcase("approved at 0", {"outcome": "APPROVE", "payableCents": 0}, ["CLOSED"]),
+                     gcase("approved with an amount", {"outcome": "APPROVE", "payableCents": 25000}, ["PAYMENT_PENDING"]),
+                     gcase("partial with an amount", {"outcome": "PARTIAL", "payableCents": 50000}, ["PAYMENT_PENDING"]),
+                     gcase("no current decision is not a pass", None, [])]})
+
 
 def build_pay():
     base = dict(start=dt.date(2025, 1, 15), dol=dt.date(2025, 9, 15))
