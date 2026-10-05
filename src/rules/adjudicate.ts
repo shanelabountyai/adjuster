@@ -14,7 +14,7 @@ export type Trace = z.infer<typeof traceSchema>;
 type RuleTrace = z.infer<typeof ruleResultSchema>;
 type Rule = RuleSet['rules'][number];
 
-export const ENGINE_SEMANTICS_VERSION = 'adjuster.engine/2';
+export const ENGINE_SEMANTICS_VERSION = 'adjuster.engine/3';
 const EARLY = STAGES.slice(0, 5) as readonly string[];
 const SKIPPED_ON_DENY = ['evidence', 'red_flags', 'valuation', 'deductible_limits', 'authority'] as const;
 
@@ -48,7 +48,7 @@ export function adjudicate(input: { plan: RuleSet; ops: RuleSet; dict: Dictionar
   const key = outcome === 'REFER' ? ['REFER', 'GAP'] : [outcome];
   return {
     schema: 'adjuster.trace/1', asOf,
-    versions: { plan: ref(plan), ops: ref(ops) },
+    versions: { plan: { ...ref(plan), selectedBy: 'contract_pin' }, ops: { ...ref(ops), selectedBy: 'latest_effective_on_asOf' } },
     skipped: deny ? [...SKIPPED_ON_DENY] : [],
     rules: all,
     valuation,

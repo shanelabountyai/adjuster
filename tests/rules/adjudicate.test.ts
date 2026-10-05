@@ -46,8 +46,8 @@ describe('GC-01..GC-10, GC-12..GC-14 and RV-01: golden claims under the versions
     const fx = read('fixtures/gc/GC-04.json');
     const t = run(fx);
     const ops2 = rs('ops-v2');
-    expect(t.versions).toEqual({ plan: { name: 'plan-v1', hash: sha256Hex(plan), effectiveFrom: plan.effectiveFrom },
-      ops: { name: 'ops-v2', hash: sha256Hex(ops2), effectiveFrom: ops2.effectiveFrom } });
+    expect(t.versions).toEqual({ plan: { name: 'plan-v1', hash: sha256Hex(plan), effectiveFrom: plan.effectiveFrom, selectedBy: 'contract_pin' },
+      ops: { name: 'ops-v2', hash: sha256Hex(ops2), effectiveFrom: ops2.effectiveFrom, selectedBy: 'latest_effective_on_asOf' } });
     const e2 = t.rules.find((r) => r.ruleId === 'E2')!;
     expect(e2.vars).toEqual({ start: fx.facts['contract.termStart'], end: fx.facts['contract.termEnd'], dol: fx.facts['claim.dateOfLoss'] });
     expect([e2.claimantVisible, e2.clause]).toEqual([true, '§2.1']);

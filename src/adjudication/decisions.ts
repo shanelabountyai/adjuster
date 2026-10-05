@@ -3,6 +3,7 @@ import { adjudicate, ENGINE_SEMANTICS_VERSION } from '@/rules/adjudicate';
 import { sha256Hex } from '@/rules/canonical';
 import type { Snapshot } from '@/rules/derive';
 import { traceSchema, type RuleSet } from '@/rules/schema';
+import { selectVersions } from '@/rules/select';
 import { checkDictionaryHash, validateDictionary } from '@/rules/validate';
 
 // Writing decisions and proving them (D6, P0-3). Raw SQL on a `pg` client, so the verifier reads exactly what is
@@ -96,11 +97,10 @@ export async function verifyDecisions(db: Db, until?: string): Promise<{ checked
     }
 
     // D3: the plan was in force, and the ops set is the latest one effective on the adjudication date.
-    const effectiveOps = [...versions.values()]
-      .filter((v) => v.kind === 'ops' && v.product === ops.product && v.status !== 'draft' && v.effectiveFrom <= d.asOf)
-      .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom))[0];
-    if (plan.effectiveFrom > d.asOf || effectiveOps?.id !== ops.id)
-      fail('VERSION_NOT_EFFECTIVE', d.id, `asOf ${d.asOf}: plan from ${plan.effectiveFrom}, ops pinned ${ops.id}, effective ${effectiveOps?.id ?? 'none'}`);
+    const selected = selectVersions({ planVersion: plan.id },
+      [...versions.values()].filter((v) => v.product === ops.product).map((v) => ({ ...v, name: v.id })), d.asOf);
+    if ('error' in selected || selected.ops.id !== ops.id)
+      fail('VERSION_NOT_EFFECTIVE', d.id, `asOf ${d.asOf}: plan from ${plan.effectiveFrom}, ops pinned ${ops.id}, effective ${'error' in selected ? `none (${selected.kind})` : selected.ops.id}`);
 
     if (d.overridesId) {
       // D18: an override sits beside the engine decision it overrides and preserves that decision's result.

@@ -97,7 +97,11 @@ export const calcStepTraceSchema = z.object({
 }).strict();
 export const traceSchema = z.object({
   schema: z.literal('adjuster.trace/1'), asOf: isoDate,
-  versions: z.object({ plan: versionRef, ops: versionRef }).strict(),
+  // How each version was chosen (D35). The engine states the rule; `selectVersions` applies it and verify re-checks it.
+  versions: z.object({
+    plan: versionRef.extend({ selectedBy: z.literal('contract_pin') }).strict(),
+    ops: versionRef.extend({ selectedBy: z.literal('latest_effective_on_asOf') }).strict(),
+  }).strict(),
   skipped: z.array(z.enum(STAGES)),
   rules: z.array(ruleResultSchema),
   valuation: z.object({ path: z.enum(['repair', 'replace']), steps: z.array(calcStepTraceSchema) }).strict().nullable(),
