@@ -350,6 +350,33 @@ def build_phase2():
                      gcase("partial with an amount", {"outcome": "PARTIAL", "payableCents": 50000}, ["PAYMENT_PENDING"]),
                      gcase("no current decision is not a pass", None, [])]})
 
+    # PL-02 / PL-03 (D13, D40): one claim run more than once. `change` is what was entered on the claim before the run.
+    # A run on the asOf and facts of the claim's last decision writes nothing; any other needs a status that can move to IN_REVIEW.
+    status_for = {"APPROVE": "DECIDED", "PARTIAL": "DECIDED", "DENY": "DECIDED", "PEND": "PENDING_EVIDENCE", "REFER": "REFERRED"}
+
+    def reruns(fid, title, f0, runs):
+        f, last, exp, status, rows, out = f0, None, None, "OPEN", 0, []
+        for i, (asof, change) in enumerate(runs):
+            f = {**f, **change}
+            ops = select_ops(D(asof))
+            if last != (asof, f):
+                assert (status, "IN_REVIEW") in edges, f"{fid} run {i}: {status} cannot be reviewed"
+                e = adjudicate(f, "plan-v1", ops)
+                exp = {"outcome": e["outcome"], "reasons": e["reasons"], "payableCents": e["payableCents"], "claimStatus": status_for[e["outcome"]],
+                       "decision": i, "supersedes": exp and exp["decision"]}
+                last, rows = (asof, f), rows + 1
+            out.append({"asOf": asof, "change": change, "ops": ops, "statusBefore": status, "expected": {**exp, "decisionRows": rows}})
+            status = exp["claimStatus"]
+        write("pl", {"id": fid, "kind": "readjudication", "title": title, "source": "PRD P0-3 / D13 / D40",
+                     "note": "expected.decision is the run whose decision row is returned; expected.supersedes is the run that row supersedes.",
+                     "plan": "plan-v1", "facts": f0, "runs": out})
+
+    reruns("PL-02", "An unchanged inputHash is a no-op: the existing decision is returned; no row, no status move",
+           facts("essential", price=90000, R=60000, C=30000), [("2025-09-18", {}), ("2025-09-18", {})])
+    reruns("PL-03", "Changed facts supersede under the same plan version and the ops version in force on the new asOf",
+           facts("essential", start=dt.date(2025, 7, 20), price=90000, R=60000, C=30000, **{"docs.repairEstimate": "requested"}),
+           [("2026-03-25", {}), ("2026-04-02", {"docs.repairEstimate": "accepted"})])
+
 
 def build_pay():
     base = dict(start=dt.date(2025, 1, 15), dol=dt.date(2025, 9, 15))

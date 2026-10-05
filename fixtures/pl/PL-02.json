@@ -1,0 +1,78 @@
+{
+  "id": "PL-02",
+  "kind": "readjudication",
+  "title": "An unchanged inputHash is a no-op: the existing decision is returned; no row, no status move",
+  "source": "PRD P0-3 / D13 / D40",
+  "note": "expected.decision is the run whose decision row is returned; expected.supersedes is the run that row supersedes.",
+  "plan": "plan-v1",
+  "facts": {
+    "contract.planCode": "essential",
+    "contract.status": "active",
+    "contract.termStart": "2025-01-15",
+    "contract.termEnd": "2027-01-14",
+    "contract.waitingEndsOn": "2025-02-14",
+    "product.purchaseDate": "2025-01-15",
+    "product.purchasePriceCents": 90000,
+    "claim.peril": "breakdown",
+    "claim.dateOfLoss": "2025-09-15",
+    "claim.dateReported": "2025-09-17",
+    "claim.cosmeticOnly": false,
+    "claim.preExisting": false,
+    "claim.consumableOrAccessory": false,
+    "claim.unauthorizedRepair": "none",
+    "claim.commercialUse": false,
+    "claim.intentionalOrAbuse": false,
+    "claim.inMfrWarrantyOrRecall": false,
+    "claim.productUnavailable": false,
+    "claim.softwareOrData": false,
+    "claim.externalCause": false,
+    "claim.serialMatchesContract": true,
+    "claim.claimantIsHolder": true,
+    "claim.accountChanged": false,
+    "claim.coveredRepairCents": 30000,
+    "claim.replacementValueCents": 60000,
+    "history.priorClaims": [],
+    "history.claimantContractsWithClaims": 1,
+    "evidence.estimateFromNetwork": true,
+    "evidence.estimatorIsPayee": false,
+    "evidence.proofOfPurchaseDate": "2025-01-15",
+    "evidence.photoMetaDateBeforeLoss": false,
+    "evidence.documentHashOnOtherClaim": false,
+    "docs.proofOfPurchase": "accepted",
+    "docs.repairEstimate": "accepted",
+    "docs.damagePhotos": "accepted",
+    "docs.incidentStatement": "accepted"
+  },
+  "runs": [
+    {
+      "asOf": "2025-09-18",
+      "change": {},
+      "ops": "ops-v1",
+      "statusBefore": "OPEN",
+      "expected": {
+        "outcome": "APPROVE",
+        "reasons": [],
+        "payableCents": 25000,
+        "claimStatus": "DECIDED",
+        "decision": 0,
+        "supersedes": null,
+        "decisionRows": 1
+      }
+    },
+    {
+      "asOf": "2025-09-18",
+      "change": {},
+      "ops": "ops-v1",
+      "statusBefore": "DECIDED",
+      "expected": {
+        "outcome": "APPROVE",
+        "reasons": [],
+        "payableCents": 25000,
+        "claimStatus": "DECIDED",
+        "decision": 0,
+        "supersedes": null,
+        "decisionRows": 1
+      }
+    }
+  ]
+}

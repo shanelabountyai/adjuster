@@ -47,6 +47,10 @@ PL01_KEY = ("OPEN>PENDING_EVIDENCE OPEN>IN_REVIEW PENDING_EVIDENCE>IN_REVIEW IN_
             "DECIDED>UNDER_APPEAL?denied UNDER_APPEAL>DECIDED DECIDED>CLOSED?denied_or_zero CLOSED>REOPENED CLOSED_NO_RESPONSE>REOPENED REOPENED>IN_REVIEW")
 PL01_GUARD = {"UNDER_APPEAL": lambda o, amt: o == "DENY", "CLOSED": lambda o, amt: o == "DENY" or amt == 0, "PAYMENT_PENDING": lambda o, amt: bool(amt)}
 PL_KEY = {"PL-06": {"error": "CONTRACT_NOT_FOUND", "decision": None, "claimStatus": "REFERRED", "rulesRun": []}}
+# D40, typed from decisions.md. Per run: outcome, payable, the run whose decision is returned, the run that decision supersedes.
+PL_RUNS_KEY = {"PL-02": [("APPROVE", 25000, 0, None), ("APPROVE", 25000, 0, None)],
+               "PL-03": [("PEND", None, 0, None), ("APPROVE", 25000, 1, 0)]}
+PL_STATUS_FOR = {"APPROVE": "DECIDED", "PARTIAL": "DECIDED", "DENY": "DECIDED", "PEND": "PENDING_EVIDENCE", "REFER": "REFERRED"}
 
 STAGES = ["intake", "contract_verification", "coverage_period", "peril_exclusions", "frequency_limits", "evidence", "red_flags", "valuation", "deductible_limits", "authority", "decision"]
 SKIPPED_ON_DENY = ["evidence", "red_flags", "valuation", "deductible_limits", "authority"]
@@ -249,7 +253,7 @@ chk(plan["roundingMode"] == "half_up" and ops["outcomePolicy"]["autoDenyEnabled"
 chk(all(s["op"] in ("start_from", "subtract", "apply_bps", "cap_at", "floor_at", "min_of") for s in plan["payout"]["steps"]), "calc step vocabulary")
 
 fx = {os.path.basename(p)[:-5]: load(p) for p in sorted(glob.glob(f"{FIX}/*/*.json"))}
-want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY) + ["RV-01"] + sorted(VP_KEY) + sorted(PL_KEY) + ["PL-01"]
+want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY) + ["RV-01"] + sorted(VP_KEY) + sorted(PL_KEY) + sorted(PL_RUNS_KEY) + ["PL-01"]
 chk(sorted(fx) == sorted(want), f"fixture set differs: missing {sorted(set(want) - set(fx))}, extra {sorted(set(fx) - set(want))}")
 
 for fid, f in fx.items():
@@ -300,6 +304,22 @@ for fid, f in fx.items():
             d = c["decision"]
             legal = sorted(to for to, g in PL01_GUARD.items() if d and g(d["outcome"], d["payableCents"]))
             chk(legal == sorted(c["legal"]), f"{fid} '{c['name']}': {c['legal']} != {legal}")
+    elif k == "readjudication":
+        # D40: a row is written exactly when asOf or the facts differ from the last decision's, and only from a status PL-01 lets into IN_REVIEW
+        chk(len(f["runs"]) == len(PL_RUNS_KEY[fid]), f"{fid}: run count")
+        facts, last, status, rows, wrote = dict(f["facts"]), None, "OPEN", 0, None
+        for i, (r, key) in enumerate(zip(f["runs"], PL_RUNS_KEY[fid])):
+            facts.update(r["change"]); e = r["expected"]
+            chk(r["ops"] == pick_ops(r["asOf"], FILE_VERSIONS) and r["statusBefore"] == status, f"{fid} run {i}: ops or statusBefore")
+            if last != (r["asOf"], facts):
+                chk(any(t["from"] == status and t["to"] == "IN_REVIEW" for t in fx["PL-01"]["transitions"]), f"{fid} run {i}: {status} cannot be reviewed")
+                got = decide(RS[f["plan"]], RS[r["ops"]], dic, facts)
+                chk(all(got[x] == e[x] for x in ("outcome", "reasons", "payableCents")), f"{fid} run {i}: interpreter disagrees with the oracle")
+                chk(e["decision"] == i and e["supersedes"] == wrote, f"{fid} run {i}: a changed input writes a decision that supersedes the last")
+                last, rows, wrote = (r["asOf"], dict(facts)), rows + 1, i
+            chk((e["outcome"], e["payableCents"], e["decision"], e["supersedes"]) == key, f"{fid} run {i}: {e} != key {key}")
+            chk(e["decisionRows"] == rows and e["claimStatus"] == PL_STATUS_FOR[e["outcome"]], f"{fid} run {i}: row count or claim status")
+            status = e["claimStatus"]
     elif k == "pipeline":
         chk(f["expected"] == PL_KEY[fid] and f["claim"]["contractId"] not in f["contracts"], f"{fid}: {f['expected']}")
     elif k == "ref":

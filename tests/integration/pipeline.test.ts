@@ -80,10 +80,60 @@ describe('adjudicateClaim', () => {
     expect((await moves('P-ROLLBACK')).length).toBe(before);
   });
 
-  it('a claim that cannot be reviewed (already decided) throws and writes nothing', async () => {
-    await file('P-TWICE', 'plan-v1', GOLDEN[0].facts);
-    await adjudicateClaim(client, 'P-TWICE', GOLDEN[0].asOf);
-    await expect(adjudicateClaim(client, 'P-TWICE', GOLDEN[0].asOf)).rejects.toMatchObject({ code: 'ILLEGAL_TRANSITION' });
-    expect(await decisionCount('P-TWICE')).toBe(1);
+  // Task 2.7 (D40). Nothing edits a claim's facts in this phase, so `change` is written to the row directly.
+  const enter = (id: string, change: object) => client.query('UPDATE "Claim" SET "facts" = "facts" || $2::jsonb WHERE "id" = $1', [id, JSON.stringify(change)]);
+  async function rerun(fxId: string) {
+    const fx = read(`fixtures/pl/${fxId}.json`);
+    const id = `P-${fx.id}`;
+    await file(id, fx.plan, fx.facts);
+    const ids: string[] = [];
+    for (const [i, run] of fx.runs.entries()) {
+      const e = run.expected;
+      await enter(id, run.change);
+      expect([i, await statusOf(id)]).toEqual([i, run.statusBefore]);
+      const before = (await moves(id)).length;
+      const r = await adjudicateClaim(client, id, run.asOf);
+      ids.push(r.decisionId!);
+      const d = (await client.query('SELECT * FROM "Decision" WHERE "id" = $1', [r.decisionId])).rows[0];
+      expect([i, r.decisionId, d.supersedesId]).toEqual([i, ids[e.decision], e.supersedes === null ? null : ids[e.supersedes]]);
+      expect([d.outcome, d.payableCents, d.explanation.decision.reasons]).toEqual([e.outcome, e.payableCents, e.reasons]);
+      expect([r.claimStatus, await statusOf(id), await decisionCount(id)]).toEqual([e.claimStatus, e.claimStatus, e.decisionRows]);
+      expect((await moves(id)).slice(before)).toEqual(e.decision === i ? ['IN_REVIEW', e.claimStatus] : []);
+      if (e.decision === i) expect([d.planVersionId, d.opsVersionId]).toEqual([versionIds[fx.plan], versionIds[run.ops]]);
+    }
+    expect((await verifyDecisions(client)).failures).toEqual([]);
+    return { id, fx, ids };
+  }
+
+  it('PL-02 an unchanged inputHash is a no-op: the same decision comes back; no row, no move, no audit event', () => rerun('PL-02'));
+
+  it('PL-03 changed facts supersede under the same plan and the ops version in force on the new asOf', () => rerun('PL-03'));
+
+  it('changed facts on a decided claim throw and write nothing: it must be appealed or reopened first', async () => {
+    const { id, fx } = await rerun('PL-03');
+    await enter(id, { 'claim.coveredRepairCents': 31000 });
+    await expect(adjudicateClaim(client, id, fx.runs.at(-1).asOf)).rejects.toMatchObject({ code: 'ILLEGAL_TRANSITION' });
+    expect([await statusOf(id), await decisionCount(id)]).toEqual(['DECIDED', 2]);
+  });
+
+  it('the same facts on a later asOf are a changed input', async () => {
+    const fx = read('fixtures/pl/PL-03.json');
+    await file('P-LATER', fx.plan, fx.facts);
+    const first = await adjudicateClaim(client, 'P-LATER', '2026-03-25');
+    const second = await adjudicateClaim(client, 'P-LATER', '2026-04-02');
+    const d = (await client.query('SELECT * FROM "Decision" WHERE "id" = $1', [second.decisionId])).rows[0];
+    expect([d.supersedesId, d.outcome, d.opsVersionId]).toEqual([first.decisionId, 'PEND', versionIds['ops-v2']]);
+    expect((await verifyDecisions(client)).failures).toEqual([]);
+  });
+
+  it('publishing a version writes no decision row, and a claim is not re-run by it', async () => {
+    const { id, fx, ids } = await rerun('PL-03');
+    const count = async () => Number((await client.query('SELECT count(*) FROM "Decision"')).rows[0].count);
+    const before = await count();
+    await publishRuleSet(client, { ...read('rules/electronics/ops-v2.json'), version: 3, effectiveFrom: '2026-06-01' });
+    expect(await count()).toBe(before);
+    expect((await adjudicateClaim(client, id, fx.runs.at(-1).asOf)).decisionId).toBe(ids.at(-1));
+    expect(await count()).toBe(before);
+    expect((await verifyDecisions(client)).failures).toEqual([]);
   });
 });
