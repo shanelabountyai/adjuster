@@ -28,12 +28,20 @@ export const inputHashOf = (d: Pick<Row, 'asOf' | 'facts' | 'planHash' | 'opsHas
 const readJson = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
 const dictFile = (body: RuleSet) => readJson(`rules/${body.product}/${body.factDictionary}.json`);
 
+// D44: an ops version is refused when a stored decision would select it on replay, that is, a decision of this product
+// with `asOf` on or after the new `effectiveFrom`, made under an ops version effective on or before it. One statement,
+// so no decision can land between the check and the insert. Plans are chosen by the contract's pin and need no check.
 export async function publishRuleSet(db: Db, body: RuleSet): Promise<string> {
   const { rows } = await db.query<{ id: string }>(
     `INSERT INTO "RuleSetVersion" ("id", "kind", "product", "version", "status", "effectiveFrom", "body", "contentHash", "publishedAt")
-     VALUES (gen_random_uuid(), $1, $2, $3, 'published', $4, $5, $6, now()) RETURNING "id"`,
+     SELECT gen_random_uuid(), $1::text, $2::text, $3::int, 'published', $4::date, $5::jsonb, $6::text, now()
+     WHERE $1::text <> 'ops' OR NOT EXISTS (
+       SELECT 1 FROM "Decision" d JOIN "RuleSetVersion" o ON o."id" = d."opsVersionId"
+       WHERE o."product" = $2::text AND d."asOf" >= $4::date AND o."effectiveFrom" <= $4::date)
+     RETURNING "id"`,
     [body.kind, body.product, body.version, body.effectiveFrom, body, sha256Hex(body)]);
-  return rows[0]!.id;
+  if (!rows[0]) throw new Error(`OPS_BACKDATED: ${body.product} ops-v${body.version} from ${body.effectiveFrom} would replace the ops version of a stored decision`);
+  return rows[0].id;
 }
 
 export const loadVersions = async (db: Db) => new Map((await db.query<Version>(

@@ -5,7 +5,7 @@ import { publishRuleSet, verifyDecisions } from '@/adjudication/decisions';
 import { sha256Hex } from '@/rules/canonical';
 import { seedDecisions } from '../../scripts/seed-decisions';
 
-// Task 1.11. The clean seed (GC-01..GC-10 decided) verifies; each tamper TM-01..TM-08, written below the service with
+// Task 1.11, reseeded by 2.11. The clean seed (17 claims through the pipeline, four versions) verifies; each tamper TM-01..TM-08, written below the service with
 // raw SQL and the immutability triggers switched off, fails with exactly its one code. TM-09 is task 2.8's (D41).
 
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -14,9 +14,11 @@ afterAll(() => client.end());
 
 let ids: Record<string, string> = {};
 let opsId = '';
+let versions: Record<string, string> = {};
 beforeEach(async () => {
   await connected;
-  ({ decisions: ids, opsId } = await seedDecisions(client));
+  ({ decisions: ids, versions } = await seedDecisions(client));
+  opsId = versions['ops-v1']!;
 });
 
 /** Runs `sql` with the immutability triggers off, as only someone below the service could. */
@@ -33,8 +35,30 @@ const copyOf = (id: string, set: string) => tamper(
 
 describe('decisions:verify', () => {
   it('reports OK on the clean seed', async () => {
-    expect(await verifyDecisions(client)).toEqual({ checked: 10, failures: [] });
-    expect((await verifyDecisions(client, '2025-07-18')).checked).toBe(2); // --as-of: GC-03 and GC-08
+    expect(await verifyDecisions(client)).toEqual({ checked: 17, failures: [] });
+    expect((await verifyDecisions(client, '2025-07-18')).checked).toBe(3); // --as-of: GC-03, GC-08 and GC-12
+  });
+
+  it('the seed covers both plan versions and both sides of the ops-v2 date', async () => {
+    const pinned = async (id: string) => {
+      const { rows } = await client.query('SELECT "planVersionId", "opsVersionId", "payableCents" FROM "Decision" WHERE "id" = $1', [ids[id]]);
+      return [Object.keys(versions).find((k) => versions[k] === rows[0].planVersionId), Object.keys(versions).find((k) => versions[k] === rows[0].opsVersionId), rows[0].payableCents];
+    };
+    expect(await pinned('OPS-v1-last-day')).toEqual(['plan-v1', 'ops-v1', 25000]);
+    expect(await pinned('OPS-v2-first-day')).toEqual(['plan-v1', 'ops-v2', 25000]);
+    expect(await pinned('RV-01-v1')).toEqual(['plan-v1', 'ops-v2', 25000]);
+    expect(await pinned('RV-01-v2')).toEqual(['plan-v2', 'ops-v2', 20000]);
+  });
+
+  it('D44 publish refuses an ops version a stored decision would select on replay, and takes a later one', async () => {
+    const ops = JSON.parse(readFileSync('rules/electronics/ops-v2.json', 'utf8'));
+    await expect(publishRuleSet(client, { ...ops, version: 3, effectiveFrom: '2026-03-31' })).rejects.toThrow('OPS_BACKDATED'); // OPS-v1-last-day
+    await expect(publishRuleSet(client, { ...ops, version: 3, effectiveFrom: '2028-01-27' })).rejects.toThrow('OPS_BACKDATED'); // GC-04, the latest asOf, boundary inclusive
+    await publishRuleSet(client, { ...ops, version: 3, effectiveFrom: '2028-01-28' });
+    expect(await codes()).toEqual([]);
+    // what the refusal prevents: the same version written below the service turns clean decisions red
+    await tamper(`UPDATE "RuleSetVersion" SET "effectiveFrom" = '2026-03-31' WHERE "kind" = 'ops' AND "version" = 3`);
+    expect(await codes()).toEqual(['VERSION_NOT_EFFECTIVE']);
   });
 
   it('TM-01 a published rule-set body edited in place → RULESET_HASH_MISMATCH', async () => {
@@ -81,9 +105,7 @@ describe('decisions:verify', () => {
   });
 
   it('TM-09 a contract re-pinned to another plan version under its decision → VERSION_NOT_EFFECTIVE', async () => {
-    const v2 = await publishRuleSet(client, JSON.parse(readFileSync('rules/electronics/plan-v2.json', 'utf8')));
-    expect(await codes()).toEqual([]); // publishing alone breaks nothing
-    await tamper(`UPDATE "Contract" SET "planVersionId" = $1 WHERE "id" = 'CT-GC-04'`, [v2]); // GC-04's asOf is after plan-v2's date
+    await tamper(`UPDATE "Contract" SET "planVersionId" = $1 WHERE "id" = 'CT-GC-04'`, [versions['plan-v2']]); // GC-04's asOf is after plan-v2's date
     expect(await codes()).toEqual(['VERSION_NOT_EFFECTIVE']);
   });
 });
