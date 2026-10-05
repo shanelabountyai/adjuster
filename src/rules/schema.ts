@@ -104,7 +104,8 @@ export const traceSchema = z.object({
   }).strict(),
   skipped: z.array(z.enum(STAGES)),
   rules: z.array(ruleResultSchema),
-  valuation: z.object({ path: z.enum(['repair', 'replace']), steps: z.array(calcStepTraceSchema) }).strict().nullable(),
+  // `labels`: each step's label as the plan had it at decision time, by step id (D42). The letter's amount lines read these.
+  valuation: z.object({ path: z.enum(['repair', 'replace']), steps: z.array(calcStepTraceSchema), labels: z.record(z.string(), z.string()) }).strict().nullable(),
   decision: z.object({
     outcome: z.enum(['APPROVE', 'PARTIAL', 'DENY', 'REFER', 'PEND']),
     reasons: z.array(z.string()), payableCents: z.number().int().nullable(), contractFulfilled: z.boolean().nullable(),

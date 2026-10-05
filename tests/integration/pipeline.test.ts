@@ -3,6 +3,8 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import pg from 'pg';
 import { publishRuleSet, verifyDecisions, type Db } from '@/adjudication/decisions';
 import { adjudicateClaim } from '@/adjudication/pipeline';
+import { renderLetter, renderNote } from '@/rules/render';
+import { traceSchema } from '@/rules/schema';
 
 // Task 2.6. Golden claims go in as a contract and a claim and come out as a decision row plus a status move; the
 // pipeline, not the test, picks the versions. PL-06 and the no-version case refer the claim and write no decision.
@@ -48,6 +50,35 @@ describe('adjudicateClaim', () => {
       expect((await moves(id)).slice(before)).toEqual(['IN_REVIEW', r.claimStatus]);
     }
     expect(await verifyDecisions(client)).toEqual({ checked: GOLDEN.length, failures: [] });
+  });
+
+  it('PL-05: a stored decision renders the same letter and note after a version with different templates is published', async () => {
+    const stored = async (id: string) => traceSchema.parse((await client.query('SELECT "explanation" FROM "Decision" WHERE "id" = $1', [id])).rows[0].explanation);
+    const render = async (id: string) => { const t = await stored(id); return [renderLetter(t), renderNote(t)]; };
+    const ids: string[] = [];
+    for (const fx of [GOLDEN[0], GOLDEN[3]]) { // GC-01 (amount lines) and GC-04 (two reasons)
+      await file(`P5-${fx.id}`, fx.plan, fx.facts);
+      ids.push((await adjudicateClaim(client, `P5-${fx.id}`, fx.asOf)).decisionId!);
+    }
+    const before = await Promise.all(ids.map(render));
+
+    // plan-v3: every reason text and every step label reworded, effective before both claims
+    const v1 = read('rules/electronics/plan-v1.json');
+    const v3 = { ...v1, version: 3,
+      rules: v1.rules.map((r: { rows: { then: Record<string, unknown> }[] }) => ({ ...r, rows: r.rows.map((x) => ({ ...x,
+        then: { ...x.then, ...(x.then.claimantText ? { claimantText: 'REWORDED' } : {}), ...(x.then.noteText ? { noteText: 'REWORDED' } : {}) } })) })),
+      payout: { ...v1.payout, steps: v1.payout.steps.map((s: { label?: string }) => (s.label ? { ...s, label: 'REWORDED' } : s)) } };
+    const v3Id = await publishRuleSet(client, v3);
+
+    expect(await Promise.all(ids.map(render))).toEqual(before);
+    expect(before.flat().join('')).not.toContain('REWORDED');
+    // the same two claims under v3 do carry the new wording, so the check above is not vacuous
+    for (const fx of [GOLDEN[0], GOLDEN[3]]) {
+      const id = `P5v3-${fx.id}`;
+      await client.query('INSERT INTO "Contract" ("id", "planVersionId", "facts") VALUES ($1, $2, $3)', [`CT-${id}`, v3Id, Object.fromEntries(Object.entries(fx.facts).filter(onContract))]);
+      await client.query('INSERT INTO "Claim" ("id", "contractId", "facts") VALUES ($1, $2, $3)', [id, `CT-${id}`, Object.fromEntries(Object.entries(fx.facts).filter((e) => !onContract(e)))]);
+      expect(renderLetter(await stored((await adjudicateClaim(client, id, fx.asOf)).decisionId!))).toContain('REWORDED');
+    }
   });
 
   it('PL-06 contract not found: no decision row, the claim is referred', async () => {

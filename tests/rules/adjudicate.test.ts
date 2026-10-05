@@ -30,7 +30,7 @@ describe('GC-01..GC-10, GC-12..GC-14 and RV-01: golden claims under the versions
       const e = fx.expected;
       expect(t.decision).toEqual({ outcome: e.outcome, reasons: e.reasons, payableCents: e.payableCents, contractFulfilled: e.contractFulfilled });
       expect(t.skipped).toEqual(e.skippedStages);
-      expect(t.valuation).toEqual(e.valuation);
+      expect(t.valuation && { path: t.valuation.path, steps: t.valuation.steps }).toEqual(e.valuation); // labels are prose, not frozen (D42)
       const byId = (rs: { ruleId: string }[]) => [...rs].sort((a, b) => a.ruleId.localeCompare(b.ruleId));
       expect(byId(t.rules.map(({ ruleId, result, missing }) => ({ ruleId, result, missing })))).toEqual(byId(e.rules));
     });
