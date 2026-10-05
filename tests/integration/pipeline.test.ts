@@ -80,6 +80,31 @@ describe('adjudicateClaim', () => {
     expect((await moves('P-ROLLBACK')).length).toBe(before);
   });
 
+  // Task 2.8. plan-v2 is published only after decisions exist, so this test publishes for itself.
+  it('RV-01 each contract keeps the plan it pinned: publishing plan-v2 changes no stored decision, and verify stays OK', async () => {
+    await client.query('TRUNCATE "Decision", "Claim", "Contract", "RuleSetVersion"');
+    for (const name of ['plan-v1', 'ops-v1', 'ops-v2']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
+    const [soldBefore, soldAfter] = read('fixtures/rv/RV-01.json').cases;
+    const decide = async (id: string, c: { plan: string; facts: Record<string, unknown>; asOf: string }) => {
+      await file(id, c.plan, c.facts);
+      const r = await adjudicateClaim(client, id, c.asOf);
+      return (await client.query('SELECT * FROM "Decision" WHERE "id" = $1', [r.decisionId])).rows[0];
+    };
+    const stored = async () => (await client.query('SELECT * FROM "Decision" ORDER BY "id"')).rows;
+
+    await decide('P-RV-GC-01', GOLDEN[0]);
+    const d1 = await decide('P-RV-01-v1', soldBefore);
+    const existing = await stored();
+    versionIds['plan-v2'] = await publishRuleSet(client, read('rules/electronics/plan-v2.json'));
+    const d2 = await decide('P-RV-01-v2', soldAfter);
+
+    expect([d1, d2].map((d) => [d.outcome, d.payableCents, d.planVersionId, d.opsVersionId])).toEqual(
+      [soldBefore, soldAfter].map((c) => [c.expected.outcome, c.expected.payableCents, versionIds[c.plan], versionIds[c.ops]]));
+    expect((await stored()).filter((d) => d.id !== d2.id)).toEqual(existing);
+    expect((await adjudicateClaim(client, 'P-RV-01-v1', soldBefore.asOf)).decisionId).toBe(d1.id); // still a no-op under its own plan
+    expect(await verifyDecisions(client)).toEqual({ checked: 3, failures: [] });
+  });
+
   // Task 2.7 (D40). Nothing edits a claim's facts in this phase, so `change` is written to the row directly.
   const enter = (id: string, change: object) => client.query('UPDATE "Claim" SET "facts" = "facts" || $2::jsonb WHERE "id" = $1', [id, JSON.stringify(change)]);
   async function rerun(fxId: string) {

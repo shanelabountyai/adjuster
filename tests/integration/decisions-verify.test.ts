@@ -1,11 +1,12 @@
+import { readFileSync } from 'node:fs';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import pg from 'pg';
-import { verifyDecisions } from '@/adjudication/decisions';
+import { publishRuleSet, verifyDecisions } from '@/adjudication/decisions';
 import { sha256Hex } from '@/rules/canonical';
 import { seedDecisions } from '../../scripts/seed-decisions';
 
 // Task 1.11. The clean seed (GC-01..GC-10 decided) verifies; each tamper TM-01..TM-08, written below the service with
-// raw SQL and the immutability triggers switched off, fails with exactly its one code.
+// raw SQL and the immutability triggers switched off, fails with exactly its one code. TM-09 is task 2.8's (D41).
 
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 const connected = client.connect();
@@ -20,9 +21,9 @@ beforeEach(async () => {
 
 /** Runs `sql` with the immutability triggers off, as only someone below the service could. */
 const tamper = async (sql: string, params: unknown[] = []) => {
-  await client.query('ALTER TABLE "Decision" DISABLE TRIGGER USER; ALTER TABLE "RuleSetVersion" DISABLE TRIGGER USER');
+  await client.query('ALTER TABLE "Decision" DISABLE TRIGGER USER; ALTER TABLE "RuleSetVersion" DISABLE TRIGGER USER; ALTER TABLE "Contract" DISABLE TRIGGER USER');
   try { await client.query(sql, params); } finally {
-    await client.query('ALTER TABLE "Decision" ENABLE TRIGGER USER; ALTER TABLE "RuleSetVersion" ENABLE TRIGGER USER');
+    await client.query('ALTER TABLE "Decision" ENABLE TRIGGER USER; ALTER TABLE "RuleSetVersion" ENABLE TRIGGER USER; ALTER TABLE "Contract" ENABLE TRIGGER USER');
   }
 };
 const codes = async () => [...new Set((await verifyDecisions(client)).failures.map((f) => f.code))];
@@ -77,5 +78,12 @@ describe('decisions:verify', () => {
   it('TM-08 a decision stamped with semantics this engine lacks → SEMANTICS_UNSUPPORTED', async () => {
     await tamper(`UPDATE "Decision" SET "engineSemanticsVersion" = 'adjuster.engine/0' WHERE "id" = $1`, [ids['GC-01']]);
     expect(await codes()).toEqual(['SEMANTICS_UNSUPPORTED']);
+  });
+
+  it('TM-09 a contract re-pinned to another plan version under its decision → VERSION_NOT_EFFECTIVE', async () => {
+    const v2 = await publishRuleSet(client, JSON.parse(readFileSync('rules/electronics/plan-v2.json', 'utf8')));
+    expect(await codes()).toEqual([]); // publishing alone breaks nothing
+    await tamper(`UPDATE "Contract" SET "planVersionId" = $1 WHERE "id" = 'CT-GC-04'`, [v2]); // GC-04's asOf is after plan-v2's date
+    expect(await codes()).toEqual(['VERSION_NOT_EFFECTIVE']);
   });
 });

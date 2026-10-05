@@ -63,6 +63,9 @@ export async function verifyDecisions(db: Db, until?: string): Promise<{ checked
   )).rows;
   const decisions = until ? all.filter((d) => d.asOf <= until) : all;
   const byId = new Map(all.map((d) => [d.id, d]));
+  const pins = new Map((await db.query<{ claimId: string; planVersionId: string }>(
+    `SELECT c."id" AS "claimId", k."planVersionId" FROM "Claim" c JOIN "Contract" k ON k."id" = c."contractId"`,
+  )).rows.map((r) => [r.claimId, r.planVersionId]));
   const failures: Failure[] = [];
   const fail = (code: Failure['code'], id: string, detail: string) => failures.push({ code, id, detail });
 
@@ -96,11 +99,12 @@ export async function verifyDecisions(db: Db, until?: string): Promise<{ checked
       if (sha256Hex(replay) !== d.outputHash) fail('REPLAY_DIVERGED', d.id, `replay gives ${replay.decision.outcome} ${replay.decision.payableCents}`);
     }
 
-    // D3: the plan was in force, and the ops set is the latest one effective on the adjudication date.
-    const selected = selectVersions({ planVersion: plan.id },
+    // D3, D41: selection runs again from the contract's pin, not the decision's, and must give the versions this row names.
+    const pin = pins.get(d.claimId);
+    const selected = selectVersions({ planVersion: pin ?? '' },
       [...versions.values()].filter((v) => v.product === ops.product).map((v) => ({ ...v, name: v.id })), d.asOf);
-    if ('error' in selected || selected.ops.id !== ops.id)
-      fail('VERSION_NOT_EFFECTIVE', d.id, `asOf ${d.asOf}: plan from ${plan.effectiveFrom}, ops pinned ${ops.id}, effective ${'error' in selected ? `none (${selected.kind})` : selected.ops.id}`);
+    if ('error' in selected || selected.plan.id !== plan.id || selected.ops.id !== ops.id)
+      fail('VERSION_NOT_EFFECTIVE', d.id, `asOf ${d.asOf}: contract pins ${pin ?? 'no plan'}, plan pinned ${plan.id} from ${plan.effectiveFrom}, ops pinned ${ops.id}, selection gives ${'error' in selected ? `none (${selected.kind})` : `${selected.plan.id} + ${selected.ops.id}`}`);
 
     if (d.overridesId) {
       // D18: an override sits beside the engine decision it overrides and preserves that decision's result.
