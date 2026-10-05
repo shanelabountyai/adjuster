@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import pg from 'pg';
@@ -50,6 +51,20 @@ describe('adjudicateClaim', () => {
       expect((await moves(id)).slice(before)).toEqual(['IN_REVIEW', r.claimStatus]);
     }
     expect(await verifyDecisions(client)).toEqual({ checked: GOLDEN.length, failures: [] });
+
+    // Task 2.10 (D43): the Python oracle gets each stored explanation and nothing else, and reproduces every amount.
+    const recompute = (rows: { id: string; explanation: unknown }[]) =>
+      spawnSync('python3', ['tools/recompute_from_trace.py'], { input: rows.map((r) => JSON.stringify(r)).join('\n'), encoding: 'utf8' });
+    const stored = (await client.query('SELECT "claimId" AS "id", "explanation" FROM "Decision"')).rows;
+    const out = recompute(stored);
+    expect([out.status, out.stderr]).toEqual([0, '']);
+    expect(JSON.parse(out.stdout)).toEqual(Object.fromEntries(GOLDEN.map((fx) => [`P-${fx.id}`, fx.expected.payableCents])));
+    // not vacuous: a deductible edited in the stored steps, an amount edited in the decision, and no input at all each fail
+    const gc01 = structuredClone(stored.find((r) => r.id === 'P-GC-01'));
+    gc01.explanation.valuation.steps.find((s: { id: string }) => s.id === 'c5').operand.value += 1;
+    const gc02 = structuredClone(stored.find((r) => r.id === 'P-GC-02'));
+    gc02.explanation.decision.payableCents = 0; // a denial pays null, never 0
+    for (const bad of [[gc01], [gc02], []]) expect(recompute(bad).status).toBe(1);
   });
 
   it('PL-05: a stored decision renders the same letter and note after a version with different templates is published', async () => {

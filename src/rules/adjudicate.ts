@@ -14,7 +14,7 @@ export type Trace = z.infer<typeof traceSchema>;
 type RuleTrace = z.infer<typeof ruleResultSchema>;
 type Rule = RuleSet['rules'][number];
 
-export const ENGINE_SEMANTICS_VERSION = 'adjuster.engine/4';
+export const ENGINE_SEMANTICS_VERSION = 'adjuster.engine/5';
 const EARLY = STAGES.slice(0, 5) as readonly string[];
 const SKIPPED_ON_DENY = ['evidence', 'red_flags', 'valuation', 'deductible_limits', 'authority'] as const;
 
@@ -35,7 +35,7 @@ export function adjudicate(input: { plan: RuleSet; ops: RuleSet; dict: Dictionar
   if (!deny && !pend) {
     const v = valuate(plan, facts);
     facts = { ...facts, ...v.calc };
-    valuation = { path: v.path as 'repair' | 'replace', steps: v.steps, labels: Object.fromEntries(plan.payout!.steps.flatMap((s) => (s.label ? [[s.id, s.label]] : []))) };
+    valuation = { path: v.path as 'repair' | 'replace', steps: v.steps, labels: Object.fromEntries(plan.payout!.steps.flatMap((s) => (s.label ? [[s.id, s.label]] : []))), outputs: plan.payout!.outputs };
     payableCents = v.payableCents;
     contractFulfilled = v.contractFulfilled;
     partial = payableCents! < (v.calc['calc.afterDeductibleCents'] as number);
