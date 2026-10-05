@@ -54,14 +54,17 @@ describe('renderLetter', () => {
 
   it('GC-01 and GC-13: the amount math line by line from the stored steps', () => {
     expect(renderLetter(gc('01')).split('\n')).toEqual(expect.arrayContaining([
-      'Decision as of 2025-09-18: Approved.', 'Loss = covered repair cost C (repair path): $300.00',
-      'Deductible: $300.00 − $50.00 = $250.00', 'Amount payable: $250.00.',
+      'Decision as of 2025-09-18: Approved.', 'Covered repair cost: $300.00',
+      'Less your deductible: $300.00 − $50.00 = $250.00', 'Amount payable: $250.00.',
     ]));
+    // D45: a step that only remembers a value has no label, so it is not a line (6 lines + the trailing newline)
+    expect(renderLetter(gc('01')).split('\n')).toHaveLength(7);
+    expect(renderLetter(gc('02'))).toContain('(1) Your plan does not cover accidental damage. (§3.1)'); // not the stored enum value
     const partial = renderLetter(gc('13'));
     expect(partial).toContain('Approved in part.');
-    expect(partial).toContain('Per-claim limit: the lesser of $570.00 and $500.00 = $500.00');
+    expect(partial).toContain("Your plan's limit for one claim: the lesser of $570.00 and $500.00 = $500.00");
     expect(partial).toContain('Amount payable: $500.00.');
-    expect(renderLetter(gc('01'))).not.toContain('Per-claim limit'); // a cap that did not bind is not a line
+    expect(renderLetter(gc('01'))).not.toContain('limit for one claim'); // a cap that did not bind is not a line
   });
 
   it('an unknown placeholder throws; a letter is never sent with a hole in it', () => {

@@ -670,7 +670,7 @@
           }
         },
         {
-          "id": "E6.fail.essential",
+          "id": "E6.fail.essential.adh",
           "when": [
             {
               "fact": "contract.planCode",
@@ -679,17 +679,15 @@
             },
             {
               "fact": "claim.peril",
-              "op": "not_in",
-              "value": [
-                "breakdown"
-              ]
+              "op": "eq",
+              "value": "adh"
             }
           ],
           "then": {
             "outcome": "DENY",
             "reasonCode": "PERIL_NOT_COVERED",
             "clause": "\u00a73.1",
-            "claimantText": "Your plan does not cover {peril}.",
+            "claimantText": "Your plan does not cover accidental damage.",
             "noteText": "Peril {peril} not in plan perils.",
             "bind": {
               "peril": "claim.peril"
@@ -697,7 +695,57 @@
           }
         },
         {
-          "id": "E6.fail.plus",
+          "id": "E6.fail.essential.battery_degradation",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "essential"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "battery_degradation"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PERIL_NOT_COVERED",
+            "clause": "\u00a73.1",
+            "claimantText": "Your plan does not cover battery wear.",
+            "noteText": "Peril {peril} not in plan perils.",
+            "bind": {
+              "peril": "claim.peril"
+            }
+          }
+        },
+        {
+          "id": "E6.fail.essential.other",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "essential"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "other"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PERIL_NOT_COVERED",
+            "clause": "\u00a73.1",
+            "claimantText": "Your plan does not cover this type of loss.",
+            "noteText": "Peril {peril} not in plan perils.",
+            "bind": {
+              "peril": "claim.peril"
+            }
+          }
+        },
+        {
+          "id": "E6.fail.plus.battery_degradation",
           "when": [
             {
               "fact": "contract.planCode",
@@ -706,18 +754,15 @@
             },
             {
               "fact": "claim.peril",
-              "op": "not_in",
-              "value": [
-                "breakdown",
-                "adh"
-              ]
+              "op": "eq",
+              "value": "battery_degradation"
             }
           ],
           "then": {
             "outcome": "DENY",
             "reasonCode": "PERIL_NOT_COVERED",
             "clause": "\u00a73.1",
-            "claimantText": "Your plan does not cover {peril}.",
+            "claimantText": "Your plan does not cover battery wear.",
             "noteText": "Peril {peril} not in plan perils.",
             "bind": {
               "peril": "claim.peril"
@@ -725,7 +770,32 @@
           }
         },
         {
-          "id": "E6.fail.premier",
+          "id": "E6.fail.plus.other",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "plus"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "other"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PERIL_NOT_COVERED",
+            "clause": "\u00a73.1",
+            "claimantText": "Your plan does not cover this type of loss.",
+            "noteText": "Peril {peril} not in plan perils.",
+            "bind": {
+              "peril": "claim.peril"
+            }
+          }
+        },
+        {
+          "id": "E6.fail.premier.other",
           "when": [
             {
               "fact": "contract.planCode",
@@ -734,19 +804,15 @@
             },
             {
               "fact": "claim.peril",
-              "op": "not_in",
-              "value": [
-                "breakdown",
-                "adh",
-                "battery_degradation"
-              ]
+              "op": "eq",
+              "value": "other"
             }
           ],
           "then": {
             "outcome": "DENY",
             "reasonCode": "PERIL_NOT_COVERED",
             "clause": "\u00a73.1",
-            "claimantText": "Your plan does not cover {peril}.",
+            "claimantText": "Your plan does not cover this type of loss.",
             "noteText": "Peril {peril} not in plan perils.",
             "bind": {
               "peril": "claim.peril"
@@ -1656,7 +1722,7 @@
             "value": "repair"
           }
         ],
-        "label": "Loss = covered repair cost C (repair path)"
+        "label": "Covered repair cost"
       },
       {
         "id": "c2",
@@ -1672,7 +1738,7 @@
             "value": "replace"
           }
         ],
-        "label": "Loss = replacement value R (replace path)"
+        "label": "Replacement value of your product"
       },
       {
         "id": "c3",
@@ -1688,7 +1754,7 @@
             "value": "replace"
           }
         ],
-        "label": "Basis V: depreciate R on an ACV plan"
+        "label": "Adjusted for the age of your product"
       },
       {
         "id": "c4",
@@ -1697,7 +1763,7 @@
           "fact": "product.purchasePriceCents"
         },
         "reg": "L",
-        "label": "Limit of liability: never above purchase price"
+        "label": "Limited to the price you paid"
       },
       {
         "id": "c5",
@@ -1706,7 +1772,7 @@
           "fact": "lookup.deductibleCents"
         },
         "reg": "L",
-        "label": "Deductible"
+        "label": "Less your deductible"
       },
       {
         "id": "c6",
@@ -1715,7 +1781,7 @@
           "const": 0
         },
         "reg": "L",
-        "label": "Under the deductible pays 0, not negative"
+        "label": "A payment is never less than zero"
       },
       {
         "id": "c7",
@@ -1723,8 +1789,7 @@
         "operand": {
           "reg": "L"
         },
-        "reg": "DED",
-        "label": "Remember the amount after deductible"
+        "reg": "DED"
       },
       {
         "id": "c8",
@@ -1733,7 +1798,7 @@
           "fact": "lookup.perClaimLimitCents"
         },
         "reg": "L",
-        "label": "Per-claim limit"
+        "label": "Your plan's limit for one claim"
       },
       {
         "id": "c9",
@@ -1742,7 +1807,7 @@
           "fact": "lookup.aggregateLimitCents"
         },
         "reg": "AGG",
-        "label": "Aggregate limit"
+        "label": "Your plan's total limit"
       },
       {
         "id": "c10",
@@ -1751,7 +1816,7 @@
           "fact": "d.sumPriorPaid"
         },
         "reg": "AGG",
-        "label": "less amounts already paid (deductibles never erode it)"
+        "label": "Less what your plan has already paid"
       },
       {
         "id": "c11",
@@ -1768,7 +1833,7 @@
           "reg": "AGG"
         },
         "reg": "L",
-        "label": "Aggregate remaining caps this payment"
+        "label": "Limited to what is left on your plan"
       },
       {
         "id": "c13",
@@ -1785,7 +1850,7 @@
           "reg": "L"
         },
         "reg": "AFTER",
-        "label": "Aggregate remaining after this payment"
+        "label": "Left on your plan after this payment"
       }
     ],
     "outputs": {
