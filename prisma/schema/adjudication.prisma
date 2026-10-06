@@ -44,6 +44,7 @@ model Claim {
   updatedAt     DateTime   @default(now()) @updatedAt @db.Timestamptz(6)
   decisions     Decision[]
   documents     Document[]
+  waivers       DocumentWaiver[]
 }
 
 // Task 3.2, D53. One row per (claim, document type), made by the first upload. Insert-only (trigger).
@@ -61,6 +62,7 @@ model Document {
 
 // Task 3.2, D53. Insert-only (trigger): an upload is a new row with the next `version`, and the bytes live in the
 // DocumentStore under `sha256`. No status column: a later version supersedes, and reviews and waivers are rows (3.3).
+// `source` is claimant, servicer or staff (CHECK, D54).
 // `uploadedBy` is a User id with no FK, as on AuditEvent (core's schema is template-owned); null = the claimant.
 model DocumentVersion {
   id         String   @id @default(uuid()) @db.Uuid
@@ -71,8 +73,43 @@ model DocumentVersion {
   source     String
   uploadedBy String?  @db.Uuid
   uploadedAt DateTime @default(now()) @db.Timestamptz(6)
+  review     DocumentReview?
 
   @@unique([documentId, version])
+}
+
+// Task 3.3, D54. The five rejection reasons of domain brief §8, seeded by the migration. Data: a sixth is a row.
+model DocumentRejectionReason {
+  code    String           @id
+  reviews DocumentReview[]
+}
+
+// Task 3.3, D53. What a person said of one version, once: accepted, or rejected with a reason. Insert-only (trigger).
+model DocumentReview {
+  id         String                   @id @default(uuid()) @db.Uuid
+  versionId  String                   @unique @db.Uuid
+  version    DocumentVersion          @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  result     String // accepted | rejected
+  reasonCode String?
+  reason     DocumentRejectionReason? @relation(fields: [reasonCode], references: [code], onDelete: Restrict)
+  reviewedBy String?                  @db.Uuid
+  reviewedAt DateTime                 @default(now()) @db.Timestamptz(6)
+}
+
+// Task 3.3, D53. A waiver is of the document slot, not of a version, so it needs no upload. Insert-only (trigger).
+// `tier` is the tier the waiver was made at and `asOf` the day, so the power can be checked again later (D49).
+model DocumentWaiver {
+  id         String   @id @default(uuid()) @db.Uuid
+  claimId    String
+  claim      Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  type       String
+  reasonText String
+  tier       String
+  asOf       DateTime @db.Date
+  waivedBy   String?  @db.Uuid
+  waivedAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([claimId, type])
 }
 
 // D4, D13, D18: append-only. A correction is a new row that supersedes; an override is a new row that overrides.

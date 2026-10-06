@@ -18,7 +18,7 @@ afterAll(() => client.end());
 const versionIds: Record<string, string> = {};
 beforeEach(async () => {
   await connected;
-  await client.query('TRUNCATE "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
+  await client.query('TRUNCATE "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
   for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
 });
 
@@ -128,7 +128,7 @@ describe('adjudicateClaim', () => {
 
   // Task 2.8. plan-v2 is published only after decisions exist, so this test publishes for itself.
   it('RV-01 each contract keeps the plan it pinned: publishing plan-v2 changes no stored decision, and verify stays OK', async () => {
-    await client.query('TRUNCATE "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
+    await client.query('TRUNCATE "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
     for (const name of ['plan-v1', 'ops-v1', 'ops-v2']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
     const [soldBefore, soldAfter] = read('fixtures/rv/RV-01.json').cases;
     const decide = async (id: string, c: { plan: string; facts: Record<string, unknown>; asOf: string }) => {

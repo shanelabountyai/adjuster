@@ -26,7 +26,7 @@ export const inputHashOf = (d: Pick<Row, 'asOf' | 'facts' | 'planHash' | 'opsHas
   sha256Hex({ asOf: d.asOf, facts: d.facts, planHash: d.planHash, opsHash: d.opsHash });
 
 const readJson = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
-const dictFile = (body: RuleSet) => readJson(`rules/${body.product}/${body.factDictionary}.json`);
+export const dictFile = (body: RuleSet) => readJson(`rules/${body.product}/${body.factDictionary}.json`);
 
 // D44: an ops version is refused when a stored decision would select it on replay, that is, a decision of this product
 // with `asOf` on or after the new `effectiveFrom`, made under an ops version effective on or before it. One statement,

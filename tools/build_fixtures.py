@@ -403,6 +403,13 @@ FROM_DOC = {"proofOfPurchase": ["evidence.proofOfPurchaseDate"],
             "repairEstimate": ["claim.coveredRepairCents", "claim.serialMatchesContract", "evidence.estimateFromNetwork", "evidence.estimatorIsPayee"],
             "damagePhotos": ["evidence.photoMetaDateBeforeLoss", "evidence.documentHashOnOtherClaim"],
             "incidentStatement": ["claim.accountChanged"]}
+# EV-06 (D54): domain brief s8's status line as a table over `docs.<type>`: status, action, status it leaves. A new upload
+# always lands on `received` (D51c). An accepted document is not waived, and nothing follows a waiver.
+DOC_MOVES = [("requested", "upload", "received"), ("received", "upload", "received"), ("rejected", "upload", "received"),
+             ("accepted", "upload", "received"), ("received", "accept", "accepted"), ("received", "reject", "rejected"),
+             ("requested", "waive", "waived"), ("received", "waive", "waived"), ("rejected", "waive", "waived")]
+REJECTION_REASONS = ["illegible", "wrong_document", "serial_mismatch", "date_inconsistent", "incomplete"]  # domain brief s8
+def doc_legal(status, action): return any(m[:2] == (status, action) for m in DOC_MOVES)
 
 
 def authority(ops, tier, power, paid, amount):
@@ -472,6 +479,7 @@ class Life:
         self.ev(asof, {"type": "open", "facts": self.intake}, step)
 
     def upload(self, asof, d, step=None):
+        assert doc_legal(self.doc(d), "upload")
         for k, v in self.versions.items():
             if k.split("/")[0] == d: v["status"] = "superseded"
         ver = f"{d}/{1 + sum(k.split('/')[0] == d for k in self.versions)}"
@@ -481,7 +489,7 @@ class Life:
         return ver
 
     def reject(self, asof, ver, reason, step=None):
-        assert self.versions[ver]["status"] == "received"
+        assert self.versions[ver]["status"] == "received" and reason in REJECTION_REASONS
         self.versions[ver]["status"] = "rejected"
         self.ev(asof, {"type": "reject", "version": ver, "reason": reason}, step)
 
@@ -497,7 +505,7 @@ class Life:
 
     def waive(self, asof, d, tier, text, step=None):
         a = authority(select_ops(D(asof)), tier, "waive_documents", self.paid, 0)
-        assert a["allowed"]
+        assert a["allowed"] and doc_legal(self.doc(d), "waive")
         self.waived.add(d)
         self.run(asof)
         self.ev(asof, {"type": "waive", "doc": d, "by": tier, "reasonText": text}, step)
@@ -598,6 +606,13 @@ def build_phase3():
     c.pay("2025-09-12", 8)
     c.write("gc", "GC-15", "Capstone: a Premier laptop claim from FNOL to a supplemental that turns a repair into a replacement", "domain brief s11",
             "step is the brief's step number. The engine's amount is always the claim's total; a payment is the part of it not yet paid.")
+
+    write("ev", {"id": "EV-06", "kind": "document-transitions", "title": "A document's status moves only along the table; anything else throws",
+                 "source": "domain brief s8 / D51 / D54",
+                 "note": "The status of docs.<type>. A version is superseded when a later version of its document exists, whatever else was said of it.",
+                 "statuses": ["requested", "received", "accepted", "rejected", "superseded", "waived"],
+                 "moves": [{"from": a, "action": b, "to": c} for a, b, c in DOC_MOVES],
+                 "rejectionReasons": REJECTION_REASONS})
 
     gc5 = json.load(open(os.path.join(ROOT, "gc", "GC-05.json")))
     asof = iso(D(gc5["asOf"]) + dt.timedelta(days=1))

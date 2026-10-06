@@ -1,10 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import pg from 'pg';
 import ev03 from '../../fixtures/ev/EV-03.json';
+import { publishRuleSet } from '@/adjudication/decisions';
 import { DocumentCorruptError, LocalDiskDocumentStore, readDocumentVersion, uploadDocument } from '@/adjudication/documents';
 
 // Task 3.2 (D53): documents and their versions are rows that are only ever inserted, and the bytes are checked against the
@@ -17,7 +19,10 @@ let store: LocalDiskDocumentStore;
 afterAll(() => client.end());
 beforeEach(async () => {
   await connected;
-  await client.query('TRUNCATE "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
+  await client.query('TRUNCATE "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
+  // an upload's type is checked against the dictionary of the plan the claim's contract pins (task 3.3)
+  const plan = await publishRuleSet(client, JSON.parse(readFileSync('rules/electronics/plan-v1.json', 'utf8')));
+  await client.query(`INSERT INTO "Contract" ("id", "planVersionId", "facts") VALUES ('CT-1', $1, '{}')`, [plan]);
   await client.query(`INSERT INTO "Claim" ("id", "contractId", "facts") VALUES ('C-1', 'CT-1', '{}')`);
   root = await mkdtemp(join(tmpdir(), 'adjuster-docs-'));
   store = new LocalDiskDocumentStore(root);
@@ -74,8 +79,10 @@ describe('EV-03 an upload is a new version; nothing is overwritten or deleted', 
     expect(await insert(2, 'a'.repeat(63))).toBe('document_version_sha256');
     expect(await insert(0, 'a'.repeat(64))).toBe('document_version_number');
     expect(await insert(2, 'a'.repeat(64), '')).toBe('document_version_source');
+    expect(await insert(2, 'a'.repeat(64), 'fax')).toBe('document_version_source');
     expect(await insert(1, 'a'.repeat(64))).toBe('DocumentVersion_documentId_version_key');
-    await expect(upload('repairEstimate', 'x', 'C-none')).rejects.toMatchObject({ constraint: 'Document_claimId_fkey' });
+    await expect(upload('repairEstimate', 'x', 'C-none')).rejects.toThrow(/no contract on file/);
+    expect(await run(`INSERT INTO "Document" ("id", "claimId", "type") VALUES (gen_random_uuid(), 'C-none', 'repairEstimate')`)).toBe('Document_claimId_fkey');
     expect((await client.query(`SELECT 1 FROM "DocumentVersion"`)).rows).toHaveLength(1);
   });
 });

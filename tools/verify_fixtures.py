@@ -52,6 +52,10 @@ PL_RUNS_KEY = {"PL-02": [("APPROVE", 25000, 0, None), ("APPROVE", 25000, 0, None
                "PL-03": [("PEND", None, 0, None), ("APPROVE", 25000, 1, 0)]}
 PL_STATUS_FOR = {"APPROVE": "DECIDED", "PARTIAL": "DECIDED", "DENY": "DECIDED", "PEND": "PENDING_EVIDENCE", "REFER": "REFERRED"}
 # Phase 3 (D47-D52). OV: whether each case is allowed, typed from domain brief s7's table.
+# D54, typed from domain brief s8: the status of docs.<type>, the action, the status it leaves; and the five rejection reasons
+EV06_KEY = ("requested>upload>received received>upload>received rejected>upload>received accepted>upload>received "
+            "received>accept>accepted received>reject>rejected requested>waive>waived received>waive>waived rejected>waive>waived")
+REJECT_KEY = "illegible wrong_document serial_mismatch date_inconsistent incomplete"
 OV_KEY = {"OV-01": [True, True, False, True, True], "OV-02": [False, True, True, False], "OV-03": [True, True, True, False, False, False, False]}
 # Claim lives. rows: every decision row in order (E engine / O override, outcome, cents). end: claim status, payment status, cents paid.
 P, E_, O_ = ("E", "PEND", None), "E", "O"
@@ -316,6 +320,10 @@ def replay(fid, f):
     for i, ev in enumerate(f["events"]):
         a, asof, extra = ev["action"], ev["asOf"], {}
         t = a["type"]
+        if t in ("upload", "accept", "reject", "waive"):  # D54: every document action is a move in EV-06, read from the event alone
+            d = a.get("doc") or of(a["version"])
+            chk({"from": doc(d), "action": t, "to": ev["expected"]["docs"][d]} in fx["EV-06"]["moves"], f"{fid} event {i}: {doc(d)} -{t}-> {ev['expected']['docs'][d]} is not in EV-06")
+            chk(t != "reject" or a["reason"] in fx["EV-06"]["rejectionReasons"], f"{fid} event {i}: {a.get('reason')} is not a rejection reason")
         chk(i == 0 or asof >= f["events"][i - 1]["asOf"], f"{fid} event {i}: goes back in time")
         if t == "open":
             chk(i == 0 and all(byid.get(x, {}).get("source") == "input" for x in a["facts"]), f"{fid}: open is first and carries input facts only")
@@ -419,7 +427,7 @@ def check_lives():
 
 
 fx = {os.path.basename(p)[:-5]: load(p) for p in sorted(glob.glob(f"{FIX}/*/*.json"))}
-want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY) + ["RV-01"] + sorted(VP_KEY) + sorted(PL_KEY) + sorted(PL_RUNS_KEY) + ["PL-01"] + sorted(OV_KEY) + sorted(LIFE_KEY)
+want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY) + ["RV-01"] + sorted(VP_KEY) + sorted(PL_KEY) + sorted(PL_RUNS_KEY) + ["PL-01"] + sorted(OV_KEY) + sorted(LIFE_KEY) + ["EV-06"]
 chk(sorted(fx) == sorted(want), f"fixture set differs: missing {sorted(set(want) - set(fx))}, extra {sorted(set(fx) - set(want))}")
 
 for fid, f in fx.items():
@@ -470,6 +478,15 @@ for fid, f in fx.items():
             d = c["decision"]
             legal = sorted(to for to, g in PL01_GUARD.items() if d and g(d["outcome"], d["payableCents"]))
             chk(legal == sorted(c["legal"]), f"{fid} '{c['name']}': {c['legal']} != {legal}")
+    elif k == "document-transitions":
+        got = {f"{m['from']}>{m['action']}>{m['to']}" for m in f["moves"]}
+        chk(got == set(EV06_KEY.split()) and len(f["moves"]) == len(got), f"{fid}: table differs from the key: {sorted(got ^ set(EV06_KEY.split()))}")
+        chk(len({(m["from"], m["action"]) for m in f["moves"]}) == len(f["moves"]), f"{fid}: a status and an action lead to two statuses")
+        enums = {tuple(x["values"]) for x in dic["facts"] if x["id"].startswith("docs.")}
+        chk(enums == {tuple(f["statuses"])}, f"{fid}: statuses differ from the docs.* facts in the dictionary")
+        chk(f["rejectionReasons"] == REJECT_KEY.split(), f"{fid}: rejection reasons differ from the brief")
+        sql = open(os.path.join(HERE, "..", "prisma/migrations/20261005010000_document_status/migration.sql")).read()
+        chk(re.findall(r"'([a-z_]+)'", sql.split('INSERT INTO "DocumentRejectionReason"')[1].split(";")[0]) == f["rejectionReasons"], f"{fid}: reasons differ from the migration's seed")
     elif k == "readjudication":
         # D40: a row is written exactly when asOf or the facts differ from the last decision's, and only from a status PL-01 lets into IN_REVIEW
         chk(len(f["runs"]) == len(PL_RUNS_KEY[fid]), f"{fid}: run count")

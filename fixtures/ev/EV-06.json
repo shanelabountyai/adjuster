@@ -1,0 +1,69 @@
+{
+  "id": "EV-06",
+  "kind": "document-transitions",
+  "title": "A document's status moves only along the table; anything else throws",
+  "source": "domain brief s8 / D51 / D54",
+  "note": "The status of docs.<type>. A version is superseded when a later version of its document exists, whatever else was said of it.",
+  "statuses": [
+    "requested",
+    "received",
+    "accepted",
+    "rejected",
+    "superseded",
+    "waived"
+  ],
+  "moves": [
+    {
+      "from": "requested",
+      "action": "upload",
+      "to": "received"
+    },
+    {
+      "from": "received",
+      "action": "upload",
+      "to": "received"
+    },
+    {
+      "from": "rejected",
+      "action": "upload",
+      "to": "received"
+    },
+    {
+      "from": "accepted",
+      "action": "upload",
+      "to": "received"
+    },
+    {
+      "from": "received",
+      "action": "accept",
+      "to": "accepted"
+    },
+    {
+      "from": "received",
+      "action": "reject",
+      "to": "rejected"
+    },
+    {
+      "from": "requested",
+      "action": "waive",
+      "to": "waived"
+    },
+    {
+      "from": "received",
+      "action": "waive",
+      "to": "waived"
+    },
+    {
+      "from": "rejected",
+      "action": "waive",
+      "to": "waived"
+    }
+  ],
+  "rejectionReasons": [
+    "illegible",
+    "wrong_document",
+    "serial_mismatch",
+    "date_inconsistent",
+    "incomplete"
+  ]
+}

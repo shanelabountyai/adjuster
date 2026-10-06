@@ -13,7 +13,7 @@ const onContract = ([k]: [string, unknown]) => k.startsWith('contract.') || k.st
 
 type Db = Parameters<typeof publishRuleSet>[0];
 export async function seedDecisions(db: Db) {
-  await db.query('TRUNCATE "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
+  await db.query('TRUNCATE "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
   const versions: Record<string, string> = {};
   for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2']) versions[name] = await publishRuleSet(db, read(`rules/electronics/${name}.json`));
 
