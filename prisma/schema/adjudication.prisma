@@ -43,6 +43,36 @@ model Claim {
   createdAt     DateTime   @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime   @default(now()) @updatedAt @db.Timestamptz(6)
   decisions     Decision[]
+  documents     Document[]
+}
+
+// Task 3.2, D53. One row per (claim, document type), made by the first upload. Insert-only (trigger).
+// `type` is a document type the fact dictionary names (docs.<type>); the list is rule data, not a CHECK.
+model Document {
+  id        String            @id @default(uuid()) @db.Uuid
+  claimId   String
+  claim     Claim             @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  type      String
+  createdAt DateTime          @default(now()) @db.Timestamptz(6)
+  versions  DocumentVersion[]
+
+  @@unique([claimId, type])
+}
+
+// Task 3.2, D53. Insert-only (trigger): an upload is a new row with the next `version`, and the bytes live in the
+// DocumentStore under `sha256`. No status column: a later version supersedes, and reviews and waivers are rows (3.3).
+// `uploadedBy` is a User id with no FK, as on AuditEvent (core's schema is template-owned); null = the claimant.
+model DocumentVersion {
+  id         String   @id @default(uuid()) @db.Uuid
+  documentId String   @db.Uuid
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  version    Int
+  sha256     String
+  source     String
+  uploadedBy String?  @db.Uuid
+  uploadedAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([documentId, version])
 }
 
 // D4, D13, D18: append-only. A correction is a new row that supersedes; an override is a new row that overrides.
