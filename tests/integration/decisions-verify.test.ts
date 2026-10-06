@@ -66,6 +66,11 @@ describe('decisions:verify', () => {
     expect(await codes()).toEqual(['RULESET_HASH_MISMATCH']);
   });
 
+  it('a relied-on document version removed from the row → FACTS_HASH_MISMATCH (D47)', async () => {
+    await tamper(`UPDATE "Decision" SET "documentVersions" = "documentVersions"[2:] WHERE "id" = $1`, [ids['GC-01']]);
+    expect(await codes()).toEqual(['FACTS_HASH_MISMATCH']);
+  });
+
   it('TM-02 a stored fact changed → FACTS_HASH_MISMATCH', async () => {
     await tamper(`UPDATE "Decision" SET "facts" = jsonb_set("facts", '{claim.coveredRepairCents}', '99999') WHERE "id" = $1`, [ids['GC-01']]);
     expect(await codes()).toEqual(['FACTS_HASH_MISMATCH']);

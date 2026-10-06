@@ -45,6 +45,7 @@ model Claim {
   decisions     Decision[]
   documents     Document[]
   waivers       DocumentWaiver[]
+  enteredFacts  ClaimFact[]
 }
 
 // Task 3.2, D53. One row per (claim, document type), made by the first upload. Insert-only (trigger).
@@ -74,6 +75,7 @@ model DocumentVersion {
   uploadedBy String?  @db.Uuid
   uploadedAt DateTime @default(now()) @db.Timestamptz(6)
   review     DocumentReview?
+  facts      ClaimFact[]
 
   @@unique([documentId, version])
 }
@@ -112,8 +114,27 @@ model DocumentWaiver {
   @@unique([claimId, type])
 }
 
+// Task 3.4, D55. One fact a person entered on a claim. Insert-only (trigger): a correction is a later row, and the
+// latest row for a fact wins. A fact read from a document names the version and counts only while that version is
+// accepted; a fact no document carries has no version and must name who entered it (CHECK).
+// `enteredBy` is a User id with no FK, as on DocumentVersion.
+model ClaimFact {
+  id                String           @id @default(uuid()) @db.Uuid
+  claimId           String
+  claim             Claim            @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  factId            String
+  value             Json
+  documentVersionId String?          @db.Uuid
+  documentVersion   DocumentVersion? @relation(fields: [documentVersionId], references: [id], onDelete: Restrict)
+  enteredBy         String?          @db.Uuid
+  enteredAt         DateTime         @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+
+  @@unique([documentVersionId, factId])
+  @@index([claimId])
+}
+
 // D4, D13, D18: append-only. A correction is a new row that supersedes; an override is a new row that overrides.
-// Seam: document version ids relied on (D4) arrive with evidence in Phase 3, as a new column.
+// `documentVersions` (D47): the ids of the document versions accepted when the decision was made, sorted; part of inputHash.
 model Decision {
   id                     String         @id @default(uuid()) @db.Uuid
   claimId                String
@@ -126,6 +147,7 @@ model Decision {
   opsHash                String
   asOf                   DateTime       @db.Date
   facts                  Json // canonical fact snapshot
+  documentVersions       String[]       @default([])
   inputHash              String
   outputHash             String
   engineSemanticsVersion String

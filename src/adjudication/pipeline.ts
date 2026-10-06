@@ -1,5 +1,6 @@
 import { type ClaimStatus, transitionClaim } from '@/adjudication/claim-status';
 import { type Db, inputHashOf, loadVersions, recordDecision } from '@/adjudication/decisions';
+import { readDocumentStatuses, readEvidence } from '@/adjudication/documents';
 import type { Snapshot } from '@/rules/derive';
 import { selectVersions } from '@/rules/select';
 
@@ -40,8 +41,13 @@ async function run(db: Db, claimId: string, asOf: string, by: { userId: string |
   const versions = [...(await loadVersions(db)).values()];
   const product = versions.find((v) => v.id === contract?.planVersionId)?.product;
   const selected = contract && selectVersions({ planVersion: contract.planVersionId }, versions.filter((v) => v.product === product).map((v) => ({ ...v, name: v.id })), asOf);
+  // Evidence (task 3.4, D55): a document's status and every entered fact are read from their rows and win over what
+  // the claim was filed with. Without a contract there are no document types and nothing below is decided anyway.
+  const docs = product ? Object.entries((await readDocumentStatuses(db, claimId)).docs).map(([type, status]) => [`docs.${type}`, status]) : [];
+  const evidence = await readEvidence(db, claimId);
   // The snapshot is frozen here: the decision row stores exactly these facts, and replay reads them, never the claim.
-  const snapshot = { ...contract?.facts, ...claim.facts };
+  const snapshot = { ...contract?.facts, ...claim.facts, ...Object.fromEntries(docs), ...evidence.facts };
+  const { documentVersions } = evidence;
 
   // Re-adjudication (D13, D40). The claim's current engine decision is the one no later engine row supersedes.
   const prev = (await db.query<{ id: string; inputHash: string; planVersionId: string; outcome: string }>(
@@ -49,7 +55,7 @@ async function run(db: Db, claimId: string, asOf: string, by: { userId: string |
        AND NOT EXISTS (SELECT 1 FROM "Decision" n WHERE n."supersedesId" = d."id")`, [claimId])).rows[0];
   // PL-02: the same input is a no-op in any status. Nothing is written, not even a status move.
   if (prev && selected && !('error' in selected)
-    && inputHashOf({ asOf, facts: snapshot, planHash: selected.plan.contentHash!, opsHash: selected.ops.contentHash! }) === prev.inputHash)
+    && inputHashOf({ asOf, facts: snapshot, documentVersions, planHash: selected.plan.contentHash!, opsHash: selected.ops.contentHash! }) === prev.inputHash)
     return { decisionId: prev.id, outcome: prev.outcome, claimStatus: claim.status };
 
   // A changed input may only be decided from a status the table lets into IN_REVIEW; any other throws here.
@@ -61,7 +67,7 @@ async function run(db: Db, claimId: string, asOf: string, by: { userId: string |
   if (prev && prev.planVersionId !== selected.plan.id) throw new Error(`Claim ${claimId}: decision ${prev.id} is under a plan version its contract does not pin`);
 
   // PL-03: the new decision supersedes the current one, under the same plan and the ops version in force on this asOf.
-  const decisionId = await recordDecision(db, { claimId, planVersionId: selected.plan.id, opsVersionId: selected.ops.id, snapshot, asOf, supersedesId: prev?.id });
+  const decisionId = await recordDecision(db, { claimId, planVersionId: selected.plan.id, opsVersionId: selected.ops.id, snapshot, documentVersions, asOf, supersedesId: prev?.id });
   const { outcome } = (await db.query<{ outcome: string }>('SELECT "outcome" FROM "Decision" WHERE "id" = $1', [decisionId])).rows[0]!;
   const claimStatus = STATUS_FOR[outcome];
   if (!claimStatus) throw new Error(`No claim status for outcome ${outcome}`);

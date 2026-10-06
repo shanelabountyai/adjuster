@@ -25,8 +25,12 @@ const versionIds: Record<string, string> = {};
 afterAll(() => client.end());
 beforeEach(async () => {
   await connected;
-  await client.query('TRUNCATE "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
+  await client.query('TRUNCATE "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
   for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
+  // The template's resetDb truncates every table, the migration's reference rows included, so whether they are still
+  // there depends on which file ran first. Put back exactly what the migration seeds, by running its own statement.
+  await client.query(readFileSync('prisma/migrations/20261005010000_document_status/migration.sql', 'utf8')
+    .match(/INSERT INTO "DocumentRejectionReason"[^;]+/)![0] + ' ON CONFLICT DO NOTHING');
   root = await mkdtemp(join(tmpdir(), 'adjuster-docs-'));
   store = new LocalDiskDocumentStore(root);
   return () => rm(root, { recursive: true });

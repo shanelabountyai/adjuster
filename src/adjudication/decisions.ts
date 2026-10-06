@@ -18,12 +18,13 @@ export type Failure = { code: (typeof FAILURE_CODES)[number]; id: string; detail
 type Version = { id: string; kind: string; product: string; version: number; status: string; effectiveFrom: string; body: RuleSet; contentHash: string | null };
 type Row = {
   id: string; claimId: string; planVersionId: string; planHash: string; opsVersionId: string; opsHash: string; asOf: string;
-  facts: Snapshot; inputHash: string; outputHash: string; engineSemanticsVersion: string; outcome: string; payableCents: number | null;
+  facts: Snapshot; documentVersions: string[]; inputHash: string; outputHash: string; engineSemanticsVersion: string; outcome: string; payableCents: number | null;
   explanation: unknown; supersedesId: string | null; overridesId: string | null; createdAt: Date;
 };
 
-export const inputHashOf = (d: Pick<Row, 'asOf' | 'facts' | 'planHash' | 'opsHash'>) =>
-  sha256Hex({ asOf: d.asOf, facts: d.facts, planHash: d.planHash, opsHash: d.opsHash });
+// D47: the accepted document versions are an input, so a replacement upload with the same facts is a new decision.
+export const inputHashOf = (d: Pick<Row, 'asOf' | 'facts' | 'documentVersions' | 'planHash' | 'opsHash'>) =>
+  sha256Hex({ asOf: d.asOf, facts: d.facts, documentVersions: d.documentVersions, planHash: d.planHash, opsHash: d.opsHash });
 
 const readJson = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
 export const dictFile = (body: RuleSet) => readJson(`rules/${body.product}/${body.factDictionary}.json`);
@@ -48,18 +49,18 @@ export const loadVersions = async (db: Db) => new Map((await db.query<Version>(
   `SELECT "id", "kind", "product", "version", "status", "effectiveFrom"::text AS "effectiveFrom", "body", "contentHash" FROM "RuleSetVersion"`,
 )).rows.map((v) => [v.id, v]));
 
-export async function recordDecision(db: Db, d: { claimId: string; planVersionId: string; opsVersionId: string; snapshot: Snapshot; asOf: string; supersedesId?: string }) {
+export async function recordDecision(db: Db, d: { claimId: string; planVersionId: string; opsVersionId: string; snapshot: Snapshot; documentVersions: string[]; asOf: string; supersedesId?: string }) {
   const versions = await loadVersions(db);
   const [plan, ops] = [versions.get(d.planVersionId)!, versions.get(d.opsVersionId)!];
   const { dict } = validateDictionary(dictFile(plan.body));
   const trace = adjudicate({ plan: plan.body, ops: ops.body, dict: dict!, snapshot: d.snapshot, asOf: d.asOf });
-  const row = { asOf: d.asOf, facts: d.snapshot, planHash: plan.contentHash!, opsHash: ops.contentHash! };
+  const row = { asOf: d.asOf, facts: d.snapshot, documentVersions: d.documentVersions, planHash: plan.contentHash!, opsHash: ops.contentHash! };
   const { rows } = await db.query<{ id: string }>(
     `INSERT INTO "Decision" ("id", "claimId", "planVersionId", "planHash", "opsVersionId", "opsHash", "asOf", "facts", "inputHash", "outputHash",
-       "engineSemanticsVersion", "outcome", "payableCents", "explanation", "supersedesId")
-     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING "id"`,
+       "engineSemanticsVersion", "outcome", "payableCents", "explanation", "supersedesId", "documentVersions")
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING "id"`,
     [d.claimId, d.planVersionId, row.planHash, d.opsVersionId, row.opsHash, d.asOf, JSON.stringify(d.snapshot), inputHashOf(row), sha256Hex(trace),
-      ENGINE_SEMANTICS_VERSION, trace.decision.outcome, trace.decision.payableCents, trace, d.supersedesId ?? null]);
+      ENGINE_SEMANTICS_VERSION, trace.decision.outcome, trace.decision.payableCents, trace, d.supersedesId ?? null, d.documentVersions]);
   return rows[0]!.id;
 }
 
@@ -91,7 +92,7 @@ export async function verifyDecisions(db: Db, until?: string): Promise<{ checked
     let inputsOk = true;
     for (const [v, pinned] of [[plan, d.planHash], [ops, d.opsHash]] as const)
       if (!intact.get(v.id) || pinned !== v.contentHash) { inputsOk = false; fail('RULESET_HASH_MISMATCH', d.id, `${v.kind}-v${v.version} (${v.id})`); }
-    if (inputHashOf(d) !== d.inputHash) { inputsOk = false; fail('FACTS_HASH_MISMATCH', d.id, 'facts, asOf or pins do not hash to inputHash'); }
+    if (inputHashOf(d) !== d.inputHash) { inputsOk = false; fail('FACTS_HASH_MISMATCH', d.id, 'facts, document versions, asOf or pins do not hash to inputHash'); }
 
     // The stored row must agree with itself. An override's outcome is a person's, so only its trace is checked.
     const t = traceSchema.safeParse(d.explanation);

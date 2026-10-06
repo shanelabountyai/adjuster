@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type Db, dictFile, loadVersions } from '@/adjudication/decisions';
 import { powersOf } from '@/rules/authority';
+import type { FactValue } from '@/rules/evaluate';
 import { selectVersions } from '@/rules/select';
 
 // Evidence documents (domain brief §8, D53). An upload is a new DocumentVersion row and nothing else changes: the
@@ -103,12 +104,35 @@ export type UploadedVersion = { documentId: string; versionId: string; version: 
 /** The claim's contract and the rule-set versions of its product. The document types are the `docs.<type>` facts its plan's dictionary names. */
 async function rulesFor(db: Db, claimId: string) {
   const versions = [...(await loadVersions(db)).values()];
-  const pin = (await db.query<{ planVersionId: string }>(
-    `SELECT k."planVersionId" FROM "Claim" c JOIN "Contract" k ON k."id" = c."contractId" WHERE c."id" = $1`, [claimId])).rows[0];
+  const pin = (await db.query<{ planVersionId: string; facts: Record<string, unknown> }>(
+    `SELECT k."planVersionId", k."facts" FROM "Claim" c JOIN "Contract" k ON k."id" = c."contractId" WHERE c."id" = $1`, [claimId])).rows[0];
   const plan = versions.find((v) => v.id === pin?.planVersionId);
   if (!pin || !plan) throw new Error(`Claim ${claimId} has no contract on file, so no document types`);
-  const types = (dictFile(plan.body).facts as { id: string }[]).flatMap((f) => (f.id.startsWith('docs.') ? [f.id.slice(5)] : []));
-  return { pin, types, versions: versions.filter((v) => v.product === plan.product) };
+  const facts = dictFile(plan.body).facts as DictFact[];
+  const types = facts.flatMap((f) => (f.id.startsWith('docs.') ? [f.id.slice(5)] : []));
+  return { pin, types, facts, versions: versions.filter((v) => v.product === plan.product) };
+}
+
+type DictFact = { id: string; type: string; source: string; values?: string[] };
+const VALUE_OK: Record<string, (v: unknown, f: DictFact) => boolean> = {
+  bool: (v) => typeof v === 'boolean',
+  int: Number.isSafeInteger, cents: Number.isSafeInteger, bps: Number.isSafeInteger,
+  date: (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)),
+  string: (v) => typeof v === 'string',
+  enum: (v, f) => typeof v === 'string' && (f.values ?? []).includes(v),
+};
+
+/**
+ * Throws unless a person may enter each of these on the claim: an input fact of the plan's dictionary that is not a
+ * document status (read from rows), not a list, and not a fact the contract already states; with a value of its type.
+ */
+function assertEnterable(r: { facts: DictFact[]; pin: { facts: Record<string, unknown> } }, entered: Record<string, unknown>) {
+  for (const [id, value] of Object.entries(entered)) {
+    const f = r.facts.find((x) => x.id === id);
+    const ok = f && VALUE_OK[f.type];
+    if (!f || !ok || f.source !== 'input' || id.startsWith('docs.') || id in r.pin.facts) throw new Error(`${JSON.stringify(id)} is not a fact a person enters on this claim`);
+    if (!ok(value, f)) throw new Error(`${id} takes a ${f.type}, not ${JSON.stringify(value)}`);
+  }
 }
 
 type Statuses = { docs: Record<string, DocStatus>; versions: Record<string, DocStatus> };
@@ -172,12 +196,17 @@ export async function uploadDocument(db: Db, store: DocumentStore, u: Upload): P
  * Accepts or rejects one version, once, with the audit event in the same statement. Only the latest version of a
  * document that is not waived is `received`; the insert holds that again, so a version superseded in between is not reviewed.
  */
-export async function reviewDocument(db: Db, r: { versionId: string; result: Review; reason?: string | null; userId: string | null }): Promise<void> {
+export async function reviewDocument(db: Db, r: { versionId: string; result: Review; reason?: string | null; userId: string | null; facts?: Record<string, unknown> }): Promise<void> {
   const v = (await db.query<{ claimId: string; type: string; version: number }>(
     `SELECT d."claimId", d."type", v."version" FROM "DocumentVersion" v JOIN "Document" d ON d."id" = v."documentId" WHERE v."id" = $1`, [r.versionId])).rows[0];
   if (!v) throw new Error(`Document version ${r.versionId} not found`);
   const action = r.result === 'accepted' ? 'accept' : 'reject';
-  const { types } = await rulesFor(db, v.claimId);
+  const rules = await rulesFor(db, v.claimId);
+  const { types } = rules;
+  // D55: the facts read from a document are entered when it is accepted, in the statement that accepts it.
+  const facts = r.facts ?? {};
+  if (r.result === 'rejected' && Object.keys(facts).length) throw new Error(`No fact is entered from a rejected document (version ${r.versionId})`);
+  assertEnterable(rules, facts);
   const now = await statusesOf(db, v.claimId, types);
   // An old version is refused under its own status; the latest one's status is the document's, waiver included.
   const from = now.versions[`${v.type}/${v.version}`] === 'superseded' ? 'superseded' : now.docs[v.type] ?? 'superseded';
@@ -188,11 +217,15 @@ export async function reviewDocument(db: Db, r: { versionId: string; result: Rev
        SELECT gen_random_uuid(), v."id", $2, $3, $4::uuid FROM "DocumentVersion" v JOIN "Document" d ON d."id" = v."documentId"
        WHERE v."id" = $1 AND NOT EXISTS (SELECT 1 FROM "DocumentVersion" n WHERE n."documentId" = v."documentId" AND n."version" > v."version")
          AND NOT EXISTS (SELECT 1 FROM "DocumentWaiver" w WHERE w."claimId" = d."claimId" AND w."type" = d."type")
-       RETURNING "id")
+       RETURNING "id"),
+     entered AS (
+       INSERT INTO "ClaimFact" ("id", "claimId", "factId", "value", "documentVersionId", "enteredBy")
+       SELECT gen_random_uuid(), $6, e.key, e.value, $1, $4::uuid FROM made, jsonb_each($8::jsonb) e)
      INSERT INTO "AuditEvent" ("actorUserId", "action", "targetType", "targetId", "data")
      SELECT $4::uuid, $5, 'Claim', $6, $7::jsonb FROM made RETURNING "id"`,
     [r.versionId, r.result, r.reason ?? null, r.userId, `document.${r.result}`, v.claimId,
-      JSON.stringify({ type: v.type, version: v.version, versionId: r.versionId, from, to, ...(r.reason ? { reason: r.reason } : {}) })]);
+      JSON.stringify({ type: v.type, version: v.version, versionId: r.versionId, from, to, ...(r.reason ? { reason: r.reason } : {}), ...(r.facts ? { facts } : {}) }),
+      JSON.stringify(facts)]);
   if (!rows.length) throw gone(`Document version ${r.versionId}`, from);
 }
 
@@ -229,4 +262,34 @@ export async function readDocumentVersion(db: Db, store: DocumentStore, versionI
   const { rows } = await db.query<{ sha256: string }>(`SELECT "sha256" FROM "DocumentVersion" WHERE "id" = $1`, [versionId]);
   if (!rows.length) throw new Error(`Document version ${versionId} not found`);
   return store.get(rows[0]!.sha256);
+}
+
+/**
+ * Enters a fact no document carries (D55), on the word of the person named, with the audit event in the same
+ * statement. Nothing is edited: entering the fact again is a later row, and the latest one counts.
+ */
+export async function enterFact(db: Db, f: { claimId: string; factId: string; value: unknown; userId: string }): Promise<void> {
+  assertEnterable(await rulesFor(db, f.claimId), { [f.factId]: f.value });
+  await db.query(
+    `WITH made AS (
+       INSERT INTO "ClaimFact" ("id", "claimId", "factId", "value", "enteredBy") VALUES (gen_random_uuid(), $1, $2, $3::jsonb, $4::uuid) RETURNING "id")
+     INSERT INTO "AuditEvent" ("actorUserId", "action", "targetType", "targetId", "data")
+     SELECT $4::uuid, 'fact.entered', 'Claim', $1, $5::jsonb FROM made`,
+    [f.claimId, f.factId, JSON.stringify(f.value), f.userId, JSON.stringify({ factId: f.factId, value: f.value })]);
+}
+
+/**
+ * What the claim's evidence says now (D47, D51c, D55): the ids of its accepted document versions, sorted, and every
+ * entered fact that counts. A document's facts count only while its version is accepted (a later upload supersedes
+ * it, facts and all); a fact entered without a document always counts. Later entries win.
+ */
+export async function readEvidence(db: Db, claimId: string): Promise<{ facts: Record<string, FactValue>; documentVersions: string[] }> {
+  const accepted = `SELECT v."id" FROM "Document" d JOIN "DocumentVersion" v ON v."documentId" = d."id" JOIN "DocumentReview" r ON r."versionId" = v."id"
+     WHERE d."claimId" = $1 AND r."result" = 'accepted'
+       AND NOT EXISTS (SELECT 1 FROM "DocumentVersion" n WHERE n."documentId" = v."documentId" AND n."version" > v."version")`;
+  const documentVersions = (await db.query<{ id: string }>(accepted, [claimId])).rows.map((r) => r.id).sort();
+  const { rows } = await db.query<{ factId: string; value: FactValue }>(
+    `SELECT "factId", "value" FROM "ClaimFact" WHERE "claimId" = $1 AND ("documentVersionId" IS NULL OR "documentVersionId" IN (${accepted}))
+     ORDER BY "enteredAt", "id"`, [claimId]);
+  return { facts: Object.fromEntries(rows.map((r) => [r.factId, r.value])), documentVersions };
 }

@@ -3,7 +3,11 @@ import { readFileSync } from 'node:fs';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import pg from 'pg';
 import { publishRuleSet, verifyDecisions, type Db } from '@/adjudication/decisions';
+import { enterFact, LocalDiskDocumentStore } from '@/adjudication/documents';
 import { adjudicateClaim } from '@/adjudication/pipeline';
+import { acceptDocument, fileClaim } from '../../scripts/seed-decisions';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { renderLetter, renderNote } from '@/rules/render';
 import { traceSchema } from '@/rules/schema';
 
@@ -18,16 +22,14 @@ afterAll(() => client.end());
 const versionIds: Record<string, string> = {};
 beforeEach(async () => {
   await connected;
-  await client.query('TRUNCATE "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
+  await client.query('TRUNCATE "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
   for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
 });
 
-const onContract = ([k]: [string, unknown]) => k.startsWith('contract.') || k.startsWith('product.');
-async function file(id: string, plan: string, facts: Record<string, unknown>) {
-  const all = Object.entries(facts);
-  await client.query('INSERT INTO "Contract" ("id", "planVersionId", "facts") VALUES ($1, $2, $3)', [`CT-${id}`, versionIds[plan], Object.fromEntries(all.filter(onContract))]);
-  await client.query('INSERT INTO "Claim" ("id", "contractId", "facts") VALUES ($1, $2, $3)', [id, `CT-${id}`, Object.fromEntries(all.filter((e) => !onContract(e)))]);
-}
+// Task 3.4: documents are filed through the services. The store is content-addressed, so one directory serves every run.
+const store = new LocalDiskDocumentStore(join(tmpdir(), 'adjuster-pipeline-docs'));
+const STAFF = '00000000-0000-4000-8000-000000000001';
+const file = (id: string, plan: string, facts: Record<string, unknown>) => fileClaim(client, store, versionIds[plan], { id, facts });
 const statusOf = async (id: string) => (await client.query('SELECT "status" FROM "Claim" WHERE "id" = $1', [id])).rows[0].status;
 const moves = async (id: string) => (await client.query(
   `SELECT "data"->>'to' AS "to" FROM "AuditEvent" WHERE "action" = 'claim.status_changed' AND "targetId" = $1 ORDER BY "id"`, [id])).rows.map((r) => r.to);
@@ -45,7 +47,9 @@ describe('adjudicateClaim', () => {
       const d = (await client.query('SELECT * FROM "Decision" WHERE "id" = $1', [r.decisionId])).rows[0];
       expect([fx.id, d.outcome, d.payableCents, d.explanation.decision.reasons]).toEqual([fx.id, fx.expected.outcome, fx.expected.payableCents, fx.expected.reasons]);
       expect([d.planVersionId, d.opsVersionId]).toEqual([versionIds[fx.plan], versionIds[fx.ops]]);
-      expect(d.facts).toEqual(fx.facts);
+      // the snapshot is rebuilt from rows: the fixture's facts, plus `requested` for each document type it does not mention (D51b)
+      expect(d.facts).toMatchObject(fx.facts);
+      expect(Object.entries(d.facts).filter(([k]) => !(k in fx.facts)).every(([k, v]) => k.startsWith('docs.') && v === 'requested')).toBe(true);
       expect(r.claimStatus).toBe(STATUS[fx.expected.outcome]);
       expect(await statusOf(id)).toBe(r.claimStatus);
       expect((await moves(id)).slice(before)).toEqual(['IN_REVIEW', r.claimStatus]);
@@ -90,8 +94,7 @@ describe('adjudicateClaim', () => {
     // the same two claims under v3 do carry the new wording, so the check above is not vacuous
     for (const fx of [GOLDEN[0], GOLDEN[3]]) {
       const id = `P5v3-${fx.id}`;
-      await client.query('INSERT INTO "Contract" ("id", "planVersionId", "facts") VALUES ($1, $2, $3)', [`CT-${id}`, v3Id, Object.fromEntries(Object.entries(fx.facts).filter(onContract))]);
-      await client.query('INSERT INTO "Claim" ("id", "contractId", "facts") VALUES ($1, $2, $3)', [id, `CT-${id}`, Object.fromEntries(Object.entries(fx.facts).filter((e) => !onContract(e)))]);
+      await fileClaim(client, store, v3Id, { id, facts: fx.facts });
       expect(renderLetter(await stored((await adjudicateClaim(client, id, fx.asOf)).decisionId!))).toContain('REWORDED');
     }
   });
@@ -128,7 +131,7 @@ describe('adjudicateClaim', () => {
 
   // Task 2.8. plan-v2 is published only after decisions exist, so this test publishes for itself.
   it('RV-01 each contract keeps the plan it pinned: publishing plan-v2 changes no stored decision, and verify stays OK', async () => {
-    await client.query('TRUNCATE "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
+    await client.query('TRUNCATE "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
     for (const name of ['plan-v1', 'ops-v1', 'ops-v2']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
     const [soldBefore, soldAfter] = read('fixtures/rv/RV-01.json').cases;
     const decide = async (id: string, c: { plan: string; facts: Record<string, unknown>; asOf: string }) => {
@@ -151,8 +154,12 @@ describe('adjudicateClaim', () => {
     expect(await verifyDecisions(client)).toEqual({ checked: 3, failures: [] });
   });
 
-  // Task 2.7 (D40). Nothing edits a claim's facts in this phase, so `change` is written to the row directly.
-  const enter = (id: string, change: object) => client.query('UPDATE "Claim" SET "facts" = "facts" || $2::jsonb WHERE "id" = $1', [id, JSON.stringify(change)]);
+  // Task 2.7 (D40), 3.4 (D55). A claim's inputs change by rows: a document accepted, or a fact entered by a person.
+  const enter = async (id: string, change: Record<string, unknown>) => {
+    for (const [k, value] of Object.entries(change))
+      if (k.startsWith('docs.')) await acceptDocument(client, store, id, k.slice(5));
+      else await enterFact(client, { claimId: id, factId: k, value, userId: STAFF });
+  };
   async function rerun(fxId: string) {
     const fx = read(`fixtures/pl/${fxId}.json`);
     const id = `P-${fx.id}`;
