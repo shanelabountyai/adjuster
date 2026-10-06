@@ -44,7 +44,8 @@ const SEVERITY: Record<Outcome, number> = { PASS: 0, REFER: 1, PEND: 2, DENY: 3 
 type Row = { id: string; when: readonly Cell[]; then: { outcome: Outcome } };
 export type RuleResult = { result: Outcome | 'GAP'; hits: string[]; missing: string[] };
 
-// Maps a missing fact to the input facts it is computed from, so a PEND asks for something a person can supply.
+// Maps a missing fact to the input facts to ask for, so a PEND names something a person can supply. The engine's
+// roots drop the inputs that are known (D51f); with none left the rule still pends, since unknown is never a gap.
 export type Roots = (fact: string) => string[];
 const self: Roots = (f) => [f];
 
@@ -60,8 +61,9 @@ export function rootsOf(dict: Dictionary): Roots {
   return roots;
 }
 
-// Names the missing roots in the UNKNOWN rows only (sorted, deduplicated).
-function missingIn(rows: readonly { when: readonly Cell[] }[], truths: Truth[], facts: Facts, roots: Roots): string[] {
+// Names the missing roots in the UNKNOWN rows only (sorted, deduplicated). Null when no row is UNKNOWN.
+function missingIn(rows: readonly { when: readonly Cell[] }[], truths: Truth[], facts: Facts, roots: Roots): string[] | null {
+  if (!truths.includes('UNKNOWN')) return null;
   const missing = rows
     .filter((_, i) => truths[i] === 'UNKNOWN')
     .flatMap((r) => r.when.filter((c) => evalCell(c, facts) === 'UNKNOWN').flatMap((c) => roots(c.fact)));
@@ -78,8 +80,7 @@ export function evalRule(rows: readonly Row[], facts: Facts, roots: Roots = self
     return { result, hits: hits.map((r) => r.id), missing: [] };
   }
   const missing = missingIn(rows, truths, facts, roots);
-  if (missing.length) return { result: 'PEND', hits: [], missing };
-  return { result: 'GAP', hits: [], missing: [] };
+  return missing ? { result: 'PEND', hits: [], missing } : { result: 'GAP', hits: [], missing: [] };
 }
 
 type LookupRow = { id: string; when: readonly Cell[]; value: FactValue };
@@ -95,5 +96,5 @@ export function evalLookup(rows: readonly LookupRow[], facts: Facts, roots: Root
   if (hits.length > 1) throw new Error(`unique table matched ${hits.map((r) => r.id).join(', ')}`);
   if (hits.length) return { result: 'HIT', value: hits[0]!.value, hits: [hits[0]!.id], missing: [] };
   const missing = missingIn(rows, truths, facts, roots);
-  return missing.length ? { result: 'PEND', value: null, hits: [], missing } : { result: 'GAP', value: null, hits: [], missing: [] };
+  return missing ? { result: 'PEND', value: null, hits: [], missing } : { result: 'GAP', value: null, hits: [], missing: [] };
 }

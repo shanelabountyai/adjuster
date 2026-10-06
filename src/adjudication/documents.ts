@@ -193,10 +193,11 @@ export async function uploadDocument(db: Db, store: DocumentStore, u: Upload): P
 }
 
 /**
- * Accepts or rejects one version, once, with the audit event in the same statement. Only the latest version of a
+ * Accepts or rejects one version, once, with the audit event in the same statement. This is the document's move only:
+ * an acceptance that should decide the claim goes through the pipeline's `acceptEvidence` (D56). Only the latest version of a
  * document that is not waived is `received`; the insert holds that again, so a version superseded in between is not reviewed.
  */
-export async function reviewDocument(db: Db, r: { versionId: string; result: Review; reason?: string | null; userId: string | null; facts?: Record<string, unknown> }): Promise<void> {
+export async function reviewDocument(db: Db, r: { versionId: string; result: Review; reason?: string | null; userId: string | null; facts?: Record<string, unknown> }): Promise<{ claimId: string }> {
   const v = (await db.query<{ claimId: string; type: string; version: number }>(
     `SELECT d."claimId", d."type", v."version" FROM "DocumentVersion" v JOIN "Document" d ON d."id" = v."documentId" WHERE v."id" = $1`, [r.versionId])).rows[0];
   if (!v) throw new Error(`Document version ${r.versionId} not found`);
@@ -227,6 +228,7 @@ export async function reviewDocument(db: Db, r: { versionId: string; result: Rev
       JSON.stringify({ type: v.type, version: v.version, versionId: r.versionId, from, to, ...(r.reason ? { reason: r.reason } : {}), ...(r.facts ? { facts } : {}) }),
       JSON.stringify(facts)]);
   if (!rows.length) throw gone(`Document version ${r.versionId}`, from);
+  return { claimId: v.claimId };
 }
 
 export type Waiver = { claimId: string; type: string; reasonText: string; tier: string; asOf: string; userId: string | null };
@@ -234,7 +236,8 @@ export type Waiver = { claimId: string; type: string; reasonText: string; tier: 
 /**
  * Waives a claim's document of one type, with the audit event in the same statement. The tier must hold the
  * `waive_documents` power under the ops version in force on `asOf`; both are stored on the row. A waiver needs no
- * upload and is final. Seam (3.7, D49): the tier is the caller's word until the assignment table exists.
+ * upload and is final. The document's move only: `waiveEvidence` also decides the claim (D56).
+ * Seam (3.7, D49): the tier is the caller's word until the assignment table exists.
  */
 export async function waiveDocument(db: Db, w: Waiver): Promise<void> {
   const { pin, types, versions } = await rulesFor(db, w.claimId);

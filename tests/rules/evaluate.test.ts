@@ -57,6 +57,10 @@ describe('unique lookups and missing roots (1.8)', () => {
     const rows = [{ id: 'r', when: [{ fact: 'd.daysSinceStart', op: 'gte' as const, value: 0 }], then: { outcome: 'PASS' as const } }];
     expect(evalRule(rows, {}, roots).missing).toEqual(['claim.dateOfLoss', 'contract.termStart']);
   });
+  it('an UNKNOWN row with no root left to name still pends: unknown is never a gap', () => {
+    const rows = [{ id: 'r', when: [{ fact: 'd.daysSinceStart', op: 'gte' as const, value: 0 }], then: { outcome: 'PASS' as const } }];
+    expect(evalRule(rows, {}, () => [])).toEqual({ result: 'PEND', hits: [], missing: [] });
+  });
   it('two TRUE rows means an unvalidated table: throw', () => {
     const rows = [{ id: 'a', when: [], value: 1 }, { id: 'b', when: [], value: 2 }];
     expect(() => evalLookup(rows, {})).toThrow('a, b');

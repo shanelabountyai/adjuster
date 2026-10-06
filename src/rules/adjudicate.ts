@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import { valuate } from './calc';
 import { sha256Hex } from './canonical';
 import { resolveFacts, type Snapshot } from './derive';
-import { evalRule, rootsOf, type Facts } from './evaluate';
+import { evalRule, rootsOf, type Facts, type Roots } from './evaluate';
 import { STAGES, type Dictionary, type RuleSet, type ruleResultSchema, type traceSchema } from './schema';
 
 // The engine: a frozen fact snapshot and two pinned rule sets in, a trace out (D12, D8). Pure: no clock, database or
@@ -14,14 +14,17 @@ export type Trace = z.infer<typeof traceSchema>;
 type RuleTrace = z.infer<typeof ruleResultSchema>;
 type Rule = RuleSet['rules'][number];
 
-export const ENGINE_SEMANTICS_VERSION = 'adjuster.engine/6';
+export const ENGINE_SEMANTICS_VERSION = 'adjuster.engine/7';
 const EARLY = STAGES.slice(0, 5) as readonly string[];
 const SKIPPED_ON_DENY = ['evidence', 'red_flags', 'valuation', 'deductible_limits', 'authority'] as const;
 
 export function adjudicate(input: { plan: RuleSet; ops: RuleSet; dict: Dictionary; snapshot: Snapshot; asOf: string }): Trace {
   const { plan, ops, dict, snapshot, asOf } = input;
   let facts: Facts = resolveFacts(snapshot, dict, plan);
-  const roots = rootsOf(dict);
+  const inputs = rootsOf(dict);
+  // D51f: a pend names only the inputs that are themselves unknown, so a missing receipt date does not also ask for
+  // the date of loss. A list is never in `facts`, so the snapshot answers first.
+  const roots: Roots = (f) => inputs(f).filter((r) => (snapshot[r] ?? facts[r] ?? null) === null);
   const rules = [...plan.rules, ...ops.rules];
   const run = (stages: readonly string[]) => rules.filter((r) => stages.includes(r.stage)).map((r) => trace(r, facts, roots));
 
@@ -63,7 +66,7 @@ export function adjudicate(input: { plan: RuleSet; ops: RuleSet; dict: Dictionar
 const ref = (rs: RuleSet) => ({ name: `${rs.kind}-v${rs.version}`, hash: sha256Hex(rs), effectiveFrom: rs.effectiveFrom });
 
 // One rule's trace entry. The deciding row is the first TRUE row carrying the winning outcome; a gap has none.
-function trace(rule: Rule, facts: Facts, roots: ReturnType<typeof rootsOf>): RuleTrace {
+function trace(rule: Rule, facts: Facts, roots: Roots): RuleTrace {
   const r = evalRule(rule.rows, facts, roots);
   const row = rule.rows.find((x) => r.hits.includes(x.id) && x.then.outcome === r.result)?.then;
   const read = [...new Set(rule.rows.flatMap((x) => x.when.map((c) => c.fact)))].sort();

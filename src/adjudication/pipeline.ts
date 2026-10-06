@@ -1,6 +1,6 @@
 import { type ClaimStatus, transitionClaim } from '@/adjudication/claim-status';
 import { type Db, inputHashOf, loadVersions, recordDecision } from '@/adjudication/decisions';
-import { readDocumentStatuses, readEvidence } from '@/adjudication/documents';
+import { readDocumentStatuses, readEvidence, reviewDocument, waiveDocument, type Waiver } from '@/adjudication/documents';
 import type { Snapshot } from '@/rules/derive';
 import { selectVersions } from '@/rules/select';
 
@@ -8,6 +8,8 @@ import { selectVersions } from '@/rules/select';
 // all in one transaction. `db` must be one connection (a `pg` Client, never a Pool), or BEGIN and COMMIT would
 // land on different sessions. No decision is written without a contract and both versions: the claim is referred.
 // Running a claim again (task 2.7, D40) returns its current decision when the input is unchanged, and supersedes it otherwise.
+// Filing a claim, accepting a document and waiving one each decide the claim in the transaction that makes the change
+// (task 3.5, D51a, D51d, D56), so a change the status table will not let be decided is not made at all.
 
 const STATUS_FOR: Record<string, ClaimStatus> = { APPROVE: 'DECIDED', PARTIAL: 'DECIDED', DENY: 'DECIDED', PEND: 'PENDING_EVIDENCE', REFER: 'REFERRED' };
 
@@ -15,10 +17,12 @@ export type PipelineResult =
   | { decisionId: string; outcome: string; claimStatus: ClaimStatus }
   | { error: 'CONTRACT_NOT_FOUND' | 'NO_EFFECTIVE_VERSION'; detail: string; decisionId: null; claimStatus: 'REFERRED' };
 
-export async function adjudicateClaim(db: Db, claimId: string, asOf: string, by: { userId: string | null } = { userId: null }): Promise<PipelineResult> {
+type By = { userId: string | null };
+
+async function tx<T>(db: Db, fn: () => Promise<T>): Promise<T> {
   await db.query('BEGIN');
   try {
-    const result = await run(db, claimId, asOf, by);
+    const result = await fn();
     await db.query('COMMIT');
     return result;
   } catch (e) {
@@ -27,7 +31,29 @@ export async function adjudicateClaim(db: Db, claimId: string, asOf: string, by:
   }
 }
 
-async function run(db: Db, claimId: string, asOf: string, by: { userId: string | null }): Promise<PipelineResult> {
+export const adjudicateClaim = (db: Db, claimId: string, asOf: string, by: By = { userId: null }): Promise<PipelineResult> =>
+  tx(db, () => run(db, claimId, asOf, by));
+
+/** FNOL (D51a): the claim is filed and decided at once, so a deniable claim is denied before any document is asked for. */
+export const openClaim = (db: Db, c: { id: string; contractId: string; facts: Snapshot }, asOf: string, by: By = { userId: null }): Promise<PipelineResult> =>
+  tx(db, async () => {
+    await db.query('INSERT INTO "Claim" ("id", "contractId", "facts") VALUES ($1, $2, $3)', [c.id, c.contractId, c.facts]);
+    return run(db, c.id, asOf, by);
+  });
+
+/** Accepts a document version with the facts read from it, and decides the claim on what it now holds. */
+export const acceptEvidence = (db: Db, r: { versionId: string; facts?: Record<string, unknown>; userId: string | null }, asOf: string): Promise<PipelineResult> =>
+  tx(db, async () => run(db, (await reviewDocument(db, { ...r, result: 'accepted' })).claimId, asOf, r));
+
+/** Waives a document and decides the claim, both on the waiver's `asOf`. */
+export const waiveEvidence = (db: Db, w: Waiver): Promise<PipelineResult> =>
+  tx(db, async () => {
+    await waiveDocument(db, w);
+    return run(db, w.claimId, w.asOf, w);
+  });
+
+async function run(db: Db, claimId: string, asOf: string, { userId }: By): Promise<PipelineResult> {
+  const by = { userId };
   const refer = async (error: 'CONTRACT_NOT_FOUND' | 'NO_EFFECTIVE_VERSION', detail: string) => {
     await transitionClaim(db, claimId, 'REFERRED', { ...by, reason: `${error}: ${detail}` });
     return { error, detail, decisionId: null, claimStatus: 'REFERRED' as const };
