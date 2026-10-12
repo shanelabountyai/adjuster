@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type Db, dictFile, loadVersions } from '@/adjudication/decisions';
-import { powersOf } from '@/rules/authority';
+import { tierOf } from '@/adjudication/authority';
+import { checkAuthority } from '@/rules/authority';
 import type { FactValue } from '@/rules/evaluate';
 import { selectVersions } from '@/rules/select';
 
@@ -35,8 +36,8 @@ export class IllegalDocumentMoveError extends Error {
 
 export class OutOfAuthorityError extends Error {
   readonly code = 'OUT_OF_AUTHORITY';
-  constructor(readonly tier: string, readonly lacks: string[], needed: string) {
-    super(`Tier ${tier} lacks ${lacks.join(' and ')} for ${needed}`);
+  constructor(readonly tier: string | null, readonly lacks: string[], needed: string) {
+    super(`${tier ? `Tier ${tier}` : 'A user with no tier'} lacks ${lacks.join(' and ')} for ${needed}`);
   }
 }
 
@@ -231,20 +232,24 @@ export async function reviewDocument(db: Db, r: { versionId: string; result: Rev
   return { claimId: v.claimId };
 }
 
-export type Waiver = { claimId: string; type: string; reasonText: string; tier: string; asOf: string; userId: string | null };
+export type Waiver = { claimId: string; type: string; reasonText: string; asOf: string; userId: string | null };
 
 /**
- * Waives a claim's document of one type, with the audit event in the same statement. The tier must hold the
- * `waive_documents` power under the ops version in force on `asOf`; both are stored on the row. A waiver needs no
- * upload and is final. The document's move only: `waiveEvidence` also decides the claim (D56).
- * Seam (3.7, D49): the tier is the caller's word until the assignment table exists.
+ * Waives a claim's document of one type, with the audit event in the same statement. The user's tier is read from
+ * the assignment table (D49) and must hold the `waive_documents` power under the ops version in force on `asOf`; both
+ * are stored on the row. A waiver needs no upload and is final. The document's move only: `waiveEvidence` also
+ * decides the claim (D56).
+ * Seam (3.9): a waiver approves no money, so only a tier that could approve nothing fails on amount. The oracle
+ * tests it against what the claim has been paid, which nothing records until the mock payment.
  */
 export async function waiveDocument(db: Db, w: Waiver): Promise<void> {
   const { pin, types, versions } = await rulesFor(db, w.claimId);
   const { from, to } = await move(db, w.claimId, w.type, 'waive', types);
   const selected = selectVersions({ planVersion: pin.planVersionId }, versions.map((v) => ({ ...v, name: v.id })), w.asOf);
   if ('error' in selected) throw new Error(`${selected.error}: ${selected.kind} on ${w.asOf}`);
-  if (!powersOf(selected.ops.body.authority ?? [], w.tier).includes('waive_documents')) throw new OutOfAuthorityError(w.tier, ['power'], 'waive_documents');
+  const tier = await tierOf(db, w.userId);
+  const check = checkAuthority(selected.ops.body.authority ?? [], tier, 'waive_documents', 0, 0);
+  if (!check.allowed) throw new OutOfAuthorityError(tier, check.lacks, 'waive_documents');
   const { rows } = await db.query(
     `WITH made AS (
        INSERT INTO "DocumentWaiver" ("id", "claimId", "type", "reasonText", "tier", "asOf", "waivedBy")
@@ -256,7 +261,7 @@ export async function waiveDocument(db: Db, w: Waiver): Promise<void> {
        RETURNING "id")
      INSERT INTO "AuditEvent" ("actorUserId", "action", "targetType", "targetId", "data")
      SELECT $6::uuid, 'document.waived', 'Claim', $1, $7::jsonb FROM made RETURNING "id"`,
-    [w.claimId, w.type, w.reasonText, w.tier, w.asOf, w.userId, JSON.stringify({ type: w.type, from, to, reasonText: w.reasonText, tier: w.tier, asOf: w.asOf })]);
+    [w.claimId, w.type, w.reasonText, tier, w.asOf, w.userId, JSON.stringify({ type: w.type, from, to, reasonText: w.reasonText, tier, asOf: w.asOf })]);
   if (!rows.length) throw gone(`Claim ${w.claimId}'s ${w.type}`, from);
 }
 

@@ -180,3 +180,15 @@ model ClaimReminder {
 
   @@unique([decisionId, level])
 }
+
+// Task 3.7 (D49, D58). A user's authority tier. Insert-only: the latest row for a user is the one in force, and a
+// null tier takes it away. The tier's name means something only against an ops rule set's `authority` list.
+model TierAssignment {
+  id         Int      @id @default(autoincrement())
+  userId     String   @db.Uuid
+  tier       String?
+  assignedBy String?  @db.Uuid
+  assignedAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([userId, id])
+}

@@ -6,12 +6,14 @@ import { join } from 'node:path';
 import pg from 'pg';
 import ev06 from '../../fixtures/ev/EV-06.json';
 import ov03 from '../../fixtures/ov/OV-03.json';
+import { assignTier, tierOf } from '@/adjudication/authority';
 import { publishRuleSet } from '@/adjudication/decisions';
 import {
   assertDocumentMove, documentStatus, IllegalDocumentMoveError, LocalDiskDocumentStore, OutOfAuthorityError, readDocumentStatuses, reviewDocument,
   uploadDocument, waiveDocument, type DocAction, type DocStatus,
 } from '@/adjudication/documents';
 import { powersOf } from '@/rules/authority';
+import { staffAt } from '../helpers/tiers';
 
 // Task 3.3 (D53, D54): a document's status is read from rows that are only ever inserted (versions, reviews, a waiver),
 // it moves only along EV-06's table, and every move leaves an audit event. The claim lives supply the legal sequences.
@@ -22,15 +24,18 @@ const connected = client.connect();
 let root: string;
 let store: LocalDiskDocumentStore;
 const versionIds: Record<string, string> = {};
+const TIERS = ['system', 'adjuster', 'senior', 'manager'] as const;
+let staff: Record<(typeof TIERS)[number], string>; // one user per tier (D49): the fixtures name the tier, the services take the user
 afterAll(() => client.end());
 beforeEach(async () => {
   await connected;
-  await client.query('TRUNCATE "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
+  await client.query('TRUNCATE "TierAssignment", "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
   for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
   // The template's resetDb truncates every table, the migration's reference rows included, so whether they are still
   // there depends on which file ran first. Put back exactly what the migration seeds, by running its own statement.
   await client.query(readFileSync('prisma/migrations/20261005010000_document_status/migration.sql', 'utf8')
     .match(/INSERT INTO "DocumentRejectionReason"[^;]+/)![0] + ' ON CONFLICT DO NOTHING');
+  staff = await staffAt(client, TIERS);
   root = await mkdtemp(join(tmpdir(), 'adjuster-docs-'));
   store = new LocalDiskDocumentStore(root);
   return () => rm(root, { recursive: true });
@@ -47,7 +52,7 @@ const upload = (claimId: string, type: string, source = 'claimant') =>
 const accept = (versionId: string) => reviewDocument(client, { versionId, result: 'accepted', userId: null });
 const reject = (versionId: string, reason: string | null = 'illegible') => reviewDocument(client, { versionId, result: 'rejected', reason, userId: null });
 const waive = (claimId: string, type: string, tier = 'adjuster', reasonText = 'not obtainable') =>
-  waiveDocument(client, { claimId, type, tier, reasonText, asOf: DAY, userId: null });
+  waiveDocument(client, { claimId, type, reasonText, asOf: DAY, userId: (staff as Record<string, string | undefined>)[tier] ?? null });
 const audit = async (claimId: string) => (await client.query(
   `SELECT "action", "data" FROM "AuditEvent" WHERE "targetType" = 'Claim' AND "targetId" = $1 AND "action" LIKE 'document.%' ORDER BY "id"`, [claimId])).rows;
 const count = async (table: string) => Number((await client.query(`SELECT count(*) FROM "${table}"`)).rows[0].count);
@@ -107,7 +112,7 @@ describe('claim lives: each document action leaves the statuses the fixture expe
         if (a.type === 'upload') ids[a.version!] = (await upload(id, a.doc!)).versionId;
         else if (a.type === 'accept') await accept(ids[a.version!]!);
         else if (a.type === 'reject') await reject(ids[a.version!]!, a.reason);
-        else if (a.type === 'waive') await waiveDocument(client, { claimId: id, type: a.doc!, tier: a.by!, reasonText: a.reasonText!, asOf: ev.asOf, userId: null });
+        else if (a.type === 'waive') await waiveDocument(client, { claimId: id, type: a.doc!, reasonText: a.reasonText!, asOf: ev.asOf, userId: staff[a.by as keyof typeof staff] });
         else { expect(await readDocumentStatuses(client, id), `${fx.id} event ${i}`).toEqual({ docs: ev.expected.docs, versions: ev.expected.versions }); continue; }
         done.push(a.type);
         expect(await readDocumentStatuses(client, id), `${fx.id} event ${i}`).toEqual({ docs: ev.expected.docs, versions: ev.expected.versions });
@@ -121,11 +126,11 @@ describe('claim lives: each document action leaves the statuses the fixture expe
 
   it('records who, why and the move on each audit event', async () => {
     const id = await claim('DS-audit');
-    const user = '00000000-0000-0000-0000-0000000000a1';
+    const user = staff.senior;
     const before = (await audit(id)).length;
     const v = await uploadDocument(client, store, { claimId: id, type: 'repairEstimate', bytes: new Uint8Array([1]), source: 'servicer', uploadedBy: null });
     await reviewDocument(client, { versionId: v.versionId, result: 'rejected', reason: 'incomplete', userId: user });
-    await waiveDocument(client, { claimId: id, type: 'repairEstimate', tier: 'senior', reasonText: 'shop closed', asOf: DAY, userId: user });
+    await waiveDocument(client, { claimId: id, type: 'repairEstimate', reasonText: 'shop closed', asOf: DAY, userId: user });
     expect((await audit(id)).slice(before).map((r) => r.data)).toEqual([
       { type: 'repairEstimate', version: 1, versionId: v.versionId, from: 'requested', to: 'received', source: 'servicer' },
       { type: 'repairEstimate', version: 1, versionId: v.versionId, from: 'received', to: 'rejected', reason: 'incomplete' },
@@ -165,10 +170,10 @@ describe('moves the table does not have write nothing', () => {
     const id = await claim('DS-power');
     await expect(waive(id, 'secondEstimate', 'system')).rejects.toBeInstanceOf(OutOfAuthorityError);
     await expect(waive(id, 'secondEstimate', 'system')).rejects.toMatchObject({ code: 'OUT_OF_AUTHORITY', lacks: ['power'] });
-    await expect(waive(id, 'secondEstimate', 'nobody')).rejects.toMatchObject({ code: 'OUT_OF_AUTHORITY' });
+    await expect(waive(id, 'secondEstimate', 'nobody')).rejects.toMatchObject({ code: 'OUT_OF_AUTHORITY', tier: null, lacks: ['amount', 'power'] });
     await expect(waive(id, 'secondEstimate', 'adjuster', '')).rejects.toMatchObject({ constraint: 'document_waiver_reason' });
     // before any ops version is in force there is no tier list to hold the power under
-    await expect(waiveDocument(client, { claimId: id, type: 'secondEstimate', tier: 'adjuster', reasonText: 'x', asOf: '2019-01-01', userId: null })).rejects.toThrow(/NO_EFFECTIVE_VERSION/);
+    await expect(waiveDocument(client, { claimId: id, type: 'secondEstimate', reasonText: 'x', asOf: '2019-01-01', userId: staff.adjuster })).rejects.toThrow(/NO_EFFECTIVE_VERSION/);
     expect(await count('DocumentWaiver')).toBe(0);
     await waive(id, 'secondEstimate', 'manager'); // powers accumulate upward
     expect((await readDocumentStatuses(client, id)).docs.secondEstimate).toBe('waived');
@@ -206,6 +211,26 @@ describe('the database rules', () => {
     for (const source of ['claimant', 'servicer', 'staff']) await upload(id, 'damagePhotos', source);
     await expect(upload(id, 'damagePhotos', 'fax')).rejects.toMatchObject({ constraint: 'document_version_source' });
     expect(await count('DocumentVersion')).toBe(3);
+  });
+
+  it('D49: a waiver is made at the tier its user holds that moment, and the row keeps it when the user moves', async () => {
+    const id = await claim('DS-tier');
+    const user = staff.system;
+    await expect(waiveDocument(client, { claimId: id, type: 'secondEstimate', reasonText: 'x', asOf: DAY, userId: user })).rejects.toMatchObject({ tier: 'system', lacks: ['power'] });
+    await assignTier(client, { userId: user, tier: 'adjuster', by: staff.manager });
+    await waiveDocument(client, { claimId: id, type: 'secondEstimate', reasonText: 'x', asOf: DAY, userId: user });
+    await assignTier(client, { userId: user, tier: null, by: staff.manager });
+    expect(await tierOf(client, user)).toBeNull();
+    await expect(waiveDocument(client, { claimId: id, type: 'transferProof', reasonText: 'x', asOf: DAY, userId: user })).rejects.toMatchObject({ tier: null, lacks: ['amount', 'power'] });
+    expect((await client.query(`SELECT "type", "tier" FROM "DocumentWaiver" WHERE "claimId" = $1`, [id])).rows).toEqual([{ type: 'secondEstimate', tier: 'adjuster' }]);
+    expect((await client.query(`SELECT "tier", "assignedBy" FROM "TierAssignment" WHERE "userId" = $1 ORDER BY "id"`, [user])).rows)
+      .toEqual([{ tier: 'system', assignedBy: null }, { tier: 'adjuster', assignedBy: staff.manager }, { tier: null, assignedBy: staff.manager }]);
+    expect((await client.query(`SELECT "actorUserId", "data" FROM "AuditEvent" WHERE "action" = 'authority.tier_assigned' AND "targetId" = $1 ORDER BY "id"`, [user])).rows)
+      .toEqual([{ actorUserId: null, data: { tier: 'system' } }, { actorUserId: staff.manager, data: { tier: 'adjuster' } }, { actorUserId: staff.manager, data: { tier: null } }]);
+    expect([await tierOf(client, null), await tierOf(client, '00000000-0000-4000-8000-00000000dead')]).toEqual([null, null]);
+    expect(await run(`UPDATE "TierAssignment" SET "tier" = 'manager'`)).toBe('document_append_only');
+    expect(await run(`DELETE FROM "TierAssignment"`)).toBe('document_append_only');
+    expect(await run(`INSERT INTO "TierAssignment" ("userId", "tier") VALUES ($1, '')`, [user])).toBe('tier_assignment_tier');
   });
 
   it('refuses UPDATE and DELETE of a review and of a waiver', async () => {

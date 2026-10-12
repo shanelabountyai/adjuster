@@ -8,6 +8,7 @@ import { publishRuleSet, verifyDecisions } from '@/adjudication/decisions';
 import { enterFact, LocalDiskDocumentStore, readDocumentStatuses, readEvidence, reviewDocument } from '@/adjudication/documents';
 import { readReminderLevel, runNoResponse } from '@/adjudication/no-response';
 import { acceptEvidence, adjudicateClaim, openClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
+import { staffAt } from '../helpers/tiers';
 
 // Task 3.4 (D47, D55): a fact is a row someone entered, from a document version or on their own word. The snapshot
 // reads those rows, a document's facts count only while its version is accepted, and the decision names the versions.
@@ -53,7 +54,7 @@ async function play(id: string, fx: Life) {
       await openClaim(client, { id, contractId: `CT-${id}`, facts: Object.fromEntries(facts.filter((f) => !onContract(f))) as never }, asOf);
     } else if (a.type === 'upload') label.set((await upload(id, a.doc, i)).versionId, a.version);
     else if (a.type === 'accept') await acceptEvidence(client, { versionId: idOf(a.version), facts: a.facts, userId: null }, asOf);
-    else if (a.type === 'waive') await waiveEvidence(client, { claimId: id, type: a.doc, tier: a.by, reasonText: a.reasonText, asOf, userId: null });
+    else if (a.type === 'waive') await waiveEvidence(client, { claimId: id, type: a.doc, reasonText: a.reasonText, asOf, userId: (await staffAt(client, [a.by]))[a.by] ?? null });
     else if (a.type === 'tick') await runNoResponse(client, asOf);
     else throw new Error(`play: ${a.type}`);
 
