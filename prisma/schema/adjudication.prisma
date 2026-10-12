@@ -160,9 +160,23 @@ model Decision {
   overridesId            String?        @db.Uuid
   overrides              Decision?      @relation("override", fields: [overridesId], references: [id], onDelete: Restrict)
   overriddenBy           Decision[]     @relation("override")
+  reminders              ClaimReminder[]
   overrideReasonCode     String?
   overrideReasonText     String?
   createdAt              DateTime       @default(now()) @db.Timestamptz(6)
 
   @@index([claimId])
+}
+
+// Task 3.6, D57. One row per reminder sent for a PEND decision. Insert-only (trigger). A claim's reminder level is
+// the highest level on its current engine decision, so a new decision starts the count again with no update.
+model ClaimReminder {
+  id         String   @id @default(uuid()) @db.Uuid
+  decisionId String   @db.Uuid
+  decision   Decision @relation(fields: [decisionId], references: [id], onDelete: Restrict)
+  level      Int
+  asOf       DateTime @db.Date
+  sentAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([decisionId, level])
 }

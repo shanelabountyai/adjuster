@@ -1,6 +1,6 @@
 import { type ClaimStatus, transitionClaim } from '@/adjudication/claim-status';
 import { type Db, inputHashOf, loadVersions, recordDecision } from '@/adjudication/decisions';
-import { readDocumentStatuses, readEvidence, reviewDocument, waiveDocument, type Waiver } from '@/adjudication/documents';
+import { type DocumentStore, readDocumentStatuses, readEvidence, reviewDocument, type Upload, uploadDocument, type UploadedVersion, waiveDocument, type Waiver } from '@/adjudication/documents';
 import type { Snapshot } from '@/rules/derive';
 import { selectVersions } from '@/rules/select';
 
@@ -10,6 +10,7 @@ import { selectVersions } from '@/rules/select';
 // Running a claim again (task 2.7, D40) returns its current decision when the input is unchanged, and supersedes it otherwise.
 // Filing a claim, accepting a document and waiving one each decide the claim in the transaction that makes the change
 // (task 3.5, D51a, D51d, D56), so a change the status table will not let be decided is not made at all.
+// An upload decides nothing, but one on a claim closed for no response reopens it in the same transaction (task 3.6, D51i).
 
 const STATUS_FOR: Record<string, ClaimStatus> = { APPROVE: 'DECIDED', PARTIAL: 'DECIDED', DENY: 'DECIDED', PEND: 'PENDING_EVIDENCE', REFER: 'REFERRED' };
 
@@ -44,6 +45,15 @@ export const openClaim = (db: Db, c: { id: string; contractId: string; facts: Sn
 /** Accepts a document version with the facts read from it, and decides the claim on what it now holds. */
 export const acceptEvidence = (db: Db, r: { versionId: string; facts?: Record<string, unknown>; userId: string | null }, asOf: string): Promise<PipelineResult> =>
   tx(db, async () => run(db, (await reviewDocument(db, { ...r, result: 'accepted' })).claimId, asOf, r));
+
+/** Stores an upload and, when the claim was closed for no response, reopens it. The bytes are written first, as in `uploadDocument`. */
+export const uploadEvidence = (db: Db, store: DocumentStore, u: Upload): Promise<UploadedVersion> =>
+  tx(db, async () => {
+    const version = await uploadDocument(db, store, u);
+    const { status } = (await db.query<{ status: ClaimStatus }>('SELECT "status" FROM "Claim" WHERE "id" = $1', [u.claimId])).rows[0]!;
+    if (status === 'CLOSED_NO_RESPONSE') await transitionClaim(db, u.claimId, 'REOPENED', { userId: u.uploadedBy, reason: 'document.uploaded' });
+    return version;
+  });
 
 /** Waives a document and decides the claim, both on the waiver's `asOf`. */
 export const waiveEvidence = (db: Db, w: Waiver): Promise<PipelineResult> =>

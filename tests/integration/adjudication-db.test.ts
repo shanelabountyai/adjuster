@@ -14,7 +14,7 @@ const connected = client.connect();
 afterAll(() => client.end());
 beforeEach(async () => {
   await connected;
-  await client.query('TRUNCATE "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
+  await client.query('TRUNCATE "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
 });
 
 /** The constraint the database refused `sql` with, or 'accepted'. */

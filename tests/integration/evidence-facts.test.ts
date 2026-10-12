@@ -5,13 +5,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import pg from 'pg';
 import { publishRuleSet, verifyDecisions } from '@/adjudication/decisions';
-import { enterFact, LocalDiskDocumentStore, readDocumentStatuses, readEvidence, reviewDocument, uploadDocument } from '@/adjudication/documents';
-import { acceptEvidence, adjudicateClaim, openClaim, waiveEvidence } from '@/adjudication/pipeline';
+import { enterFact, LocalDiskDocumentStore, readDocumentStatuses, readEvidence, reviewDocument } from '@/adjudication/documents';
+import { readReminderLevel, runNoResponse } from '@/adjudication/no-response';
+import { acceptEvidence, adjudicateClaim, openClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
 
 // Task 3.4 (D47, D55): a fact is a row someone entered, from a document version or on their own word. The snapshot
 // reads those rows, a document's facts count only while its version is accepted, and the decision names the versions.
 // Task 3.5 (D51a, D51d, D51f, D56): filing, accepting and waiving decide the claim themselves; an upload does not.
-// Every event is checked against the fixture: status, documents, the decision and what each rule that did not pass is missing.
+// Task 3.6 (D51h, D51i, D57): the no-response job reminds and closes on the injected date, and an upload reopens.
+// Every event is checked against the fixture: status, documents, reminder level, the decision and what each rule that did not pass is missing.
 
 const read = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -21,7 +23,7 @@ const versionIds: Record<string, string> = {};
 afterAll(() => client.end());
 beforeEach(async () => {
   await connected;
-  await client.query('TRUNCATE "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
+  await client.query('TRUNCATE "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
   for (const name of ['plan-v1', 'ops-v1']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
   const root = await mkdtemp(join(tmpdir(), 'adjuster-facts-'));
   store = new LocalDiskDocumentStore(root);
@@ -31,16 +33,16 @@ beforeEach(async () => {
 const STAFF = '00000000-0000-4000-8000-000000000001';
 const onContract = ([k]: [string, unknown]) => k.startsWith('contract.') || k.startsWith('product.');
 const upload = (claimId: string, type: string, n = 1) =>
-  uploadDocument(client, store, { claimId, type, bytes: new TextEncoder().encode(`${claimId} ${type} ${n}`), source: 'claimant', uploadedBy: null });
+  uploadEvidence(client, store, { claimId, type, bytes: new TextEncoder().encode(`${claimId} ${type} ${n}`), source: 'claimant', uploadedBy: null });
 const accept = (versionId: string, facts?: Record<string, unknown>) => reviewDocument(client, { versionId, result: 'accepted', userId: null, facts });
 const decision = async (id: string | null) => (await client.query('SELECT * FROM "Decision" WHERE "id" = $1', [id])).rows[0];
 
 type Action = { type: string; facts: Record<string, unknown>; doc: string; version: string; by: string; reasonText: string };
 type NotPassed = { ruleId: string; result: string; missing: string[] };
 type Expected = { row: number; outcome: string; payableCents: number | null; reasons: string[]; notPassed: NotPassed[]; documentVersions: string[]; supersedes: number | null };
-type Life = { plan: string; events: { asOf: string; action: Action; expected: { claimStatus: string; docs: Record<string, string>; decisionRows: number; decision: Expected } }[] };
+type Life = { plan: string; events: { asOf: string; action: Action; expected: { claimStatus: string; reminderLevel: number; docs: Record<string, string>; decisionRows: number; decision: Expected } }[] };
 
-/** Plays a claim life's open, upload, accept and waive events through the services and returns the label of each version id. */
+/** Plays a claim life's open, upload, accept, waive and tick events through the services and returns the label of each version id. */
 async function play(id: string, fx: Life) {
   const label = new Map<string, string>();
   const idOf = (l: string) => [...label].find(([, v]) => v === l)![0];
@@ -52,7 +54,8 @@ async function play(id: string, fx: Life) {
     } else if (a.type === 'upload') label.set((await upload(id, a.doc, i)).versionId, a.version);
     else if (a.type === 'accept') await acceptEvidence(client, { versionId: idOf(a.version), facts: a.facts, userId: null }, asOf);
     else if (a.type === 'waive') await waiveEvidence(client, { claimId: id, type: a.doc, tier: a.by, reasonText: a.reasonText, asOf, userId: null });
-    else if (a.type !== 'tick') throw new Error(`play: ${a.type}`); // the no-response job is 3.6; it writes no decision
+    else if (a.type === 'tick') await runNoResponse(client, asOf);
+    else throw new Error(`play: ${a.type}`);
 
     const rows = (await client.query('SELECT * FROM "Decision" WHERE "claimId" = $1 ORDER BY "createdAt"', [id])).rows;
     const d = rows[e.decision.row];
@@ -62,7 +65,7 @@ async function play(id: string, fx: Life) {
     const notPassed = (d.explanation.rules as NotPassed[]).filter((r) => r.result !== 'PASS').map(({ ruleId, result, missing }) => ({ ruleId, result, missing }));
     expect([i, notPassed]).toEqual([i, e.decision.notPassed]);
     const { status } = (await client.query('SELECT "status" FROM "Claim" WHERE "id" = $1', [id])).rows[0];
-    expect([i, status, (await readDocumentStatuses(client, id)).docs]).toEqual([i, e.claimStatus, e.docs]);
+    expect([i, status, await readReminderLevel(client, id), (await readDocumentStatuses(client, id)).docs]).toEqual([i, e.claimStatus, e.reminderLevel, e.docs]);
   }
   return label;
 }
@@ -85,6 +88,40 @@ describe('evidence in the pipeline', () => {
     const upTo = fx.events.findIndex((e) => e.action.type === 'waive');
     await play('E-GC-15', { ...fx, events: fx.events.slice(0, upTo + 1) });
     expect((await verifyDecisions(client)).failures).toEqual([]);
+  });
+});
+
+describe('no response', () => {
+  it('GC-11: reminders on day 10 and 20, closed on day 30 with no decision written, reopened by the upload and decided on its acceptance', async () => {
+    await play('E-GC-11', read('fixtures/gc/GC-11.json'));
+    const outcomes = (await client.query(`SELECT "outcome" FROM "Decision" WHERE "claimId" = 'E-GC-11' ORDER BY "createdAt"`)).rows.map((r) => r.outcome);
+    expect(outcomes).toEqual(['PEND', 'PEND', 'PEND', 'PEND', 'APPROVE']);
+    expect((await verifyDecisions(client)).failures).toEqual([]);
+  });
+
+  it('one run sends at most one reminder, a second run the same day sends none, and the day before the first reminder sends none', async () => {
+    const fx = read('fixtures/ev/EV-04.json');
+    await play('E-LATE', { ...fx, events: fx.events.slice(0, 1) }); // pends on 2025-09-17
+    expect(await runNoResponse(client, '2025-09-26')).toEqual({ reminded: [], closed: [], skipped: [] });
+    expect(await runNoResponse(client, '2025-10-07')).toEqual({ reminded: [{ claimId: 'E-LATE', level: 2 }], closed: [], skipped: [] });
+    expect(await runNoResponse(client, '2025-10-07')).toEqual({ reminded: [], closed: [], skipped: [] });
+    expect((await client.query('SELECT "level" FROM "ClaimReminder"')).rows).toEqual([{ level: 2 }]);
+    await expect(client.query('UPDATE "ClaimReminder" SET "level" = 1')).rejects.toMatchObject({ constraint: 'document_append_only' });
+  });
+
+  it('a new PEND starts the count again, and a claim reopened by an upload can pend and be closed again', async () => {
+    const fx: Life = read('fixtures/gc/GC-11.json');
+    await play('E-AGAIN', { ...fx, events: fx.events.slice(0, 2) }); // FNOL and an estimate uploaded on 2025-09-17
+    await runNoResponse(client, '2025-09-27');
+    const versionId = (await client.query<{ id: string }>('SELECT "id" FROM "DocumentVersion"')).rows[0]!.id;
+    await acceptEvidence(client, { versionId, facts: fx.events[2]!.action.facts, userId: null }, '2025-10-01');
+    expect(await readReminderLevel(client, 'E-AGAIN')).toBe(0);
+    expect(await runNoResponse(client, '2025-10-17')).toMatchObject({ reminded: [{ claimId: 'E-AGAIN', level: 1 }], closed: [] }); // day 30 of the first PEND, 16 of this one
+    expect(await runNoResponse(client, '2025-10-31')).toMatchObject({ closed: ['E-AGAIN'] });
+    const late = await upload('E-AGAIN', 'damagePhotos');
+    expect((await client.query(`SELECT "status" FROM "Claim" WHERE "id" = 'E-AGAIN'`)).rows[0].status).toBe('REOPENED');
+    await acceptEvidence(client, { versionId: late.versionId, userId: null }, '2025-11-03');
+    expect(await runNoResponse(client, '2026-01-01')).toMatchObject({ closed: ['E-AGAIN'] });
   });
 });
 

@@ -40,7 +40,7 @@ export async function acceptDocument(db: Db, store: DocumentStore, claimId: stri
 }
 
 export async function seedDecisions(db: Db, store: DocumentStore = new LocalDiskDocumentStore('uploads/documents')) {
-  await db.query('TRUNCATE "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
+  await db.query('TRUNCATE "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
   const versions: Record<string, string> = {};
   for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2']) versions[name] = await publishRuleSet(db, read(`rules/electronics/${name}.json`));
 
