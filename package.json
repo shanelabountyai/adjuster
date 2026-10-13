@@ -38,6 +38,8 @@
     "seed:decisions:test": "dotenv -e .env.test -e .env.local -- tsx scripts/seed-decisions.ts",
     "fixtures:check": "python3 tools/build_fixtures.py && python3 tools/verify_fixtures.py && git diff --exit-code fixtures/",
     "rules:lint": "tsx scripts/rules-lint.ts",
+    "rules:lint:db": "dotenv -e .env.local -- tsx scripts/rules-lint.ts --db",
+    "rules:export": "dotenv -e .env.local -- tsx scripts/rules-export.ts",
     "rules:schemas": "tsx scripts/rules-schemas.ts"
   },
   "dependencies": {

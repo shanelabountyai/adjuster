@@ -6,7 +6,8 @@ type Version = { name: string; kind: string; status: string; effectiveFrom: stri
 export type Selection<V> = { plan: V; ops: V } | { error: 'NO_EFFECTIVE_VERSION'; kind: 'plan' | 'ops' };
 
 /** The ops version in force on `asOf`, of one product's versions: the latest non-draft one effective by then. */
-// ponytail: two ops versions effective from the same day pick the first listed; reject that at publish if it can happen
+// Two ops versions effective from the same day pick the first listed. `publishDraft` refuses the second (D77);
+// ponytail: `publishRuleSet`, the seed's loader of files, does not
 export const opsInForce = <V extends Omit<Version, 'name'>>(versions: readonly V[], asOf: string): V | undefined =>
   versions.filter((v) => v.kind === 'ops' && v.status !== 'draft' && v.effectiveFrom <= asOf)
     .reduce<V | undefined>((a, b) => (a && a.effectiveFrom >= b.effectiveFrom ? a : b), undefined);

@@ -1,5 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import pg from 'pg';
+import { exportRules } from '@/adjudication/drafts';
 import { checkDictionaryHash, validateDictionary, validateRuleSet, type Issue } from '@/rules/validate';
 
 // `npm run rules:lint` (CLAUDE.md): schema-validate rules/, then grep src/ for plan identifiers and escape hatches.
@@ -40,6 +42,15 @@ for (const p of src) {
   const text = readFileSync(p, 'utf8');
   for (const id of identifiers) if (new RegExp(`\\b${id}\\b`, 'i').test(text)) fail(p, `plan identifier "${id}" in src/`);
   if (/^src\/(rules|engine)\//.test(p) && /\beval\s*\(|new\s+Function\s*\(|\bimport\s*\(/.test(text)) fail(p, 'eval, Function or dynamic import in the rule path');
+}
+
+// D69: `--db` (npm run rules:lint:db) also fails on a published version with no file. CI never runs this form.
+if (process.argv.includes('--db')) {
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    for (const p of await exportRules(client, { write: false })) fail(p, 'a published version has no file; run rules:export and commit it');
+  } catch (e) { fail('rules/', (e as Error).message); } finally { await client.end(); }
 }
 
 if (failed) { console.error(`rules:lint: ${failed} problem(s)`); process.exit(1); }

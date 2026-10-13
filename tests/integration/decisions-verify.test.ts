@@ -2,9 +2,11 @@ import { readFileSync } from 'node:fs';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import pg from 'pg';
 import { publishRuleSet, verifyDecisions } from '@/adjudication/decisions';
+import { createDraft, publishDraft, saveDraft } from '@/adjudication/drafts';
 import { renderDecision } from '@/adjudication/letters';
 import { sha256Hex } from '@/rules/canonical';
 import { seedDecisions } from '../../scripts/seed-decisions';
+import { staffAt } from '../helpers/tiers';
 
 // Task 1.11, reseeded by 2.11 and 3.12. The clean seed (19 claims through the pipeline, four versions) verifies; each tamper TM-01..TM-08, written below the service with
 // raw SQL and the immutability triggers switched off, fails with exactly its one code. TM-09 is task 2.8's (D41), OVERRIDE_UNAUTHORIZED is 3.8's (D48).
@@ -78,6 +80,22 @@ describe('decisions:verify', () => {
     // what the refusal prevents: the same version written below the service turns clean decisions red
     await tamper(`UPDATE "RuleSetVersion" SET "effectiveFrom" = '2026-03-31' WHERE "kind" = 'ops' AND "version" = 4`);
     expect(await codes()).toEqual(['VERSION_NOT_EFFECTIVE']);
+  });
+
+  it('4.3 a draft published from the screen meets the same D44 refusal, and a later one leaves verify clean', async () => {
+    const ops = JSON.parse(readFileSync('rules/electronics/ops-v3.json', 'utf8'));
+    const staff = await staffAt(client, ['senior', 'manager']);
+    const asOf = ops.effectiveFrom; // the first day author_rules is in force
+    const id = await createDraft(client, { kind: 'ops', product: ops.product, userId: staff.senior, asOf });
+    const publish = async (effectiveFrom: string) => {
+      await saveDraft(client, { id, userId: staff.senior, body: { ...ops, effectiveFrom }, asOf });
+      const { rows } = await client.query('SELECT "body" FROM "RuleSetVersion" WHERE "id" = $1', [id]);
+      return publishDraft(client, { id, userId: staff.manager, diffHash: sha256Hex(rows[0].body), asOf });
+    };
+    await expect(publish('2028-01-27')).rejects.toMatchObject({ code: 'OPS_BACKDATED' }); // GC-04, the latest asOf
+    expect((await client.query('SELECT "status", "contentHash" FROM "RuleSetVersion" WHERE "id" = $1', [id])).rows[0]).toEqual({ status: 'draft', contentHash: null });
+    await publish('2028-01-28');
+    expect(await codes()).toEqual([]);
   });
 
   it('TM-01 a published rule-set body edited in place → RULESET_HASH_MISMATCH', async () => {
