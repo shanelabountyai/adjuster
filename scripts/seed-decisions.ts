@@ -1,9 +1,13 @@
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import pg from 'pg';
 import { publishRuleSet } from '@/adjudication/decisions';
 import { type DocumentStore, LocalDiskDocumentStore, reviewDocument, uploadDocument } from '@/adjudication/documents';
-import { adjudicateClaim } from '@/adjudication/pipeline';
+import { assignTier } from '@/adjudication/authority';
+import { runNoResponse } from '@/adjudication/no-response';
+import { mockPaymentProvider } from '@/adjudication/payments';
+import { acceptEvidence, adjudicateClaim, openClaim, overrideDecision, payClaim, reopenClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
 
 // The clean seed for decisions:verify (task 2.11): both plan and both ops versions published, then every claim filed
 // as a contract and a claim and decided by the pipeline, which picks the versions. GC-01..10 and 12..14, the RV-01
@@ -11,6 +15,8 @@ import { adjudicateClaim } from '@/adjudication/pipeline';
 // of ops-v2. Synthetic claims only. Replaces every rule set, contract, claim and decision in the target database.
 // Each document a golden claim calls accepted is uploaded and accepted through the services (task 3.4), and the facts
 // that document carries are entered with the acceptance. The bytes are a placeholder line under uploads/ (gitignored).
+// Task 3.12: GC-11 and GC-15 are played event by event through the services (no response, waiver, override, payment,
+// reopen), and GC-05's referral is signed off. The two lives go first: the no-response job reads every open claim.
 const read = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
 const onContract = ([k]: [string, unknown]) => k.startsWith('contract.') || k.startsWith('product.');
 
@@ -39,10 +45,53 @@ export async function acceptDocument(db: Db, store: DocumentStore, claimId: stri
   await reviewDocument(db, { versionId, result: 'accepted', userId: null, facts });
 }
 
+export type LifeEvent = { asOf: string; action: { type: string; facts: Record<string, unknown>; doc: string; version: string; by: string; reasonText: string; reasonCode: string; reason: string } };
+/** A claim life being played: `versions` maps a fixture's version label to the id its upload got, `staff` gives a user holding a tier. */
+export type Life = { db: Db; store: DocumentStore; claimId: string; planVersionId: string | undefined; staff: (tier: string) => Promise<string>; versions: Map<string, string> };
+
+/** Plays one event of a claim life through the service a person or the job would call, and returns what the service returned. */
+export async function playEvent({ db, store, claimId, planVersionId, staff, versions }: Life, { asOf, action: a }: LifeEvent, i: number) {
+  switch (a.type) {
+    case 'open': {
+      const facts = Object.entries(a.facts);
+      await db.query('INSERT INTO "Contract" ("id", "planVersionId", "facts") VALUES ($1, $2, $3)', [`CT-${claimId}`, planVersionId, Object.fromEntries(facts.filter(onContract))]);
+      return openClaim(db, { id: claimId, contractId: `CT-${claimId}`, facts: Object.fromEntries(facts.filter((f) => !onContract(f))) as never }, asOf);
+    }
+    case 'upload': {
+      const u = await uploadEvidence(db, store, { claimId, type: a.doc, bytes: new TextEncoder().encode(`${claimId} ${a.doc} ${i}`), source: 'claimant', uploadedBy: null });
+      versions.set(a.version, u.versionId);
+      return u;
+    }
+    case 'accept': return acceptEvidence(db, { versionId: versions.get(a.version)!, facts: a.facts, userId: null }, asOf);
+    case 'waive': return waiveEvidence(db, { claimId, type: a.doc, reasonText: a.reasonText, asOf, userId: await staff(a.by) });
+    case 'tick': return runNoResponse(db, asOf);
+    case 'override': return overrideDecision(db, { claimId, userId: await staff(a.by), reasonCode: a.reasonCode, reasonText: a.reasonText, asOf });
+    case 'pay': return payClaim(db, mockPaymentProvider, { claimId, asOf, userId: null });
+    case 'reopen': return reopenClaim(db, { claimId, userId: await staff('adjuster'), reason: a.reason });
+    default: throw new Error(`playEvent: ${a.type}`);
+  }
+}
+
+/** The override reason codes the migration seeds, put back by its own statement: the test suite's reset empties every table, reference rows included. */
+export const seedOverrideReasons = (db: Db) => db.query(readFileSync('prisma/migrations/20261012020000_override_authority/migration.sql', 'utf8')
+  .match(/INSERT INTO "OverrideReason"[^;]+/)![0] + ' ON CONFLICT DO NOTHING');
+
 export async function seedDecisions(db: Db, store: DocumentStore = new LocalDiskDocumentStore('uploads/documents')) {
-  await db.query('TRUNCATE "Payment", "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
+  await db.query('TRUNCATE "TierAssignment", "Payment", "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
+  await seedOverrideReasons(db);
   const versions: Record<string, string> = {};
   for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2']) versions[name] = await publishRuleSet(db, read(`rules/electronics/${name}.json`));
+
+  const users: Record<string, string> = {};
+  const staff = async (tier: string) => {
+    if (!users[tier]) await assignTier(db, { userId: (users[tier] = randomUUID()), tier, by: null });
+    return users[tier]!;
+  };
+  for (const n of ['11', '15']) {
+    const fx: { id: string; plan: string; events: LifeEvent[] } = read(`fixtures/gc/GC-${n}.json`);
+    const life: Life = { db, store, claimId: fx.id, planVersionId: versions[fx.plan], staff, versions: new Map() };
+    for (const [i, e] of fx.events.entries()) await playEvent(life, e, i);
+  }
 
   const golden = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14].map((n) => read(`fixtures/gc/GC-${String(n).padStart(2, '0')}.json`));
   const [soldBefore, soldAfter] = read('fixtures/rv/RV-01.json').cases;
@@ -61,6 +110,8 @@ export async function seedDecisions(db: Db, store: DocumentStore = new LocalDisk
     if ('error' in r) throw new Error(`seed:decisions: ${c.id} was not decided (${r.error}: ${r.detail})`);
     decisions[c.id] = r.decisionId;
   }
+  const so = golden[4].signoff;
+  decisions['GC-05-signoff'] = (await overrideDecision(db, { claimId: 'GC-05', userId: await staff(so.by), reasonCode: so.reasonCode, reasonText: so.reasonText, asOf: so.asOf })).decisionId;
   return { versions, decisions };
 }
 
@@ -68,8 +119,8 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
   try {
-    const { decisions } = await seedDecisions(client);
-    console.log(`seed:decisions: ${Object.keys(decisions).length} decisions`);
+    await seedDecisions(client);
+    console.log(`seed:decisions: ${(await client.query('SELECT count(*) FROM "Decision"')).rows[0].count} decisions`);
   } finally {
     await client.end();
   }

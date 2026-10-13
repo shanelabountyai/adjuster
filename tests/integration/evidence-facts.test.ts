@@ -10,8 +10,8 @@ import { readReminderLevel, runNoResponse } from '@/adjudication/no-response';
 import { transitionClaim } from '@/adjudication/claim-status';
 import { mockPaymentProvider, paidCents } from '@/adjudication/payments';
 import { renderDecision } from '@/adjudication/letters';
-import { acceptEvidence, adjudicateClaim, openClaim, overrideDecision, payClaim, reopenClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
-import { fileClaim } from '../../scripts/seed-decisions';
+import { acceptEvidence, adjudicateClaim, overrideDecision, payClaim, reopenClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
+import { fileClaim, playEvent } from '../../scripts/seed-decisions';
 import { seedOverrideReasons, staffAt } from '../helpers/tiers';
 
 // Task 3.4 (D47, D55): a fact is a row someone entered, from a document version or on their own word. The snapshot
@@ -38,7 +38,6 @@ beforeEach(async () => {
 });
 
 const STAFF = '00000000-0000-4000-8000-000000000001';
-const onContract = ([k]: [string, unknown]) => k.startsWith('contract.') || k.startsWith('product.');
 const upload = (claimId: string, type: string, n = 1) =>
   uploadEvidence(client, store, { claimId, type, bytes: new TextEncoder().encode(`${claimId} ${type} ${n}`), source: 'claimant', uploadedBy: null });
 const accept = (versionId: string, facts?: Record<string, unknown>) => reviewDocument(client, { versionId, result: 'accepted', userId: null, facts });
@@ -55,22 +54,14 @@ type Life = { plan: string; events: { asOf: string; action: Action; expected: { 
  * each event.
  */
 async function play(id: string, fx: Life, before?: (a: Action) => Promise<unknown>) {
-  const label = new Map<string, string>();
-  const idOf = (l: string) => [...label].find(([, v]) => v === l)![0];
-  for (const [i, { asOf, action: a, expected: e }] of fx.events.entries()) {
+  const versions = new Map<string, string>();
+  const label = { get: (v: string) => [...versions].find(([, id]) => id === v)?.[0], has: (v: string) => [...versions.values()].includes(v) };
+  const life = { db: client, store, claimId: id, planVersionId: versionIds[fx.plan], versions, staff: async (tier: string) => (await staffAt(client, [tier]))[tier]! };
+  for (const [i, ev] of fx.events.entries()) {
+    const { action: a, expected: e } = ev;
     await before?.(a);
-    if (a.type === 'open') {
-      const facts = Object.entries(a.facts);
-      await client.query('INSERT INTO "Contract" ("id", "planVersionId", "facts") VALUES ($1, $2, $3)', [`CT-${id}`, versionIds[fx.plan], Object.fromEntries(facts.filter(onContract))]);
-      await openClaim(client, { id, contractId: `CT-${id}`, facts: Object.fromEntries(facts.filter((f) => !onContract(f))) as never }, asOf);
-    } else if (a.type === 'upload') label.set((await upload(id, a.doc, i)).versionId, a.version);
-    else if (a.type === 'accept') await acceptEvidence(client, { versionId: idOf(a.version), facts: a.facts, userId: null }, asOf);
-    else if (a.type === 'waive') await waiveEvidence(client, { claimId: id, type: a.doc, reasonText: a.reasonText, asOf, userId: (await staffAt(client, [a.by]))[a.by] ?? null });
-    else if (a.type === 'tick') await runNoResponse(client, asOf);
-    else if (a.type === 'override') await overrideDecision(client, { claimId: id, userId: (await staffAt(client, [a.by]))[a.by]!, reasonCode: a.reasonCode, reasonText: a.reasonText, asOf });
-    else if (a.type === 'pay') expect([i, (await payClaim(client, mockPaymentProvider, { claimId: id, asOf, userId: null })).paymentCents]).toEqual([i, e.paymentCents]);
-    else if (a.type === 'reopen') await reopenClaim(client, { claimId: id, userId: (await staffAt(client, ['adjuster'])).adjuster, reason: a.reason });
-    else throw new Error(`play: ${a.type}`);
+    const r = await playEvent(life, ev, i);
+    if (a.type === 'pay') expect([i, 'paymentCents' in r && r.paymentCents]).toEqual([i, e.paymentCents]);
 
     const rows = (await client.query('SELECT * FROM "Decision" WHERE "claimId" = $1 ORDER BY "createdAt"', [id])).rows;
     const d = rows[e.decision.row];

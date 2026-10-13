@@ -45,7 +45,7 @@ jobs:
       - run: createdb adjuster_test
       - run: npx prisma migrate deploy
       - run: npx vitest run
-      # Tasks 1.12 and 2.11: the gate. Seed 17 claims through the pipeline under both plan and both ops versions, then replay every stored decision; any divergence exits 1.
+      # Tasks 1.12 and 2.11: the gate. Seed 19 claims through the pipeline and the services (3.12: a sign-off, a no-response life, a paid supplemental) under both plan and both ops versions, then replay every stored decision; any divergence exits 1.
       - run: npm run seed:decisions:test
       - run: npm run decisions:verify:test
       # Production build, served — the way it ships. login.spec.ts drives a real page.

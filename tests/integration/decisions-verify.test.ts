@@ -2,12 +2,12 @@ import { readFileSync } from 'node:fs';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import pg from 'pg';
 import { publishRuleSet, verifyDecisions } from '@/adjudication/decisions';
+import { renderDecision } from '@/adjudication/letters';
 import { sha256Hex } from '@/rules/canonical';
 import { seedDecisions } from '../../scripts/seed-decisions';
-import { seedOverrideReasons } from '../helpers/tiers';
 
-// Task 1.11, reseeded by 2.11. The clean seed (17 claims through the pipeline, four versions) verifies; each tamper TM-01..TM-08, written below the service with
-// raw SQL and the immutability triggers switched off, fails with exactly its one code. TM-09 is task 2.8's (D41).
+// Task 1.11, reseeded by 2.11 and 3.12. The clean seed (19 claims through the pipeline, four versions) verifies; each tamper TM-01..TM-08, written below the service with
+// raw SQL and the immutability triggers switched off, fails with exactly its one code. TM-09 is task 2.8's (D41), OVERRIDE_UNAUTHORIZED is 3.8's (D48).
 
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 const connected = client.connect();
@@ -19,7 +19,6 @@ let versions: Record<string, string> = {};
 beforeEach(async () => {
   await connected;
   ({ decisions: ids, versions } = await seedDecisions(client));
-  await seedOverrideReasons(client);
   opsId = versions['ops-v1']!;
 });
 
@@ -37,7 +36,7 @@ const copyOf = (id: string, set: string) => tamper(
 
 describe('decisions:verify', () => {
   it('reports OK on the clean seed', async () => {
-    expect(await verifyDecisions(client)).toEqual({ checked: 17, failures: [] });
+    expect(await verifyDecisions(client)).toEqual({ checked: 32, failures: [] }); // 17 engine rows, GC-05's sign-off, GC-11's five and GC-15's nine
     expect((await verifyDecisions(client, '2025-07-18')).checked).toBe(3); // --as-of: GC-03, GC-08 and GC-12
   });
 
@@ -50,6 +49,24 @@ describe('decisions:verify', () => {
     expect(await pinned('OPS-v2-first-day')).toEqual(['plan-v1', 'ops-v2', 25000]);
     expect(await pinned('RV-01-v1')).toEqual(['plan-v1', 'ops-v2', 25000]);
     expect(await pinned('RV-01-v2')).toEqual(['plan-v2', 'ops-v2', 20000]);
+  });
+
+  it('3.12 the seeded GC-15 is told from its stored rows: nine decisions, the supplemental signed off at 170100 by a senior adjuster, two payments, every move audited', async () => {
+    const rows = (await client.query(`SELECT "id", "outcome" FROM "Decision" WHERE "claimId" = 'GC-15' ORDER BY "createdAt"`)).rows;
+    expect(rows.map((r) => r.outcome)).toEqual(['PEND', 'PEND', 'PEND', 'PEND', 'PEND', 'REFER', 'APPROVE', 'REFER', 'APPROVE']);
+    for (const r of rows) await renderDecision(client, r.id); // every row renders a letter and a note
+    const last = await renderDecision(client, rows[8].id);
+    expect(last.note.split('\n').slice(0, 3)).toEqual([
+      `APPROVE by override as of 2025-09-11. Payable cents: 170100. Decision ${rows[8].id} overrides decision ${rows[7].id}.`,
+      expect.stringMatching(/^Decided by user [0-9a-f-]{36} at tier senior, tested on total incurred 170100 cents under ops rules sha256 [0-9a-f]{64}\.$/),
+      'Override reason FLAG_CLEARED: F2: unrelated failure, network-repaired; teardown estimate reviewed',
+    ]);
+    expect(last.letter).toContain('Amount payable: $1701.00.');
+    // the seed does not empty AuditEvent, so an earlier seed's GC-15 is still there: this one's events name its decisions
+    const events = (await client.query(`SELECT "action", "data" FROM "AuditEvent" WHERE "targetId" = 'GC-15' AND "data"->>'decisionId' = ANY($1) ORDER BY "id"`, [rows.map((r) => r.id)])).rows;
+    expect(events.filter((e) => e.action === 'claim.paid').map((e) => [e.data.asOf, e.data.amountCents])).toEqual([['2025-08-21', 85100], ['2025-09-12', 85000]]);
+    expect(events.filter((e) => e.data.to === 'REOPENED').map((e) => e.data.reason)).toEqual(['supplemental']);
+    expect(events.at(-1)!.data).toMatchObject({ from: 'PAID', to: 'CLOSED', decisionId: rows[8].id });
   });
 
   it('D44 publish refuses an ops version a stored decision would select on replay, and takes a later one', async () => {
@@ -104,6 +121,11 @@ describe('decisions:verify', () => {
   it('TM-07 an override pointing at another claim\'s decision → OVERRIDE_INVALID', async () => {
     await copyOf(ids['GC-01']!, JSON.stringify({ overridesId: ids['GC-02'], overrideReasonCode: 'SIGN_OFF', overrideReasonText: 'tamper', overrideTier: 'manager', overrideTotalIncurredCents: 0, overrideBy: '00000000-0000-4000-8000-000000000001' }));
     expect(await codes()).toEqual(['OVERRIDE_INVALID']);
+  });
+
+  it('a sign-off rewritten to a tier that does not hold its amount → OVERRIDE_UNAUTHORIZED (D48)', async () => {
+    await tamper(`UPDATE "Decision" SET "overrideTier" = 'system' WHERE "id" = $1`, [ids['GC-05-signoff']]);
+    expect(await codes()).toEqual(['OVERRIDE_UNAUTHORIZED']);
   });
 
   it('TM-08 a decision stamped with semantics this engine lacks → SEMANTICS_UNSUPPORTED', async () => {
