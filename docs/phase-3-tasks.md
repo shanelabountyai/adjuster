@@ -27,7 +27,7 @@ Defaults are given; none is taken until 3.1 records it. The first three change t
 - [x] **3.8 Override and sign-off.** (D59: `overrideDecision`, `OverrideReason`, the row dated its own day; `OVERRIDE_UNAUTHORIZED`) An override is a separate decision row with reason code and text, linked to the engine decision it overrides, which stays as written. Out of authority is rejected before anything is written (OV-01..OV-03). GC-05: the referral is signed off at 77500 by an adjuster. `decisions:verify` checks override rows as decided in item 2.
 - [x] **3.9 Mock payment.** `DECIDED → PAYMENT_PENDING → PAID → CLOSED` and `paymentStatus` `NONE → PENDING → PAID`, behind a `PaymentProvider` interface with one mock. The amount is the current decision's; a denial or an approval at 0 never pays; paying twice is a no-op. Paid amounts are what `d.sumPriorPaid` reads, so the aggregate erodes only by money paid.
 - [x] **3.10 Supplemental.** A supplemental reopens the same claim. The total is recomputed from the new facts, the difference is paid, the deductible is taken once, and authority is tested on the new total (GC-15 step 8: 170100 total, 85000 supplemental, senior adjuster).
-- [ ] **3.11 Letters and notes.** The parts D42 left out: the documents a decision relied on, who decided and at what authority, the override reason in the note (never in the letter), and the pend letter's list of documents. Still text from stored rows only.
+- [x] **3.11 Letters and notes.** The parts D42 left out: the documents a decision relied on, who decided and at what authority, the override reason in the note (never in the letter), and the pend letter's list of documents. Still text from stored rows only.
 - [ ] **3.12 Seed and gate.** The seed adds GC-05's sign-off, GC-11 and GC-15 through the real services. `decisions:verify:test` OK in CI; TM-01..TM-09 still each fail with exactly their code, plus a tamper case for each new verify code.
 
 **Exit criteria:** EV-01..EV-05, OV-01..OV-03, GC-05 (sign-off), GC-11 and GC-15 pass through the services. Every decision names the document versions it relied on. No document version, decision or payment record can be updated or deleted at the database. GC-15 can be narrated step by step from stored rows alone. `decisions:verify` is OK and CI enforces it. `rules:lint` finds no plan name, tier or threshold under `src/`.
@@ -36,7 +36,7 @@ Defaults are given; none is taken until 3.1 records it. The first three change t
 
 - From 3.1 (decisions.md, *Open after 3.1*): a supplemental not above what was paid cannot leave `DECIDED`.
 
-- Shane has not yet read the GC-12 file note as the auditor (the second half of the Phase 2 "before Phase 3" check). 3.11 changes the note, so read it before then.
+- ~~Shane has not yet read the GC-12 file note as the auditor~~ read 2026-10-12 before 3.11; what it turned up is in D62.
 - The database does not refuse a raw `UPDATE` of `Claim.status` (D38); only `transitionClaim` is meant to write it.
 - A same-day ops version is accepted while no decision exists on or after that day, and whether a new decision may select a retired ops version is undecided (D37, D44).
 - `tools/recompute_from_trace.py` refuses a `min_of` step because the trace stores no operands for it; no rule data uses it (D43).

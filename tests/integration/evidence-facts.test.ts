@@ -9,6 +9,7 @@ import { enterFact, LocalDiskDocumentStore, readDocumentStatuses, readEvidence, 
 import { readReminderLevel, runNoResponse } from '@/adjudication/no-response';
 import { transitionClaim } from '@/adjudication/claim-status';
 import { mockPaymentProvider, paidCents } from '@/adjudication/payments';
+import { renderDecision } from '@/adjudication/letters';
 import { acceptEvidence, adjudicateClaim, openClaim, overrideDecision, payClaim, reopenClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
 import { fileClaim } from '../../scripts/seed-decisions';
 import { seedOverrideReasons, staffAt } from '../helpers/tiers';
@@ -293,5 +294,45 @@ describe('evidence facts', () => {
     await insert('false', STAFF);
     await expect(client.query(`UPDATE "ClaimFact" SET "value" = 'true'`)).rejects.toMatchObject({ constraint: 'document_append_only' });
     await expect(client.query('DELETE FROM "ClaimFact"')).rejects.toMatchObject({ constraint: 'document_append_only' });
+  });
+});
+
+// Task 3.11 (D62): the letter and note of each stored row, read back by id alone.
+describe('letters and notes from stored rows', () => {
+  it('GC-15 up to its sign-off: documents, the waiver, the referral and the override each say what the rows hold', async () => {
+    await play('E-GC-15', gc15To('override'));
+    const rows = (await client.query('SELECT "id", "outcome", "documentVersions", "overridesId", "overrideBy" FROM "Decision" WHERE "claimId" = $1 ORDER BY "createdAt"', ['E-GC-15'])).rows;
+    const [first, refer, over] = [rows[0], rows.at(-2), rows.at(-1)];
+    const event = (type: string) => gc15.events.find((e) => e.action.type === type)!;
+    const [waive, signed] = [event('waive'), event('override')];
+
+    const fnol = await renderDecision(client, first.id);
+    expect(fnol.letter).toContain('(1) We need: proof of purchase. (§8.1)');
+    expect(fnol.letter.trimEnd().split('\n').at(-1)).toBe('Please send us what is listed above. We will decide your claim when we have it.');
+    expect(fnol.note).toContain(`Decided by the engine (adjuster.engine/7), decision ${first.id}; no person.`);
+    expect(fnol.note).toContain('Documents relied on: none.');
+
+    const referral = await renderDecision(client, refer.id);
+    expect([refer.outcome, refer.documentVersions.length]).toEqual(['REFER', 4]);
+    const relied = (await client.query('SELECT v."id", v."sha256", v."version", d."type" FROM "DocumentVersion" v JOIN "Document" d ON d."id" = v."documentId" WHERE v."id"::text = ANY($1)', [refer.documentVersions])).rows;
+    for (const v of relied) expect(referral.note).toContain(`Document relied on: ${v.type} version ${v.version}, id ${v.id}, sha256 ${v.sha256}.`);
+    expect(referral.note).toMatch(new RegExp(`Document waived: secondEstimate, by user [0-9a-f-]{36} at tier ${waive.action.by} on ${waive.asOf}: `));
+    expect(referral.note).toContain(waive.action.reasonText);
+    expect(referral.note).toContain('Calculated payable cents: 85100, not approved.');
+    expect(referral.letter).toBe(`Decision as of ${waive.asOf}: Your claim needs review by an adjuster. No decision has been made yet.\n`);
+    expect(fnol.note).not.toContain('Document waived'); // the first decision did not rely on a waiver made later
+
+    const override = await renderDecision(client, over.id);
+    expect(override.note.split('\n').slice(0, 3)).toEqual([
+      `APPROVE by override as of ${signed.asOf}. Payable cents: 85100. Decision ${over.id} overrides decision ${refer.id}.`,
+      expect.stringMatching(new RegExp(`^Decided by user ${over.overrideBy} at tier ${signed.action.by}, tested on total incurred 85100 cents under ops rules sha256 [0-9a-f]{64}\\.$`)),
+      `Override reason ${signed.action.reasonCode}: ${signed.action.reasonText}`,
+    ]);
+    expect(override.note).toContain(waive.action.reasonText);
+    expect(override.letter.split('\n')[0]).toBe(`Decision as of ${signed.asOf}: Approved.`);
+    expect(override.letter).toContain('Amount payable: $851.00.');
+    for (const hidden of [signed.action.reasonText, signed.action.reasonCode, waive.action.reasonText, over.overrideBy, 'F2', 'tier', 'review'])
+      expect(override.letter).not.toContain(hidden);
+    await expect(renderDecision(client, '00000000-0000-4000-8000-000000000000')).rejects.toThrow('no decision');
   });
 });

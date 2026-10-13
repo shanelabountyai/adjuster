@@ -85,12 +85,61 @@ describe('renderLetter', () => {
   });
 });
 
+describe('the decision row (3.11, D62)', () => {
+  const override = { overridesId: 'engine-row', asOf: '2025-02-04', payableCents: 37500, by: 'u-1', tier: 'adjuster', totalIncurredCents: 37500,
+    opsHash: 'f'.repeat(64), reasonCode: 'FLAG_CLEARED', reasonText: 'Receipt reissued by the retailer; original sale confirmed.' };
+  const rec = { decisionId: 'override-row', engine: 'adjuster.engine/7', waivers: [],
+    documents: [{ type: 'proofOfPurchase', version: 2, versionId: 'dv-1', sha256: 'a'.repeat(64) }] };
+
+  it('GC-12 signed off: the letter is the approval with its math, on the override date, and says nothing of flags, reason or signer', () => {
+    const letter = renderLetter(gc('12'), { override });
+    expect(letter.split('\n')).toEqual(expect.arrayContaining(['Decision as of 2025-02-04: Approved.', 'Less your deductible: $400.00 − $25.00 = $375.00', 'Amount payable: $375.00.']));
+    expect(letter).not.toMatch(/\bF\d+\b|FLAG|Receipt|retailer|adjuster|u-1|review/);
+    // GC-10 refers on a rule that has claimant text: once signed off, the referral's reason is not a reason of the approval
+    expect(renderLetter(gc('10'))).toContain('(1) The product identified does not match the covered product. (§8.2)');
+    expect(renderLetter(gc('10'), { override })).not.toMatch(/\(1\)|does not match/);
+  });
+
+  it('GC-12 signed off: the note leads with who, tier, total incurred and reason, then the engine referral it overrides', () => {
+    const lines = renderNote(gc('12'), { ...rec, override }).split('\n');
+    expect(lines.slice(0, 5)).toEqual([
+      'APPROVE by override as of 2025-02-04. Payable cents: 37500. Decision override-row overrides decision engine-row.',
+      `Decided by user u-1 at tier adjuster, tested on total incurred 37500 cents under ops rules sha256 ${'f'.repeat(64)}.`,
+      'Override reason FLAG_CLEARED: Receipt reissued by the retailer; original sale confirmed.',
+      'The engine decision overridden:',
+      'REFER as of 2025-02-03. Calculated payable cents: 37500, not approved. Contract fulfilled: false.',
+    ]);
+    expect(lines).toContain(`Document relied on: proofOfPurchase version 2, id dv-1, sha256 ${'a'.repeat(64)}.`);
+    expect(lines.join('\n')).not.toContain('Decided by the engine');
+  });
+
+  it('an engine decision names the engine, its documents and its waivers; with none it says none', () => {
+    const waivers = [{ type: 'secondEstimate', tier: 'adjuster', asOf: '2025-02-03', by: null, reasonText: 'No network servicer nearby.' }];
+    const note = renderNote(gc('01'), { ...rec, waivers, override: null });
+    expect(note).toContain('Decided by the engine (adjuster.engine/7), decision override-row; no person.');
+    expect(note).toContain('Document waived: secondEstimate, by no recorded user at tier adjuster on 2025-02-03: No network servicer nearby.');
+    expect(note).toContain('APPROVE as of 2025-09-18. Payable cents: 25000.'); // only a referral's amount is "calculated"
+    expect(renderNote(gc('01'), { ...rec, documents: [], override: null })).toContain('Documents relied on: none.');
+    expect(renderLetter(gc('01'), { override: null })).toBe(renderLetter(gc('01')));
+  });
+
+  it('a pend letter ends with what to do: send what is listed, or nothing when no reason is the claimant\'s to answer', () => {
+    const pend = (drop: string) => {
+      const fx = read('fixtures/gc/GC-01.json');
+      return renderLetter(adjudicate({ plan: rs(fx.plan), ops: rs(fx.ops), dict: dict!, snapshot: { ...fx.facts, [drop]: drop.startsWith('docs.') ? 'requested' : null }, asOf: fx.asOf }));
+    };
+    expect(pend('docs.repairEstimate').split('\n').slice(1, 3)).toEqual(['(1) We need: repair estimate or diagnostic. (§8.1)', 'Please send us what is listed above. We will decide your claim when we have it.']);
+    expect(pend('claim.serialMatchesContract').split('\n').slice(1, 2)).toEqual(['You do not need to send anything now. We will contact you if we need something from you.']);
+  });
+});
+
 describe('renderNote', () => {
   it('GC-12: the flags with their values, the versions, and every calc step in cents', () => {
     const t = gc('12');
     const note = renderNote(t);
     expect(note).toContain('REFER as of');
-    expect(note).toContain('Payable cents: 37500.');
+    expect(note).toContain('REFER as of 2025-02-03. Calculated payable cents: 37500, not approved.'); // D62: not an amount anyone approved
+    expect(note).toContain('c5 subtract L: 40000, lookup.deductibleCents 2500 -> 37500 (Less your deductible)');
     expect(note).toMatch(/F1 REFER FLAG_F1 row F1\.hit: Loss 2 days after the waiting period ended\. Facts: d\.daysPastWaitingEnd=2\./);
     expect(note).toContain('F3 REFER FLAG_F3 row F3.hit: Proof of purchase is dated after the loss.');
     expect(note).toContain(`Rules ${t.versions.plan.name}, effective ${t.versions.plan.effectiveFrom}, selected by contract_pin, sha256 ${t.versions.plan.hash}.`);
