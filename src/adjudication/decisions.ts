@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { adjudicate, ENGINE_SEMANTICS_VERSION } from '@/rules/adjudicate';
+import { checkAuthority, powerToOverride } from '@/rules/authority';
 import { sha256Hex } from '@/rules/canonical';
 import type { Snapshot } from '@/rules/derive';
 import { traceSchema, type RuleSet } from '@/rules/schema';
@@ -12,7 +13,7 @@ import { checkDictionaryHash, validateDictionary } from '@/rules/validate';
 export type Db = { query: <R = Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<{ rows: R[] }> };
 
 export const FAILURE_CODES = ['RULESET_HASH_MISMATCH', 'FACTS_HASH_MISMATCH', 'REPLAY_DIVERGED', 'EXPLANATION_INCONSISTENT',
-  'VERSION_NOT_EFFECTIVE', 'CHAIN_BROKEN', 'OVERRIDE_INVALID', 'SEMANTICS_UNSUPPORTED'] as const;
+  'VERSION_NOT_EFFECTIVE', 'CHAIN_BROKEN', 'OVERRIDE_INVALID', 'OVERRIDE_UNAUTHORIZED', 'SEMANTICS_UNSUPPORTED'] as const;
 export type Failure = { code: (typeof FAILURE_CODES)[number]; id: string; detail: string };
 
 type Version = { id: string; kind: string; product: string; version: number; status: string; effectiveFrom: string; body: RuleSet; contentHash: string | null };
@@ -20,6 +21,7 @@ type Row = {
   id: string; claimId: string; planVersionId: string; planHash: string; opsVersionId: string; opsHash: string; asOf: string;
   facts: Snapshot; documentVersions: string[]; inputHash: string; outputHash: string; engineSemanticsVersion: string; outcome: string; payableCents: number | null;
   explanation: unknown; supersedesId: string | null; overridesId: string | null; createdAt: Date;
+  overrideReasonCode: string | null; overrideReasonText: string | null; overrideTier: string | null; overrideTotalIncurredCents: number | null;
 };
 
 // D47: the accepted document versions are an input, so a replacement upload with the same facts is a new decision.
@@ -92,17 +94,19 @@ export async function verifyDecisions(db: Db, until?: string): Promise<{ checked
     let inputsOk = true;
     for (const [v, pinned] of [[plan, d.planHash], [ops, d.opsHash]] as const)
       if (!intact.get(v.id) || pinned !== v.contentHash) { inputsOk = false; fail('RULESET_HASH_MISMATCH', d.id, `${v.kind}-v${v.version} (${v.id})`); }
-    if (inputHashOf(d) !== d.inputHash) { inputsOk = false; fail('FACTS_HASH_MISMATCH', d.id, 'facts, document versions, asOf or pins do not hash to inputHash'); }
+    // An override is dated and pinned to ops on its own day (D59), so its inputHash is the engine decision's, compared below.
+    if (!d.overridesId && inputHashOf(d) !== d.inputHash) { inputsOk = false; fail('FACTS_HASH_MISMATCH', d.id, 'facts, document versions, asOf or pins do not hash to inputHash'); }
 
-    // The stored row must agree with itself. An override's outcome is a person's, so only its trace is checked.
+    // The stored row must agree with itself. An override's outcome and date are a person's, so only its trace is checked.
     const t = traceSchema.safeParse(d.explanation);
     const e = t.success ? t.data : null;
-    if (!e || sha256Hex(d.explanation) !== d.outputHash || e.asOf !== d.asOf
-      || (!d.overridesId && (e.decision.outcome !== d.outcome || e.decision.payableCents !== d.payableCents)))
+    if (!e || sha256Hex(d.explanation) !== d.outputHash
+      || (!d.overridesId && (e.asOf !== d.asOf || e.decision.outcome !== d.outcome || e.decision.payableCents !== d.payableCents)))
       fail('EXPLANATION_INCONSISTENT', d.id, e ? 'explanation, outputHash and outcome columns disagree' : 'explanation is not a trace');
 
     // Replay only from verified inputs: with a tampered input the replay would diverge too, and hide the cause.
-    if (inputsOk) {
+    // An override is never replayed (D48): the result it carries is its target's, which is.
+    if (inputsOk && !d.overridesId) {
       const { dict } = validateDictionary(dictFile(plan.body));
       const replay = adjudicate({ plan: plan.body, ops: ops.body, dict: dict!, snapshot: d.facts, asOf: d.asOf });
       if (sha256Hex(replay) !== d.outputHash) fail('REPLAY_DIVERGED', d.id, `replay gives ${replay.decision.outcome} ${replay.decision.payableCents}`);
@@ -117,9 +121,21 @@ export async function verifyDecisions(db: Db, until?: string): Promise<{ checked
 
     if (d.overridesId) {
       // D18: an override sits beside the engine decision it overrides and preserves that decision's result.
+      // D48, D59: and it repeats what that decision was made on, is not dated before it, and gives a reason.
       const target = byId.get(d.overridesId);
-      if (!target || target.overridesId || target.claimId !== d.claimId || target.inputHash !== d.inputHash || target.outputHash !== d.outputHash || d.supersedesId)
+      if (!target || target.overridesId || target.claimId !== d.claimId || target.inputHash !== d.inputHash || target.outputHash !== d.outputHash || d.supersedesId
+        || target.planVersionId !== d.planVersionId || d.asOf < target.asOf || !d.overrideReasonCode?.trim() || !d.overrideReasonText?.trim()
+        || sha256Hex([d.facts, d.documentVersions]) !== sha256Hex([target.facts, target.documentVersions])
+        // D59 (b): an override approves the amount the engine calculated, and nothing else
+        || d.outcome !== 'APPROVE' || d.payableCents === null || d.payableCents !== e?.decision.payableCents)
         fail('OVERRIDE_INVALID', d.id, `overrides ${d.overridesId}`);
+      else if (e) {
+        // D48: the stored tier, under this row's ops version (checked above to be the one in force on its date), must hold
+        // the limit for the larger of the stored total and the amount, and the power the overridden reasons call for.
+        const power = powerToOverride([...plan.body.rules, ...versions.get(target.opsVersionId)!.body.rules], e.decision.reasons);
+        const check = checkAuthority(ops.body.authority ?? [], d.overrideTier, power, d.overrideTotalIncurredCents ?? 0, d.payableCents ?? 0);
+        if (!check.allowed) fail('OVERRIDE_UNAUTHORIZED', d.id, `tier ${d.overrideTier} lacks ${check.lacks.join(' and ')} for ${check.totalIncurredCents}`);
+      }
     } else if (d.supersedesId) {
       // D13: same claim, same plan version, later, and on changed facts (an unchanged inputHash is a no-op).
       const prev = byId.get(d.supersedesId);

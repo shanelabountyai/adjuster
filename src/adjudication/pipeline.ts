@@ -1,6 +1,8 @@
+import { tierOf } from '@/adjudication/authority';
 import { type ClaimStatus, transitionClaim } from '@/adjudication/claim-status';
 import { type Db, inputHashOf, loadVersions, recordDecision } from '@/adjudication/decisions';
-import { type DocumentStore, readDocumentStatuses, readEvidence, reviewDocument, type Upload, uploadDocument, type UploadedVersion, waiveDocument, type Waiver } from '@/adjudication/documents';
+import { type DocumentStore, OutOfAuthorityError, readDocumentStatuses, readEvidence, reviewDocument, type Upload, uploadDocument, type UploadedVersion, waiveDocument, type Waiver } from '@/adjudication/documents';
+import { checkAuthority, powerToOverride } from '@/rules/authority';
 import type { Snapshot } from '@/rules/derive';
 import { selectVersions } from '@/rules/select';
 
@@ -11,6 +13,7 @@ import { selectVersions } from '@/rules/select';
 // Filing a claim, accepting a document and waiving one each decide the claim in the transaction that makes the change
 // (task 3.5, D51a, D51d, D56), so a change the status table will not let be decided is not made at all.
 // An upload decides nothing, but one on a claim closed for no response reopens it in the same transaction (task 3.6, D51i).
+// A person's sign-off of a referral is a second row beside the engine's, never a change to it (task 3.8, D48, D59).
 
 const STATUS_FOR: Record<string, ClaimStatus> = { APPROVE: 'DECIDED', PARTIAL: 'DECIDED', DENY: 'DECIDED', PEND: 'PENDING_EVIDENCE', REFER: 'REFERRED' };
 
@@ -60,6 +63,44 @@ export const waiveEvidence = (db: Db, w: Waiver): Promise<PipelineResult> =>
   tx(db, async () => {
     await waiveDocument(db, w);
     return run(db, w.claimId, w.asOf, w);
+  });
+
+export type Override = { claimId: string; userId: string | null; reasonCode: string; reasonText: string; asOf: string };
+
+/**
+ * Signs off a referral: the claim's current engine decision, if it is a REFER with an amount, is approved at that
+ * amount by a person. The override row repeats what the engine decided on (facts, documents, trace and both hashes)
+ * and is dated `asOf`, under the ops version in force that day, whose tiers are the ones tested. Out of authority is
+ * refused before anything is written. A referral with no amount (a rule gap) is never approved this way.
+ * Seam (3.9): paid is 0 until payments are recorded; total incurred is then the larger of paid and this amount (D50).
+ */
+export const overrideDecision = (db: Db, o: Override): Promise<{ decisionId: string; outcome: string; claimStatus: ClaimStatus }> =>
+  tx(db, async () => {
+    const engine = (await db.query<{ id: string; outcome: string; payableCents: number | null; asOf: string; planVersionId: string; opsVersionId: string; reasons: string[] }>(
+      `SELECT "id", "outcome", "payableCents", "asOf"::text AS "asOf", "planVersionId", "opsVersionId", "explanation"->'decision'->'reasons' AS "reasons"
+       FROM "Decision" d WHERE "claimId" = $1 AND "overridesId" IS NULL
+         AND NOT EXISTS (SELECT 1 FROM "Decision" n WHERE n."supersedesId" = d."id" OR n."overridesId" = d."id")`, [o.claimId])).rows[0];
+    if (!engine || engine.outcome !== 'REFER' || engine.payableCents === null || o.asOf < engine.asOf)
+      throw new Error(`NOT_OVERRIDABLE: claim ${o.claimId} has no referral with an amount, dated on or before ${o.asOf}, that is still its decision`);
+
+    const versions = await loadVersions(db);
+    const [plan, decidedUnder] = [versions.get(engine.planVersionId)!, versions.get(engine.opsVersionId)!];
+    const selected = selectVersions({ planVersion: plan.id }, [...versions.values()].filter((v) => v.product === plan.product).map((v) => ({ ...v, name: v.id })), o.asOf);
+    if ('error' in selected) throw new Error(`${selected.error}: ${selected.kind} on ${o.asOf}`);
+    const tier = await tierOf(db, o.userId);
+    const power = powerToOverride([...plan.body.rules, ...decidedUnder.body.rules], engine.reasons);
+    const check = checkAuthority(selected.ops.body.authority ?? [], tier, power, 0, engine.payableCents);
+    if (!check.allowed) throw new OutOfAuthorityError(tier, check.lacks, `an override of decision ${engine.id}`);
+
+    const { rows } = await db.query<{ id: string }>(
+      `INSERT INTO "Decision" ("id", "claimId", "planVersionId", "planHash", "opsVersionId", "opsHash", "asOf", "facts", "documentVersions", "inputHash", "outputHash",
+         "engineSemanticsVersion", "outcome", "payableCents", "explanation", "overridesId", "overrideReasonCode", "overrideReasonText", "overrideTier", "overrideTotalIncurredCents", "overrideBy")
+       SELECT gen_random_uuid(), "claimId", "planVersionId", "planHash", $2, $3, $4::date, "facts", "documentVersions", "inputHash", "outputHash",
+         "engineSemanticsVersion", 'APPROVE', "payableCents", "explanation", "id", $5, $6, $7, $8, $9::uuid
+       FROM "Decision" WHERE "id" = $1 RETURNING "id"`,
+      [engine.id, selected.ops.id, selected.ops.contentHash, o.asOf, o.reasonCode, o.reasonText, tier, check.totalIncurredCents, o.userId]);
+    await transitionClaim(db, o.claimId, 'DECIDED', { userId: o.userId, reason: `override: ${o.reasonCode}` });
+    return { decisionId: rows[0]!.id, outcome: 'APPROVE', claimStatus: 'DECIDED' };
   });
 
 async function run(db: Db, claimId: string, asOf: string, { userId }: By): Promise<PipelineResult> {

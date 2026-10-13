@@ -4,6 +4,7 @@ import pg from 'pg';
 import { publishRuleSet, verifyDecisions } from '@/adjudication/decisions';
 import { sha256Hex } from '@/rules/canonical';
 import { seedDecisions } from '../../scripts/seed-decisions';
+import { seedOverrideReasons } from '../helpers/tiers';
 
 // Task 1.11, reseeded by 2.11. The clean seed (17 claims through the pipeline, four versions) verifies; each tamper TM-01..TM-08, written below the service with
 // raw SQL and the immutability triggers switched off, fails with exactly its one code. TM-09 is task 2.8's (D41).
@@ -18,6 +19,7 @@ let versions: Record<string, string> = {};
 beforeEach(async () => {
   await connected;
   ({ decisions: ids, versions } = await seedDecisions(client));
+  await seedOverrideReasons(client);
   opsId = versions['ops-v1']!;
 });
 
@@ -100,7 +102,7 @@ describe('decisions:verify', () => {
   });
 
   it('TM-07 an override pointing at another claim\'s decision → OVERRIDE_INVALID', async () => {
-    await copyOf(ids['GC-01']!, JSON.stringify({ overridesId: ids['GC-02'], overrideReasonCode: 'GOODWILL', overrideReasonText: 'tamper' }));
+    await copyOf(ids['GC-01']!, JSON.stringify({ overridesId: ids['GC-02'], overrideReasonCode: 'SIGN_OFF', overrideReasonText: 'tamper', overrideTier: 'manager', overrideTotalIncurredCents: 0, overrideBy: '00000000-0000-4000-8000-000000000001' }));
     expect(await codes()).toEqual(['OVERRIDE_INVALID']);
   });
 

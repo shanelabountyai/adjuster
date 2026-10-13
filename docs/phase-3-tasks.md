@@ -24,7 +24,7 @@ Defaults are given; none is taken until 3.1 records it. The first three change t
 - [x] **3.5 Evidence in the pipeline.** (D56: `openClaim`, `acceptEvidence`, `waiveEvidence`; engine `/7`) Missing documents pend and name each one (EV-01, EV-02); a claim already objectively deniable is not asked for documents. Accepting or waiving evidence re-adjudicates (EV-05) through `adjudicateClaim`, under D40's status rules.
 - [x] **3.6 No response.** (D57: `ClaimReminder` rows, `runNoResponse`, `uploadEvidence` reopens) Reminders at the ops rule set's `firstDay` and `secondDay`, then `CLOSED_NO_RESPONSE` at `closeDay`, all on the injected `asOf`. Not a denial: no decision row with an outcome of DENY, and the claim reopens when a document arrives (GC-11).
 - [x] **3.7 Authority.** (D58: `checkAuthority`, `TierAssignment`, the waiver reads its user's tier) A pure check: tier, power, total incurred on the claim, against the ops version in force. Tested on the total, never the increment.
-- [ ] **3.8 Override and sign-off.** An override is a separate decision row with reason code and text, linked to the engine decision it overrides, which stays as written. Out of authority is rejected before anything is written (OV-01..OV-03). GC-05: the referral is signed off at 77500 by an adjuster. `decisions:verify` checks override rows as decided in item 2.
+- [x] **3.8 Override and sign-off.** (D59: `overrideDecision`, `OverrideReason`, the row dated its own day; `OVERRIDE_UNAUTHORIZED`) An override is a separate decision row with reason code and text, linked to the engine decision it overrides, which stays as written. Out of authority is rejected before anything is written (OV-01..OV-03). GC-05: the referral is signed off at 77500 by an adjuster. `decisions:verify` checks override rows as decided in item 2.
 - [ ] **3.9 Mock payment.** `DECIDED → PAYMENT_PENDING → PAID → CLOSED` and `paymentStatus` `NONE → PENDING → PAID`, behind a `PaymentProvider` interface with one mock. The amount is the current decision's; a denial or an approval at 0 never pays; paying twice is a no-op. Paid amounts are what `d.sumPriorPaid` reads, so the aggregate erodes only by money paid.
 - [ ] **3.10 Supplemental.** A supplemental reopens the same claim. The total is recomputed from the new facts, the difference is paid, the deductible is taken once, and authority is tested on the new total (GC-15 step 8: 170100 total, 85000 supplemental, senior adjuster).
 - [ ] **3.11 Letters and notes.** The parts D42 left out: the documents a decision relied on, who decided and at what authority, the override reason in the note (never in the letter), and the pend letter's list of documents. Still text from stored rows only.
@@ -34,7 +34,7 @@ Defaults are given; none is taken until 3.1 records it. The first three change t
 
 ## Carried in, not owned by a task
 
-- From 3.1 (decisions.md, *Open after 3.1*): a supplemental not above what was paid cannot leave `DECIDED`; override reason codes have no home yet (3.8).
+- From 3.1 (decisions.md, *Open after 3.1*): a supplemental not above what was paid cannot leave `DECIDED`.
 
 - Shane has not yet read the GC-12 file note as the auditor (the second half of the Phase 2 "before Phase 3" check). 3.11 changes the note, so read it before then.
 - The database does not refuse a raw `UPDATE` of `Claim.status` (D38); only `transitionClaim` is meant to write it.

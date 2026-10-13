@@ -49,11 +49,12 @@ export function assertTransition(from: ClaimStatus, to: ClaimStatus, decision?: 
  * conditional on the status that was checked: a claim someone else moved in between throws instead of moving twice.
  */
 export async function transitionClaim(db: Db, claimId: string, to: ClaimStatus, by: { userId: string | null; reason?: string }): Promise<void> {
-  // The current decision is the one no later row supersedes or overrides.
+  // The current decision is the one no later row supersedes or overrides. An override goes with the decision it
+  // overrides: once that is superseded, the override is history too (D59).
   const { rows } = await db.query<{ status: ClaimStatus; decisionId: string | null; outcome: string; payableCents: number | null }>(
     `SELECT c."status", d."id" AS "decisionId", d."outcome", d."payableCents" FROM "Claim" c
      LEFT JOIN "Decision" d ON d."claimId" = c."id"
-       AND NOT EXISTS (SELECT 1 FROM "Decision" n WHERE n."supersedesId" = d."id" OR n."overridesId" = d."id")
+       AND NOT EXISTS (SELECT 1 FROM "Decision" n WHERE n."supersedesId" IN (d."id", d."overridesId") OR n."overridesId" = d."id")
      WHERE c."id" = $1`, [claimId]);
   if (!rows.length) throw new Error(`Claim ${claimId} not found`);
   if (rows.length > 1) throw new Error(`Claim ${claimId} has ${rows.length} current decisions`);

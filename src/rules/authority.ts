@@ -8,6 +8,10 @@ type Tiers = NonNullable<RuleSet['authority']>;
 export const powersOf = (tiers: Tiers, tier: string | null): string[] =>
   tiers.slice(0, tiers.findIndex((t) => t.code === tier) + 1).flatMap((t) => t.powers);
 
+/** The power an override needs (D48): the one that clears a flag, when a reason it sets aside is a rule of kind `flag`. */
+export const powerToOverride = (rules: RuleSet['rules'], reasons: string[]): string | null =>
+  rules.some((r) => r.kind === 'flag' && reasons.includes(r.id)) ? 'clear_flags' : null;
+
 export type AuthorityCheck = { totalIncurredCents: number; allowed: boolean; lacks: ('amount' | 'power')[] };
 
 /**
