@@ -100,3 +100,22 @@ Appeal flow (decider ≠ original decider) · rule coverage report (rows never h
 ## Build Notes for Claude Code
 
 CLAUDE.md: house conventions + **no plan-specific logic in code**, **no eval or expression strings**, **published rule sets and decisions are immutable**, **no decision without an explanation**, **unknown is never false and a rule gap is never an approval**, **run `decisions:verify` in CI on every push**. TDD order: fact dictionary and schemas → fixtures → condition evaluator → table evaluator → calc steps → verify → pipeline. Do this *by hand first*: before any evaluator code, adjudicate three golden claims on paper from the rule tables alone and write the explanation you would want to receive. That page is the trace schema.
+
+---
+
+## Addendum A: second product for CP-01 (2026-10-13, D64)
+
+**Sample business:** the same administrator adds a furniture protection plan (three tiers: Spotless, Everyday, Heirloom), sold with a piece of furniture and covering stains, accidental damage and structural failure.
+
+**Scope honesty:** as above. Synthetic data, invented terms, no compliance claims, mock payments. A store credit here is a number and a line in a letter; nothing is issued.
+
+**What it is for.** P0-7's CP-01: a second product arrives as rule data and fixtures with no change under `src/` or `prisma/` between the tags `cp-01-base` and `cp-01-done` (D65). Furniture was chosen because it does not fit easily: no serial number, a limit that is the purchase price and not a constant, a remedy ladder that ends in a store credit, and a plan that in life covers several pieces.
+
+**Requirements**
+- [ ] `rules/furniture/`: its own fact dictionary, one plan version, one ops version. No file under `rules/electronics/` changes
+- [ ] Rules H1 to H23, flags HF1 to HF8 and the payout order of `docs/domain-brief.md` section 12, with every reason collected as on electronics
+- [ ] Payout fixtures FP-A..FP-I and golden claims FG-01..FG-12 to the cent, both oracle derivations agreeing
+- [ ] `decisions:verify` OK across both products; `rules:lint` finds no identifier of either product under `src/`
+- [ ] Anything the product needs from `src/` or a migration lands before `cp-01-base`, each as a recorded decision, and the write-up counts them (V1 to V8 in `docs/decisions.md`)
+
+**Non-goals for this product:** several pieces on one contract, matching-set replacement, remedies with no invoice, issuing or redeeming a store credit, cancellation and refund, a furniture-specific screen.

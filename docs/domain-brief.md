@@ -215,3 +215,166 @@ Also legal: `IN_REVIEW → DECIDED` · `REFERRED → PENDING_EVIDENCE` · `PENDI
 6. Referral: E23 (above 50000) and F2. Adjuster clears F2 ("unrelated failure, network-repaired") and approves within 100000 authority.
 7. Payment: 85100 paid; claim closed.
 8. Supplemental: teardown finds motherboard damage, +50000. Covered repair is now 145000 > 133000 → replace. New total min(190000, 180000) − 9900 = 170100; less 85100 already paid = supplemental **85000**. Total incurred 170100 exceeds adjuster authority, so a senior adjuster approves. Aggregate remaining 400000 − 20000 − 170100 = 209900; the contract continues (replacement does not fulfill a Premier contract).
+
+## 12. Second product: furniture protection plan (CP-01, D64)
+
+A second line sold by the same administrator, added as rule data: its own fact dictionary, one plan version, one ops version, its own fixtures. Sections 1 to 11 are electronics and do not change. Everything here is invented for the sample business, as in section 1. The eight places where furniture presses on the closed vocabulary are V1 to V8 in `decisions.md` (*4.6: open, for Shane*); no rule data is written until they are answered.
+
+### 12.1 Scope and plans
+
+A plan is sold with a piece of furniture on the same invoice and covers that one piece (V3). The term starts on the **delivery date**, not the purchase date. Left out, beyond section 1's list: matching-set replacement, dye-lot mismatch, delivery and reselection fees, remedies with no invoice (a mailed cleaning kit, phone advice), cancellation and pro-rata refund.
+
+| Term | Spotless | Everyday | Heirloom |
+|---|---|---|---|
+| Term, from delivery | 36 months | 60 months | 60 months |
+| Perils | Stain | Stain + accidental damage | Stain + accidental damage + structural |
+| Stains covered on | Fabric, protected leather | + hard surfaces (wood, glass, stone) | + natural leather (aniline, suede, nubuck) |
+| Waiting period | None | None | None |
+| Structural cover starts | n/a | n/a | Day 365 after delivery (the manufacturer's warranty year) |
+| Service fee per claim | 0 | 0 stain / 5000 accidental damage | 0 |
+| Limit, per claim and in total | Purchase price of the piece | Purchase price | Purchase price |
+| Stain claims per 12 months | 2 | 3 | No limit |
+| Pet damage other than a stain | Excluded | Excluded | Covered |
+| Replace when service cost exceeds | 60% of R | 60% of R | 60% of R |
+| Replacement | Store credit, no depreciation | Store credit, no depreciation | Store credit, no depreciation |
+| Replacement fulfills contract | Yes | Yes | Yes |
+| Transferable | No | No | No |
+
+- **Perils:** *stain* (a spill or mark from one identified incident); *accidental damage* (rip, cut, puncture, burn, gouge, chip, breakage, from one incident); *structural* (frame, springs, welds, reclining and sleeper mechanisms, motors, seam separation).
+- **Exclusions, all plans:** accumulated soiling, body oils and perspiration; stains of unknown origin; normal wear, fading, odor, natural characteristics of leather or wood; pre-existing and delivery damage; damage from the holder's own cleaning or repair attempt; commercial, rental or outdoor use; intentional damage, abuse, misuse; damage in a move or in storage; a piece no longer available for inspection; external events (fire, flood, infestation).
+- **The service fee is a teaching parameter [verify]:** most real furniture plans charge no deductible. Everyday has one so the deductible step and "approved at 0" are exercised on this product too.
+
+### 12.2 What differs from electronics
+
+| Electronics | Furniture | Fits the vocabulary? |
+|---|---|---|
+| A serial number identifies the product (E5) | The invoice line identifies the piece; a person confirms the match | Yes: a human-entered boolean, as E5 already is |
+| Waiting period per plan (E3); manufacturer's warranty is an entered boolean (E13) | No waiting period; structural cover starts on day 365, computed from the delivery date | Yes: `days_between`, rows by peril |
+| Late report refers (E4) | Late report denies | Yes: the outcome is row data |
+| Limits are constants per plan | The limit is the piece's purchase price, a fact | Payout: yes. Eligibility: only by an idiom (V2) |
+| Depreciation on an ACV replace | None | Yes: the payout order is plan data, and this one is shorter |
+| Replace at 70% of R | Replace at 60% of R, or when the technician says the piece cannot be repaired | Yes: one more row in the `path` table (V8 note) |
+| Payment in money to the servicer | Repair: money to the servicer. Replace: store credit to the holder | The amount: yes. The form: no (V1) |
+| A non-holder may prove a transfer (E22 pends) | Not transferable: a non-holder is denied | Yes: row data; no transfer document type |
+| Network estimate, else a second one (E21) | The administrator assigns the technician; no second-estimate rule | Yes: the rule is absent |
+| One product per contract | A real plan covers every piece on an invoice | No (V3); the brief takes one piece per contract |
+
+### 12.3 Eligibility rules
+
+Class and stage as in section 3. Rule ids are the product's own (H for home), so a reason code never means two things across products.
+
+| ID | Class | Rule (parameters) | Outcome | Claimant reason text |
+|---|---|---|---|---|
+| H1 | C | Contract active on date of loss | Deny | "Your plan was not active on the date of loss." |
+| H2 | C | Date of loss within term | Deny | "The loss occurred outside your coverage term ({start}–{end})." |
+| H3 | C | Structural: date of loss on or after day N=365 from delivery | Deny | "During the first year, structural defects are covered by the manufacturer's warranty; please contact your retailer." |
+| H4 | C | Reported within N=30 days of date of loss | Deny | "Your claim was reported more than {N} days after the damage occurred." |
+| H5 | O | Claimed piece is the piece on the contract | Refer | "The piece identified does not match the covered piece." |
+| H6 | C | Peril is in the plan's covered perils | Deny | "Your plan does not cover {peril}." |
+| H7 | C | Stain: the material is one the plan covers | Deny | "Your plan does not cover stains on {material}." |
+| H8 | C | Stain: one identified incident (not accumulation, not unknown origin) | Deny | "Soiling that builds up over time is excluded." / "Stains of unknown origin are excluded." |
+| H9 | C | Normal wear, fading, odor or a natural characteristic | Deny | "Normal wear, fading and natural characteristics are excluded." |
+| H10 | C | Pre-existing or delivery damage | Refer (recommend deny) | "The damage existed before coverage began." |
+| H11 | C | Pet damage other than a stain (Heirloom: covered) | Deny | "Damage from pets, other than stains, is excluded." |
+| H12 | C | Damage from the holder's own cleaning or repair attempt (declared → deny; suspected → refer) | Deny / refer | "Damage caused by cleaning or repair not arranged through us is excluded." |
+| H13 | C | Commercial, rental or outdoor use | Deny | "Furniture used commercially, rented out or kept outdoors is excluded." |
+| H14 | C | Intentional damage, abuse, misuse | Refer | "Damage from abuse or intentional acts is excluded." |
+| H15 | C | Damaged in a move or in storage | Deny | "Damage during a move or in storage is excluded." |
+| H16 | C | Piece unavailable for inspection | Deny | "We cannot cover a piece that is not available for inspection." |
+| H17 | C | External cause (fire, flood, infestation) | Deny | "Damage from external events is excluded." |
+| H18 | C | Stain: at most N stain claims per rolling 12 months (2 / 3 / no limit) | Deny | "You have reached the limit of {N} stain claims in 12 months." |
+| H19 | C | Total paid on the contract is below the purchase price | Deny | "Your plan's total limit, the price you paid, has been reached." |
+| H20 | C | Claimant is the contract holder | Deny | "This plan cannot be transferred, and you are not the holder on record." |
+| H21 | O | Duplicate: same contract and peril, date of loss within N=7 days | Refer | "This appears to duplicate claim {id}." |
+| H22 | O | Required documents accepted for the peril | Pend | "We need: {list}." |
+| H23 | O | Payable above the auto-approve limit (50000) | Refer | Internal only |
+
+- H8's "unknown origin" is an answer a person enters, not a missing fact. Missing still pends (non-negotiable 6); `unknown_origin` is a value of the enum and denies (V7).
+- H10, H12 (suspected) and H14 are judgment exclusions: stored with `claimantVisible: false`, neutral wording in the letter (D24).
+- H2 already denies a loss dated before delivery, which is the objective half of H10.
+
+### 12.4 Payout order of operations
+
+1. **Covered service cost C** = the technician's quote (cleaning, repair or a replacement part) minus non-covered lines. Absent when the technician reports the piece cannot be repaired.
+2. **Replacement value R** = current retail price of the same or a comparable piece at the selling retailer.
+3. **Repair or replace:** if the piece cannot be repaired, or C > 60% × R, replace and loss L = R. Otherwise repair and L = C. No depreciation.
+4. **Limit of liability:** L = min(L, purchase price).
+5. **Service fee:** L = max(0, L − fee).
+6. **Remaining limit:** payable = min(L, purchase price − prior paid).
+7. **Form:** a repair is paid to the technician. A replacement is a store credit to the holder at the selling retailer, and fulfills the contract.
+8. **Erosion:** only the amount paid erodes the limit; the fee does not.
+
+Same conventions as section 4: integer cents, basis points, half-up, the 60% test by cross-multiplication (D26). `PARTIAL` means the remaining limit cut the payment; the price cap in step 4 does not make a claim partial, as on electronics.
+
+Payout fixtures (all checked by hand):
+
+| ID | Plan | Inputs | Math | Payable |
+|---|---|---|---|---|
+| FP-A clean | Spotless, stain | Price 120000, R 130000, C 18000 | 18000 ≤ 78000 → repair; fee 0 | **18000** |
+| FP-B repair with fee | Everyday, accidental | Price 90000, R 95000, C 30000 | 30000 ≤ 57000 → repair; 30000 − 5000 | **25000** |
+| FP-C replace | Everyday, accidental | Price 150000, R 160000, C 100000 | 100000 > 96000 → replace at 160000; min(160000, 150000) − 5000 | **145000** (store credit; contract fulfilled) |
+| FP-D not repairable | Heirloom, structural | Price 45000, R 40000, no C | Replace at 40000; min(40000, 45000); fee 0 | **40000** (store credit; contract fulfilled) |
+| FP-E below the fee | Everyday, accidental | Price 60000, R 60000, C 4000 | 4000 − 5000, floored at 0 | **0** (approved, not denied) |
+| FP-F remaining limit | Heirloom, stain | Price 120000, R 125000, C 40000, prior paid 90000 | 40000 ≤ 75000 → repair; remaining 120000 − 90000 = 30000 | **30000** (partial; contract fulfilled) |
+| FP-G1 at the threshold | Spotless, stain | Price 100000, R 100000, C 60000 | 60000 is not above 60000 → repair | **60000** |
+| FP-G2 one cent over | Spotless, stain | Price 100000, R 100000, C 60001 | 60001 > 60000 → replace at 100000; min(100000, 100000) | **100000** (store credit; contract fulfilled) |
+| FP-H denial | Spotless | Torn cushion (accidental damage) | Valuation not run | **null** |
+| FP-I price cap on a repair | Spotless, stain | Price 50000, R 100000, C 55000 | 55000 ≤ 60000 → repair; min(55000, 50000) | **50000** (approved, not partial) |
+
+Note on FP-D: the limit was 45000 and 40000 is paid; the last 5000 is not owed, because a replacement fulfills the contract.
+
+### 12.5 Evidence documents
+
+| Document | Stain | Accidental damage | Structural | Adjuster checks |
+|---|---|---|---|---|
+| Proof of purchase (invoice) | Required | Required | Required | Piece and price match the contract; delivery date on or before date of loss |
+| Photos | Required | Required | Required | Whole piece, close-up of the damage, care tag legible |
+| Incident statement | Required | Required | Optional | What happened and when; consistent with FNOL |
+| Technician's report | Required | Required | Required | Assigned technician; itemized quote, or "cannot be repaired"; cause consistent with the peril |
+
+Statuses, reminders, versions and waivers are section 6's, unchanged. Rejection reasons for this product: illegible, wrong document, **item mismatch** (in place of serial mismatch), date inconsistent, incomplete (V4).
+
+### 12.6 Authority and ops parameters
+
+| Tier | Approve up to (total incurred on the claim) |
+|---|---|
+| System | 50000 |
+| Adjuster | 150000 |
+| Senior adjuster | 300000 |
+| Claims manager | Unlimited |
+
+Tier names and powers are electronics' (V6); the limits are this product's own ops data. Auto-deny on; reminders at day 10 and 20, closed for no response at day 30.
+
+### 12.7 Red flags (refer only; never deny; never shown to the claimant)
+
+| ID | Indicator |
+|---|---|
+| HF1 | Date of loss within 30 days after delivery |
+| HF2 | Two or more claims on the contract within 60 days |
+| HF3 | Reported on day 28 to 30 after the loss, the last days of the window |
+| HF4 | Service quote at 55% to 60% of R, just under the replace threshold |
+| HF5 | Same claimant with claims on four or more contracts |
+| HF6 | Photo metadata date before date of loss, or the same document hash on another claim |
+| HF7 | Date of loss within the last 30 days of the term |
+| HF8 | Claimant's account of the cause changed between FNOL and statement |
+
+HF5's threshold is four, not electronics' three: with one piece per contract, one household's living room is several contracts, and one spill can reach two of them.
+
+### 12.8 Golden claims (FG-01..FG-12)
+
+| FG | Plan | Facts | Decision | Reasons |
+|---|---|---|---|---|
+| 01 | Spotless | Fabric sofa; wine spill in month 5, reported 3 days later; FP-A; documents complete | Approve 18000 | All pass; 18000, fee 0 |
+| 02 | Spotless | Torn seat cushion | Deny (null) | H6 |
+| 03 | Heirloom | Power recliner; mechanism fails on day 200 | Deny | H3 |
+| 04 | Everyday | Fabric armchair; soiling built up over months; reported 45 days after it was noticed | Deny | H4 + H8, both cited |
+| 05 | Everyday | Dining table, burn; FP-C | Refer → approve 145000 as store credit on adjuster sign-off | Replace threshold; H23 |
+| 06 | Everyday | Small tear in a dining chair; FP-E | Approve 0 | Below the service fee |
+| 07 | Heirloom | Fabric sectional; two earlier claims paid 45000 each, both more than 60 days ago; FP-F | Partial 30000 | Remaining limit; contract fulfilled |
+| 08 | Heirloom | Accent chair; frame cracks on day 500; technician: cannot be repaired; FP-D | Approve 40000 as store credit | No C; contract fulfilled |
+| 09 | Spotless | Third stain claim in 12 months, two approved before | Deny | H18 |
+| 10 | Everyday | Protected-leather chair, ink stain, service cost 15000; no incident statement | Pend | H22; not a denial |
+| 11 | Heirloom | Fabric loveseat, price 110000, R 115000, service cost 22000; rip on day 12 after delivery, reported 29 days later | Refer (calculated 22000) | HF1 + HF3 |
+| 12 | Spotless | Suede ottoman; a stain the holder cannot explain | Deny | H7 + H8, both cited |
+
+No furniture golden plays a supplemental, an override other than FG-05's sign-off, or an appeal: GC-15 and AP-01..06 prove those on electronics, and the code is the same.
