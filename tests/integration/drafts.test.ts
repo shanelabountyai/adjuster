@@ -157,7 +157,7 @@ describe('a draft row', () => {
     await publish(id);
     const row = await rowOf(id);
     expect([row.status, row.contentHash, row.publishedBy, row.publishedAt instanceof Date]).toEqual(['published', sha256Hex(row.body), await manager(), true]);
-    expect(await events(id, 'ruleset.published')).toEqual([{ actorUserId: await manager(), data: { contentHash: row.contentHash, effectiveFrom: nextDay } }]);
+    expect(await events(id, 'ruleset.published')).toEqual([{ actorUserId: await manager(), data: { contentHash: row.contentHash, effectiveFrom: nextDay, changed: 0, unchanged: 0 } }]);
     await expect(client.query(`UPDATE "RuleSetVersion" SET "body" = '{}' WHERE "id" = $1`, [id])).rejects.toThrow();
   });
 

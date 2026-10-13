@@ -4,7 +4,10 @@ import { tierOf } from '@/adjudication/authority';
 import { type Db, dictFile, loadVersions } from '@/adjudication/decisions';
 import { OutOfAuthorityError } from '@/adjudication/documents';
 import { powersOf } from '@/rules/authority';
+import type { Trace } from '@/rules/adjudicate';
 import { canonicalJson, sha256Hex } from '@/rules/canonical';
+import type { Snapshot } from '@/rules/derive';
+import { impactDiff, unhitRows } from '@/rules/impact';
 import type { RuleSet } from '@/rules/schema';
 import { opsInForce } from '@/rules/select';
 import { checkDictionaryHash, type Issue, validateDictionary, validateRuleSet } from '@/rules/validate';
@@ -13,6 +16,8 @@ import { checkDictionaryHash, type Issue, validateDictionary, validateRuleSet } 
 // kind and product, its author is whoever saved it last, and someone else publishes it. Each write carries its audit
 // event in the same statement. Refusals are tested in D70's order: DRAFT_EXISTS, NOT_A_DRAFT, OUT_OF_AUTHORITY,
 // PUBLISHER_IS_AUTHOR, DIFF_STALE, then DRAFT_INVALID, OPS_SAME_DAY and OPS_BACKDATED.
+// Task 4.4 (D71, D78): `impactOfDraft` runs a draft over the stored decisions and writes nothing; the hash it returns
+// is the one `publishDraft` takes.
 
 export class DraftError extends Error {
   constructor(
@@ -30,6 +35,42 @@ async function needPower(db: Db, product: string, userId: string, asOf: string, 
   const tier = await tierOf(db, userId);
   if (!powersOf(opsInForce(versions, asOf)?.body.authority ?? [], tier).includes(power)) throw new OutOfAuthorityError(tier, ['power'], needed);
   return versions;
+}
+
+/** Throws DRAFT_INVALID, carrying the issues, unless the body validates and pins its dictionary's hash. */
+function needValid(body: RuleSet, what: string) {
+  const dict = dictFile(body);
+  const issues = [...validateRuleSet(body, validateDictionary(dict).dict!), ...checkDictionaryHash(body, dict)];
+  if (issues.length) throw new DraftError('DRAFT_INVALID', `${what} has ${issues.length} validation issue(s): ${issues.map((i) => i.code).join(', ')}`, issues);
+}
+
+// D71: one case per claim of the draft's product, its current engine decision (the one no later engine row
+// supersedes; an override is a person's and is not a case). The plan a decision ran under is its contract's pin (D41).
+// D78: the coverage report reads every stored engine trace of the product, superseded ones too.
+async function impactOf(db: Db, draft: RuleSet, versions: readonly { id: string; body: RuleSet }[]) {
+  const body = new Map(versions.map((v) => [v.id, v.body]));
+  const { rows } = await db.query<{ claimId: string; planVersionId: string; opsVersionId: string; asOf: string; facts: Snapshot; explanation: Trace; current: boolean }>(
+    `SELECT d."claimId", d."planVersionId", d."opsVersionId", d."asOf"::text AS "asOf", d."facts", d."explanation",
+            NOT EXISTS (SELECT 1 FROM "Decision" n WHERE n."supersedesId" = d."id") AS "current"
+     FROM "Decision" d JOIN "RuleSetVersion" o ON o."id" = d."opsVersionId"
+     WHERE d."overridesId" IS NULL AND o."product" = $1 ORDER BY d."claimId", d."createdAt"`, [draft.product]);
+  const cases = rows.filter((r) => r.current).map((r) => (
+    { claim: r.claimId, snapshot: r.facts, asOf: r.asOf, plan: body.get(r.planVersionId)!, ops: body.get(r.opsVersionId)!, trace: r.explanation }));
+  return { ...impactDiff(draft, validateDictionary(dictFile(draft)).dict!, cases), unhit: unhitRows(draft, rows.map((r) => r.explanation)) };
+}
+
+/**
+ * The impact diff of a draft as it is stored: each claim whose current decision would move, with its outcome, reasons
+ * and cents before and after, and the draft's rows no stored decision hit. Reads only. `diffHash` names the content
+ * the diff ran on. A draft that does not validate has no diff: the engine cannot run it.
+ */
+export async function impactOfDraft(db: Db, d: { id: string }) {
+  const { rows: [row] } = await db.query<{ kind: string; product: string; version: number; status: string; body: RuleSet }>(
+    `SELECT "kind", "product", "version", "status", "body" FROM "RuleSetVersion" WHERE "id" = $1::uuid`, [d.id]);
+  if (row?.status !== 'draft') throw notADraft(d.id, row?.status);
+  needValid(row.body, `${row.product} ${row.kind} v${row.version}`);
+  const versions = [...(await loadVersions(db)).values()].filter((v) => v.product === row.product);
+  return { diffHash: sha256Hex(row.body), kind: row.kind, ...(await impactOf(db, row.body, versions)) };
 }
 
 /** Starts the one open draft of a kind and product; returns its id. */
@@ -100,14 +141,14 @@ export async function publishDraft(db: Db, d: { id: string; userId: string; diff
   if (row.authoredBy === d.userId) throw new DraftError('PUBLISHER_IS_AUTHOR', `${what} was last saved by its publisher`);
   const contentHash = sha256Hex(row.body);
   if (d.diffHash !== contentHash) throw new DraftError('DIFF_STALE', `${what} is ${contentHash}; the impact diff ran on ${d.diffHash}`);
-  const dict = dictFile(row.body);
-  const issues = [...validateRuleSet(row.body, validateDictionary(dict).dict!), ...checkDictionaryHash(row.body, dict)];
-  if (issues.length) throw new DraftError('DRAFT_INVALID', `${what} has ${issues.length} validation issue(s): ${issues.map((i) => i.code).join(', ')}`, issues);
+  needValid(row.body, what);
   // D77: selection takes the latest ops version effective on a day, so two from the same day would have no answer.
   // ponytail: a file loaded by publishRuleSet is not tested for this; it is the seed's loader
   const sameDay = versions.find((v) => row.kind === 'ops' && v.kind === 'ops' && v.status !== 'draft' && v.effectiveFrom === row.body.effectiveFrom);
   if (sameDay) throw new DraftError('OPS_SAME_DAY', `${what} takes effect on ${row.body.effectiveFrom}, as ops v${sameDay.version} does`);
 
+  // D71: the event keeps how many claims the diff moved. Counted on the body this statement names.
+  const impact = await impactOf(db, row.body, versions);
   const body = JSON.stringify(row.body);
   const published = await db.query(
     `WITH published AS (
@@ -118,7 +159,7 @@ export async function publishDraft(db: Db, d: { id: string; userId: string; diff
        RETURNING r."id")
      INSERT INTO "AuditEvent" ("actorUserId", "action", "targetType", "targetId", "data")
      SELECT $3::uuid, 'ruleset.published', 'RuleSetVersion', "id"::text, $5::jsonb FROM published RETURNING "id"`,
-    [d.id, contentHash, d.userId, body, JSON.stringify({ contentHash, effectiveFrom: row.body.effectiveFrom })]);
+    [d.id, contentHash, d.userId, body, JSON.stringify({ contentHash, effectiveFrom: row.body.effectiveFrom, changed: impact.changed.length, unchanged: impact.unchanged })]);
   if (!published.rows[0]) {
     const { rows: [now] } = await db.query<{ status: string; same: boolean }>(`SELECT "status", "body" = $2::jsonb AS "same" FROM "RuleSetVersion" WHERE "id" = $1::uuid`, [d.id, body]);
     if (now?.status !== 'draft') throw notADraft(d.id, now?.status);
