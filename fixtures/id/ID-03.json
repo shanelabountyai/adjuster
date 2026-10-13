@@ -1,0 +1,88 @@
+{
+  "id": "ID-03",
+  "kind": "impact-diff",
+  "title": "The auto-approve limit raised to 80000: a referral becomes an approval",
+  "source": "PRD P0-9 / D71",
+  "note": "The draft is `base` with `edits` applied. It stands in for the version of its kind each claim was decided under; the claim's facts, asOf and other version stay.",
+  "base": "ops-v1",
+  "edits": [
+    {
+      "path": [
+        "authority",
+        "system",
+        "approveUpToCents"
+      ],
+      "value": 80000
+    },
+    {
+      "path": [
+        "rules",
+        "E23",
+        "rows",
+        "E23.pass",
+        "when",
+        0,
+        "value"
+      ],
+      "value": 80000
+    },
+    {
+      "path": [
+        "rules",
+        "E23",
+        "rows",
+        "E23.fail",
+        "when",
+        0,
+        "value"
+      ],
+      "value": 80000
+    },
+    {
+      "path": [
+        "rules",
+        "E23",
+        "rows",
+        "E23.fail",
+        "then",
+        "noteText"
+      ],
+      "value": "Payable {amt} above auto-approve limit 80000."
+    }
+  ],
+  "claims": [
+    "GC-01",
+    "GC-02",
+    "GC-03",
+    "GC-04",
+    "GC-05",
+    "GC-06",
+    "GC-07",
+    "GC-08",
+    "GC-09",
+    "GC-10",
+    "GC-12",
+    "GC-13",
+    "GC-14"
+  ],
+  "expected": {
+    "changed": [
+      {
+        "claim": "GC-05",
+        "before": {
+          "outcome": "REFER",
+          "reasons": [
+            "E23"
+          ],
+          "payableCents": 77500
+        },
+        "after": {
+          "outcome": "APPROVE",
+          "reasons": [],
+          "payableCents": 77500
+        }
+      }
+    ],
+    "unchanged": 12
+  }
+}

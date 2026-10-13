@@ -1,0 +1,73 @@
+{
+  "id": "OV-04",
+  "kind": "authority",
+  "title": "Authoring a rule set and publishing one are two powers, held as every other power is",
+  "source": "domain brief s7 / D66 / D68",
+  "ops": "ops-v3",
+  "cases": [
+    {
+      "name": "a senior adjuster drafts",
+      "tier": "senior",
+      "power": "author_rules",
+      "paidCents": 0,
+      "amountCents": 0,
+      "expected": {
+        "totalIncurredCents": 0,
+        "allowed": true,
+        "lacks": []
+      }
+    },
+    {
+      "name": "an adjuster does not",
+      "tier": "adjuster",
+      "power": "author_rules",
+      "paidCents": 0,
+      "amountCents": 0,
+      "expected": {
+        "totalIncurredCents": 0,
+        "allowed": false,
+        "lacks": [
+          "power"
+        ]
+      }
+    },
+    {
+      "name": "a manager drafts too",
+      "tier": "manager",
+      "power": "author_rules",
+      "paidCents": 0,
+      "amountCents": 0,
+      "expected": {
+        "totalIncurredCents": 0,
+        "allowed": true,
+        "lacks": []
+      }
+    },
+    {
+      "name": "a manager publishes",
+      "tier": "manager",
+      "power": "publish_rules",
+      "paidCents": 0,
+      "amountCents": 0,
+      "expected": {
+        "totalIncurredCents": 0,
+        "allowed": true,
+        "lacks": []
+      }
+    },
+    {
+      "name": "a senior adjuster does not publish",
+      "tier": "senior",
+      "power": "publish_rules",
+      "paidCents": 0,
+      "amountCents": 0,
+      "expected": {
+        "totalIncurredCents": 0,
+        "allowed": false,
+        "lacks": [
+          "power"
+        ]
+      }
+    }
+  ]
+}

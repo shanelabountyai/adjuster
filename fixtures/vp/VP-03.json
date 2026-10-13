@@ -31,8 +31,14 @@
     {
       "name": "ops-v3",
       "kind": "ops",
+      "status": "published",
+      "effectiveFrom": "2026-10-13"
+    },
+    {
+      "name": "ops-v4",
+      "kind": "ops",
       "status": "draft",
-      "effectiveFrom": "2026-06-01"
+      "effectiveFrom": "2026-12-01"
     }
   ],
   "cases": [
@@ -63,16 +69,16 @@
       }
     },
     {
-      "name": "after the draft ops-v3's date",
+      "name": "after the draft ops-v4's date",
       "contract": {
         "planVersion": "plan-v1"
       },
       "dateOfLoss": "2026-03-20",
       "dateReported": "2026-03-22",
-      "asOf": "2026-07-01",
+      "asOf": "2027-01-01",
       "expected": {
         "plan": "plan-v1",
-        "ops": "ops-v2"
+        "ops": "ops-v3"
       }
     }
   ]

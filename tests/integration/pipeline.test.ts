@@ -23,7 +23,7 @@ const versionIds: Record<string, string> = {};
 beforeEach(async () => {
   await connected;
   await client.query('TRUNCATE "Payment", "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
-  for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
+  for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2', 'ops-v3']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
 });
 
 // Task 3.4: documents are filed through the services. The store is content-addressed, so one directory serves every run.
@@ -208,7 +208,7 @@ describe('adjudicateClaim', () => {
     const { id, fx, ids } = await rerun('PL-03');
     const count = async () => Number((await client.query('SELECT count(*) FROM "Decision"')).rows[0].count);
     const before = await count();
-    await publishRuleSet(client, { ...read('rules/electronics/ops-v2.json'), version: 3, effectiveFrom: '2026-06-01' });
+    await publishRuleSet(client, { ...read('rules/electronics/ops-v2.json'), version: 4, effectiveFrom: '2026-06-01' });
     expect(await count()).toBe(before);
     expect((await adjudicateClaim(client, id, fx.runs.at(-1).asOf)).decisionId).toBe(ids.at(-1));
     expect(await count()).toBe(before);

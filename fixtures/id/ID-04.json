@@ -1,0 +1,39 @@
+{
+  "id": "ID-04",
+  "kind": "impact-diff",
+  "title": "Plus per-claim limit 100000 to 150000: no golden claim reaches either",
+  "source": "PRD P0-9 / D71",
+  "note": "The draft is `base` with `edits` applied. It stands in for the version of its kind each claim was decided under; the claim's facts, asOf and other version stay.",
+  "base": "plan-v1",
+  "edits": [
+    {
+      "path": [
+        "lookups",
+        "perClaimLimitCents",
+        "rows",
+        "pcl.plus",
+        "value"
+      ],
+      "value": 150000
+    }
+  ],
+  "claims": [
+    "GC-01",
+    "GC-02",
+    "GC-03",
+    "GC-04",
+    "GC-05",
+    "GC-06",
+    "GC-07",
+    "GC-08",
+    "GC-09",
+    "GC-10",
+    "GC-12",
+    "GC-13",
+    "GC-14"
+  ],
+  "expected": {
+    "changed": [],
+    "unchanged": 13
+  }
+}

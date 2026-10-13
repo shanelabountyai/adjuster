@@ -31,8 +31,14 @@
     {
       "name": "ops-v3",
       "kind": "ops",
+      "status": "published",
+      "effectiveFrom": "2026-10-13"
+    },
+    {
+      "name": "ops-v4",
+      "kind": "ops",
       "status": "draft",
-      "effectiveFrom": "2026-06-01"
+      "effectiveFrom": "2026-12-01"
     }
   ],
   "cases": [

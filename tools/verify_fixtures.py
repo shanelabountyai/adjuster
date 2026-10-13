@@ -37,7 +37,7 @@ DENY_ONLY_PAYABLE_NULL = {"GC-02", "GC-03", "GC-04", "GC-09", "GC-14"}
 RV_KEY = [("plan-v1", "APPROVE", 25000), ("plan-v2", "APPROVE", 20000)]
 VP_KEY = {
     "VP-02": [("plan-v1", "ops-v2"), ("plan-v2", "ops-v2")],
-    "VP-03": [("plan-v1", "ops-v1"), ("plan-v1", "ops-v2"), ("plan-v1", "ops-v2")],
+    "VP-03": [("plan-v1", "ops-v1"), ("plan-v1", "ops-v2"), ("plan-v1", "ops-v3")],
     "VP-04": [("NO_EFFECTIVE_VERSION", "plan"), ("NO_EFFECTIVE_VERSION", "ops")],
 }
 # D38, typed from domain brief s7's status line, plus OPEN>IN_REVIEW (task 2.5) and the three guards on leaving DECIDED
@@ -57,7 +57,17 @@ PL_STATUS_FOR = {"APPROVE": "DECIDED", "PARTIAL": "DECIDED", "DENY": "DECIDED", 
 EV06_KEY = ("requested>upload>received received>upload>received rejected>upload>received accepted>upload>received "
             "received>accept>accepted received>reject>rejected requested>waive>waived received>waive>waived rejected>waive>waived")
 REJECT_KEY = "illegible wrong_document serial_mismatch date_inconsistent incomplete"
-OV_KEY = {"OV-01": [True, True, False, True, True], "OV-02": [False, True, True, False], "OV-03": [True, True, True, False, False, False, False]}
+OV_KEY = {"OV-01": [True, True, False, True, True], "OV-02": [False, True, True, False], "OV-03": [True, True, True, False, False, False, False],
+          "OV-04": [True, False, True, True, False]}  # D68: senior and up draft, the manager publishes
+# Phase 4 (D68-D71). AU-01..04: the one code each draft must fail with, typed from PRD P0-9's list.
+AU_KEY = {"AU-01": "UNKNOWN_FACT", "AU-02": "TYPE_MISMATCH", "AU-03": "OVERLAP", "AU-04": "MISSING_TEMPLATE"}
+# AU-05, typed from D70: the row's moves with the power each needs, and per scenario how every step ends (- = allowed)
+AU05_MOVES = "None>create>draft?author_rules draft>save>draft?author_rules draft>publish>published?publish_rules"
+AU05_KEY = ["- - -", "OUT_OF_AUTHORITY -", "- - OUT_OF_AUTHORITY -", "- - PUBLISHER_IS_AUTHOR -", "- - PUBLISHER_IS_AUTHOR -", "- - - DIFF_STALE -",
+            "- DRAFT_EXISTS - - NOT_A_DRAFT NOT_A_DRAFT -"]
+# ID, worked by hand from domain brief s1 and s4: every golden claim the draft moves, with its new outcome and cents
+ID_KEY = {"ID-01": {"GC-01": ("APPROVE", 0), "GC-13": ("APPROVE", 32000)},  # 30000 - 30000; 62000 - 30000, now under the 50000 limit
+          "ID-02": {"GC-01": ("APPROVE", 20000)}, "ID-03": {"GC-05": ("APPROVE", 77500)}, "ID-04": {}}
 # Claim lives. rows: every decision row in order (E engine / O override, outcome, cents). end: claim status, payment status, cents paid.
 P, E_, O_ = ("E", "PEND", None), "E", "O"
 LIFE_KEY = {
@@ -243,7 +253,78 @@ for w in e23v2["rows"]: w["when"][0]["value"] = 75000
 e23v2["rows"][1]["then"]["noteText"] = "Payable {amt} above auto-approve limit 75000."
 e23v2["note"] = "75000 equals the system tier below; the two must move together."
 chk(RS.get("ops-v2") == o2, "ops-v2 is not ops-v1 with only the system limit (and E23) at 75000 (D35)")
-chk(sorted(RS) == ["ops-v1", "ops-v2", "plan-v1", "plan-v2"], f"rule set files: {sorted(RS)}")
+o3 = copy.deepcopy(o2); o3.update(version=3, effectiveFrom="2026-10-13"); o3["authority"][2]["powers"].append("author_rules")
+chk(RS.get("ops-v3") == o3 and o3["authority"][2]["code"] == "senior", "ops-v3 is not ops-v2 with only author_rules added to the senior tier (D68)")
+chk(sorted(RS) == ["ops-v1", "ops-v2", "ops-v3", "plan-v1", "plan-v2"], f"rule set files: {sorted(RS)}")
+
+
+# ------------------------------------------------------------------ Phase 4: a draft is a rule file with edits applied
+
+def edited(base, edits):
+    """A string step into a list names the element with that id (a tier by its code); a number is a position."""
+    rs = copy.deepcopy(base)
+    for e in edits:
+        node, path = rs, list(e["path"])
+        while path:
+            k = path.pop(0)
+            if isinstance(node, list) and isinstance(k, str): k = next(i for i, x in enumerate(node) if k in (x.get("id"), x.get("code")))
+            if path: node = node[k]
+            elif e.get("remove"): del node[k]
+            else: node[k] = e["value"]
+    return rs
+
+
+def defects(rs):
+    """The four failures PRD P0-9 names, each in its plainest form. Narrower than the product's validator on purpose: a second, typed reading."""
+    fits = {"bool": lambda d, v: isinstance(v, bool), "enum": lambda d, v: v in d["values"], "date": lambda d, v: isinstance(v, str),
+            "string": lambda d, v: isinstance(v, str)}
+    number = lambda d, v: isinstance(v, int) and not isinstance(v, bool)
+    out = set()
+    tables = [r["rows"] for r in rs["rules"]] + [l["rows"] for l in rs.get("lookups", [])]
+    for c in (c for rows in tables for w in rows for c in w["when"]):
+        d = byid.get(c["fact"])
+        if not d: out.add("UNKNOWN_FACT"); continue
+        vs = c["value"] if isinstance(c.get("value"), list) else [c["value"]] if "value" in c else []
+        if not all(fits.get(d["type"], number)(d, v) for v in vs): out.add("TYPE_MISMATCH")
+    for l in rs.get("lookups", []):
+        whens = [json.dumps(w["when"], sort_keys=True) for w in l["rows"]]
+        if l["hitPolicy"] == "unique" and len(set(whens)) < len(whens): out.add("OVERLAP")
+    for r in rs["rules"]:
+        for w in r["rows"]:
+            t = w["then"]
+            if t["outcome"] != "PASS" and not (t.get("reasonCode") and t.get("noteText") and (r["kind"] == "flag" or t.get("claimantVisible") is False or t.get("claimantText"))):
+                out.add("MISSING_TEMPLATE")
+    return sorted(out)
+
+
+for name, r in RS.items(): chk(defects(r) == [], f"{name}: a published file has {defects(r)}")
+
+
+def replay_draft(f):
+    """AU-05, replayed from each step's action and actor alone, with the tiers of the ops file the fixture names."""
+    moves = {(str(m["from"]), m["action"]): m for m in f["moves"]}
+    for sc, key in zip(f["scenarios"], AU05_KEY):
+        rows, n = [], f["latestPublished"]
+        for i, (st, want) in enumerate(zip(sc["steps"], key.split())):
+            a, who = st["action"], st["by"]
+            cur = rows[-1] if rows else None
+            open_draft = cur is not None and cur["status"] == "draft"
+            m = moves.get((("draft" if open_draft else "None") if a == "create" else cur["status"] if cur else "None", a))
+            if a == "create" and open_draft: err = "DRAFT_EXISTS"
+            elif m is None: err = "NOT_A_DRAFT"
+            elif not authority(f["ops"], who["tier"], m["power"], 0, 0)["allowed"]: err = "OUT_OF_AUTHORITY"
+            elif a == "publish" and who["user"] == cur["authoredBy"]: err = "PUBLISHER_IS_AUTHOR"
+            elif a == "publish" and st["sawRevision"] != cur["revision"]: err = "DIFF_STALE"
+            else:
+                err = None
+                if a == "create": n += 1; rows.append({"status": m["to"], "version": n, "authoredBy": who["user"], "publishedBy": None, "revision": 0})
+                elif a == "save": rows[-1] = {**cur, "authoredBy": who["user"], "revision": cur["revision"] + 1}
+                else: rows[-1] = {**cur, "status": m["to"], "publishedBy": who["user"]}
+            got = {"allowed": err is None, "error": err, "row": rows[-1] if rows else None}
+            chk(got == st["expected"] and (err or "-") == want, f"AU-05 '{sc['name']}' step {i} ({a}): {st['expected']} / {got} / key {want}")
+            chk(err is None or err in f["refusals"], f"AU-05 '{sc['name']}' step {i}: {err} is not a listed refusal")
+        chk(len(sc["steps"]) == len(key.split()), f"AU-05 '{sc['name']}': step count")
+        chk(all(r["authoredBy"] != r["publishedBy"] for r in rows), f"AU-05 '{sc['name']}': a row published by its author")
 
 
 def pick_ops(asof, versions):
@@ -428,7 +509,8 @@ def check_lives():
 
 
 fx = {os.path.basename(p)[:-5]: load(p) for p in sorted(glob.glob(f"{FIX}/*/*.json"))}
-want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY) + ["RV-01"] + sorted(VP_KEY) + sorted(PL_KEY) + sorted(PL_RUNS_KEY) + ["PL-01"] + sorted(OV_KEY) + sorted(LIFE_KEY) + ["EV-06"]
+want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY) + ["RV-01"] + sorted(VP_KEY) + sorted(PL_KEY) + sorted(PL_RUNS_KEY) + ["PL-01"] + sorted(OV_KEY) + sorted(LIFE_KEY) + ["EV-06"] + \
+       sorted(AU_KEY) + ["AU-05"] + sorted(ID_KEY)
 chk(sorted(fx) == sorted(want), f"fixture set differs: missing {sorted(set(want) - set(fx))}, extra {sorted(set(fx) - set(want))}")
 
 for fid, f in fx.items():
@@ -511,6 +593,30 @@ for fid, f in fx.items():
             chk(got == c["expected"] and got["allowed"] is allowed, f"{fid} '{c['name']}': {c['expected']} / {got} / key {allowed}")
     elif k == "lifecycle":
         replay(fid, f)
+    elif k == "draft-validation":
+        chk(defects(edited(RS[f["base"]], f["edits"])) == f["expectedCodes"] == [AU_KEY[fid]], f"{fid}: the draft has {defects(edited(RS[f['base']], f['edits']))}, the fixture says {f['expectedCodes']}, the key {AU_KEY[fid]}")
+    elif k == "draft-transitions":
+        got = {f"{m['from']}>{m['action']}>{m['to']}?{m['power']}" for m in f["moves"]}
+        chk(got == set(AU05_MOVES.split()) and len(f["moves"]) == len(got), f"{fid}: table differs from the key: {sorted(got ^ set(AU05_MOVES.split()))}")
+        sql = open(os.path.join(HERE, "..", "prisma/migrations/20261002000000_adjudication_init/migration.sql")).read()
+        chk(f["statuses"] == re.findall(r"'([a-z]+)'", sql.split("ruleset_status CHECK")[1].split("))")[0]), f"{fid}: statuses differ from the ruleset_status CHECK")
+        chk(f["latestPublished"] == max(r["version"] for r in RS.values() if r["kind"] == "ops") and len(f["scenarios"]) == len(AU05_KEY), f"{fid}: starts after the newest ops file, one key per scenario")
+        replay_draft(f)
+    elif k == "impact-diff":
+        draft, kind = edited(RS[f["base"]], f["edits"]), RS[f["base"]]["kind"]
+        chk(defects(draft) == [], f"{fid}: the draft itself is not publishable")
+        chk(f["claims"] == sorted(GC_KEY), f"{fid}: runs over every golden decision")
+        moved = {}
+        for gid in f["claims"]:
+            c = fx[gid]
+            got = decide(draft if kind == "plan" else RS[c["plan"]], draft if kind == "ops" else RS[c["ops"]], dic, c["facts"])
+            chk(not any(r["result"] == "GAP" for r in got["rules"]), f"{fid} {gid}: a rule had no matching row under the draft")
+            show = lambda e: {x: e[x] for x in ("outcome", "reasons", "payableCents")}
+            if show(got) != show(c["expected"]): moved[gid] = {"claim": gid, "before": show(c["expected"]), "after": show(got)}
+        e = f["expected"]
+        chk(e["changed"] == list(moved.values()) and e["unchanged"] == len(f["claims"]) - len(moved), f"{fid}: interpreter moves {sorted(moved)}, the oracle {[x['claim'] for x in e['changed']]}")
+        chk({x["claim"]: (x["after"]["outcome"], x["after"]["payableCents"]) for x in e["changed"]} == ID_KEY[fid], f"{fid}: deltas differ from the key")
+        chk(fid != "ID-02" or draft == RS["plan-v2"], f"{fid}: plan-v1 with these edits is not plan-v2")
     elif k == "pipeline":
         chk(f["expected"] == PL_KEY[fid] and f["claim"]["contractId"] not in f["contracts"], f"{fid}: {f['expected']}")
     elif k == "ref":
@@ -544,5 +650,5 @@ if fails:
     for m in fails: print(" -", m)
     sys.exit(1)
 print(f"OK ({len(fx)} fixtures: {sum(1 for f in fx.values() if f['id'].startswith('RE'))} RE, {sum(1 for f in fx.values() if f['id'].startswith('PAY'))} PAY, "
-      f"{sum(1 for f in fx.values() if f['id'].startswith('GC'))} GC, {sum(1 for f in fx.values() if f['id'][:2] in ('RV', 'VP', 'PL', 'EV', 'OV'))} RV/VP/PL/EV/OV; "
+      f"{sum(1 for f in fx.values() if f['id'].startswith('GC'))} GC, {sum(1 for f in fx.values() if f['id'][:2] in ('RV', 'VP', 'PL', 'EV', 'OV', 'AU', 'ID'))} RV/VP/PL/EV/OV/AU/ID; "
       "payables match the brief to the cent)")

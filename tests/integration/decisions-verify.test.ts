@@ -71,12 +71,12 @@ describe('decisions:verify', () => {
 
   it('D44 publish refuses an ops version a stored decision would select on replay, and takes a later one', async () => {
     const ops = JSON.parse(readFileSync('rules/electronics/ops-v2.json', 'utf8'));
-    await expect(publishRuleSet(client, { ...ops, version: 3, effectiveFrom: '2026-03-31' })).rejects.toThrow('OPS_BACKDATED'); // OPS-v1-last-day
-    await expect(publishRuleSet(client, { ...ops, version: 3, effectiveFrom: '2028-01-27' })).rejects.toThrow('OPS_BACKDATED'); // GC-04, the latest asOf, boundary inclusive
-    await publishRuleSet(client, { ...ops, version: 3, effectiveFrom: '2028-01-28' });
+    await expect(publishRuleSet(client, { ...ops, version: 4, effectiveFrom: '2026-03-31' })).rejects.toThrow('OPS_BACKDATED'); // OPS-v1-last-day
+    await expect(publishRuleSet(client, { ...ops, version: 4, effectiveFrom: '2028-01-27' })).rejects.toThrow('OPS_BACKDATED'); // GC-04, the latest asOf, boundary inclusive
+    await publishRuleSet(client, { ...ops, version: 4, effectiveFrom: '2028-01-28' });
     expect(await codes()).toEqual([]);
     // what the refusal prevents: the same version written below the service turns clean decisions red
-    await tamper(`UPDATE "RuleSetVersion" SET "effectiveFrom" = '2026-03-31' WHERE "kind" = 'ops' AND "version" = 3`);
+    await tamper(`UPDATE "RuleSetVersion" SET "effectiveFrom" = '2026-03-31' WHERE "kind" = 'ops' AND "version" = 4`);
     expect(await codes()).toEqual(['VERSION_NOT_EFFECTIVE']);
   });
 

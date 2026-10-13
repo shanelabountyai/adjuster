@@ -30,7 +30,8 @@ DOC_OK = ("accepted", "waived")
 PLANS = {"plan-v1": dict(effective=dt.date(2025, 1, 1), tiers=TIER),
          "plan-v2": dict(effective=dt.date(2026, 1, 1), tiers={**TIER, "essential": {**TIER["essential"], "ded": {"breakdown": 10000, "adh": 10000}}})}
 OPS = {"ops-v1": dict(effective=dt.date(2025, 1, 1), auto_limit=50000),
-       "ops-v2": dict(effective=dt.date(2026, 4, 1), auto_limit=75000)}
+       "ops-v2": dict(effective=dt.date(2026, 4, 1), auto_limit=75000),
+       "ops-v3": dict(effective=dt.date(2026, 10, 13), auto_limit=75000)}  # D68: the senior tier gains author_rules, nothing else
 
 
 def select_ops(asof, versions=None):
@@ -63,7 +64,8 @@ def full_years(a: dt.date, b: dt.date) -> int:
 # ------------------------------------------------------------------ the adjudicator
 
 def adjudicate(f, plan="plan-v1", ops="ops-v1"):
-    t = PLANS[plan]["tiers"][f["contract.planCode"]]
+    plan, ops = (PLANS[plan] if isinstance(plan, str) else plan), (OPS[ops] if isinstance(ops, str) else ops)  # a name, or a draft's own terms (ID-xx)
+    t = plan["tiers"][f["contract.planCode"]]
     start, end, dol, rep = D(f["contract.termStart"]), D(f["contract.termEnd"]), D(f["claim.dateOfLoss"]), D(f["claim.dateReported"])
     peril = f["claim.peril"]
     since, to_end, lag = (dol - start).days, (end - dol).days, (rep - dol).days
@@ -153,7 +155,7 @@ def adjudicate(f, plan="plan-v1", ops="ops-v1"):
     if not deny and not pend:
         valuation, payable, after_ded, agg_after = valuate(f, t, C_, R_, ratio, paid, start, dol)
         fulfilled = (valuation["path"] == "replace" and t["fulfills"]) or agg_after <= 0
-        add("authority", "E23", "REFER" if payable > OPS[ops]["auto_limit"] else "PASS")
+        add("authority", "E23", "REFER" if payable > ops["auto_limit"] else "PASS")
     out.sort(key=lambda x: STAGES.index(x[0]))  # stable: file order inside a stage
 
     if deny: outcome = "DENY"
@@ -252,7 +254,7 @@ def write(sub, doc):
 
 # ------------------------------------------------------------------ GC and PAY
 
-def build_gc():
+def golden():
     s = dt.date(2025, 1, 15)
     gcs = []
     gcs.append(("GC-01", "Essential washer motor fails month 8; repair 30000; documents complete", "domain brief s11",
@@ -287,7 +289,11 @@ def build_gc():
                 facts("essential", price=120000, R=100000, C=62000)))
     gcs.append(("GC-14", "Essential, declared prior third-party repair and used in a cafe", "domain brief s11",
                 facts("essential", price=60000, R=60000, C=20000, **{"claim.unauthorizedRepair": "declared", "claim.commercialUse": True})))
-    for gid, title, src, f in gcs:
+    return gcs
+
+
+def build_gc():
+    for gid, title, src, f in golden():
         write("gc", decision_fixture(gid, title, src, f))
 
 
@@ -316,7 +322,7 @@ def build_phase2():
 
     versions = [dict(name=n, kind="plan", status="published", effectiveFrom=iso(p["effective"])) for n, p in PLANS.items()] + \
                [dict(name=n, kind="ops", status="published", effectiveFrom=iso(o["effective"])) for n, o in OPS.items()] + \
-               [dict(name="ops-v3", kind="ops", status="draft", effectiveFrom="2026-06-01")]
+               [dict(name="ops-v4", kind="ops", status="draft", effectiveFrom="2026-12-01")]
 
     def select(pin, asof, vs):
         if D(next(v for v in vs if v["name"] == pin)["effectiveFrom"]) > asof: return {"error": "NO_EFFECTIVE_VERSION", "kind": "plan"}
@@ -336,7 +342,7 @@ def build_phase2():
         ("VP-03", "Ops is the latest published version effective on asOf (inclusive), never by date of loss; a draft is never selected", [
             case("day before ops-v2", "plan-v1", "2026-03-20", "2026-03-31"),
             case("ops-v2's effective date, loss before it", "plan-v1", "2026-03-20", "2026-04-01"),
-            case("after the draft ops-v3's date", "plan-v1", "2026-03-20", "2026-07-01")]),
+            case("after the draft ops-v4's date", "plan-v1", "2026-03-20", "2027-01-01")]),
         ("VP-04", "No effective version: no decision, a coded error naming the kind", [
             case("pinned plan not yet effective on asOf", "plan-v2", "2025-12-20", "2025-12-31"),
             case("only a draft ops exists", "plan-v1", "2025-06-01", "2025-06-04",
@@ -398,8 +404,9 @@ def build_phase2():
 # ------------------------------------------------------------------ Phase 3: authority (OV), claim lives (EV, GC-11, GC-15)  D47-D52
 
 # domain brief s7, typed here; verify_fixtures.py reads the same table from ops rule data. Powers accumulate up the list (D51).
-AUTH = [("system", {"ops-v1": 50000, "ops-v2": 75000}, []), ("adjuster", 100000, ["clear_flags", "waive_documents"]),
-        ("senior", 250000, ["decide_appeals"]), ("manager", None, ["ex_gratia", "publish_rules"])]
+AUTH = [("system", {"ops-v1": 50000, "ops-v2": 75000, "ops-v3": 75000}, []), ("adjuster", 100000, ["clear_flags", "waive_documents"]),
+        ("senior", 250000, ["decide_appeals", "author_rules"]), ("manager", None, ["ex_gratia", "publish_rules"])]
+SINCE = {"author_rules": "ops-v3"}  # D68: a power is held only under an ops version that names it
 REMIND = dict(firstDay=10, secondDay=20, closeDay=30)
 DOCS = ["proofOfPurchase", "repairEstimate", "damagePhotos", "incidentStatement", "secondEstimate", "transferProof"]
 # which facts a person enters from which document (D51). Fixture input, not a rule: the accept action carries them.
@@ -421,7 +428,7 @@ def authority(ops, tier, power, paid, amount):
     i = [c for c, _, _ in AUTH].index(tier)
     limit = AUTH[i][1][ops] if isinstance(AUTH[i][1], dict) else AUTH[i][1]
     total = max(paid, amount)
-    lacks = (["amount"] if limit is not None and total > limit else []) + (["power"] if power and power not in sum((p for _, _, p in AUTH[:i + 1]), []) else [])
+    lacks = (["amount"] if limit is not None and total > limit else []) + (["power"] if power and power not in [p for _, _, ps in AUTH[:i + 1] for p in ps if SINCE.get(p, "") <= ops] else [])
     return {"totalIncurredCents": total, "allowed": not lacks, "lacks": lacks}
 
 
@@ -627,6 +634,100 @@ def build_phase3():
     write("gc", gc5)
 
 
+# ------------------------------------------------------------------ Phase 4: authoring (AU, OV-04) and the impact diff (ID)  D68-D75
+
+# An edit is a path into a rule set and a value (or `remove`). A string step into a list names the element with that id
+# (a tier by its code); a number is a position. The edits are typed here: this file still reads nothing under rules/.
+def edit(*path, **kw): return {"path": list(path), **kw}
+
+# AU-05 (D70): the life of one version row. `create` starts a row; it is refused while the kind and product has a draft.
+DRAFT_MOVES = [(None, "create", "draft", "author_rules"), ("draft", "save", "draft", "author_rules"), ("draft", "publish", "published", "publish_rules")]
+REFUSALS = ["DRAFT_EXISTS", "NOT_A_DRAFT", "OUT_OF_AUTHORITY", "PUBLISHER_IS_AUTHOR", "DIFF_STALE"]  # tested in this order; the first that applies is the error
+
+
+def draft_life(ops, latest, steps):
+    row, out = None, []  # row: the kind and product's newest version row
+    for action, user, tier, *saw in steps:
+        status = row["status"] if row and (action != "create" or row["status"] == "draft") else None
+        move = next((m for m in DRAFT_MOVES if m[:2] == (status, action)), None)
+        if not move: err = "DRAFT_EXISTS" if action == "create" else "NOT_A_DRAFT"
+        elif not authority(ops, tier, move[3], 0, 0)["allowed"]: err = "OUT_OF_AUTHORITY"
+        elif action == "publish" and user == row["authoredBy"]: err = "PUBLISHER_IS_AUTHOR"
+        elif action == "publish" and saw[0] != row["revision"]: err = "DIFF_STALE"
+        else:
+            err = None
+            if action == "create": latest += 1; row = dict(status="draft", version=latest, authoredBy=user, publishedBy=None, revision=0)
+            elif action == "save": row.update(authoredBy=user, revision=row["revision"] + 1)
+            else: row.update(status="published", publishedBy=user)
+        out.append({"action": action, "by": {"user": user, "tier": tier}, **({"sawRevision": saw[0]} if saw else {}),
+                    "expected": {"allowed": err is None, "error": err, "row": row and dict(row)}})
+    return out
+
+
+def build_phase4():
+    case = lambda name, tier, power: {"name": name, "tier": tier, "power": power, "paidCents": 0, "amountCents": 0, "expected": authority("ops-v3", tier, power, 0, 0)}
+    write("ov", {"id": "OV-04", "kind": "authority", "title": "Authoring a rule set and publishing one are two powers, held as every other power is",
+                 "source": "domain brief s7 / D66 / D68", "ops": "ops-v3", "cases": [
+                     case("a senior adjuster drafts", "senior", "author_rules"), case("an adjuster does not", "adjuster", "author_rules"),
+                     case("a manager drafts too", "manager", "author_rules"), case("a manager publishes", "manager", "publish_rules"),
+                     case("a senior adjuster does not publish", "senior", "publish_rules")]})
+
+    E7 = ("rules", "E7", "rows", "E7.fail")
+    drafts = [
+        ("AU-01", "UNKNOWN_FACT", "ops-v3", "A cell names a fact the dictionary does not have", [edit("rules", "E5", "rows", "E5.fail", "when", 0, "fact", value="claim.serialNumber")]),
+        ("AU-02", "TYPE_MISMATCH", "plan-v2", "A yes/no fact compared to a word", [edit(*E7, "when", 0, "value", value="yes")]),
+        ("AU-03", "OVERLAP", "plan-v2", "Two rows of a unique table can match the same claim", [edit("lookups", "deductibleCents", "rows", "ded.plus", "when", 0, "value", value="essential")]),
+        ("AU-04", "MISSING_TEMPLATE", "plan-v2", "A denial with no text for the file note", [edit(*E7, "then", "noteText", remove=True)]),
+    ]
+    for fid, code, base, title, edits in drafts:
+        write("au", {"id": fid, "kind": "draft-validation", "title": f"{title}: the draft cannot be published", "source": "PRD P0-9 / D70",
+                     "base": base, "edits": edits, "expectedCodes": [code]})
+
+    S1, S2, M1, M2, A1 = ("u-senior-1", "senior"), ("u-senior-2", "senior"), ("u-manager-1", "manager"), ("u-manager-2", "manager"), ("u-adjuster-1", "adjuster")
+    scenarios = [
+        ("one person drafts, another publishes", [("create", *S1), ("save", *S1), ("publish", *M1, 1)]),
+        ("who may draft", [("create", *A1), ("create", *M1)]),
+        ("who may publish", [("create", *S1), ("save", *S1), ("publish", *S2, 1), ("publish", *M1, 1)]),
+        ("the author cannot publish, whatever the tier", [("create", *M1), ("save", *M1), ("publish", *M1, 1), ("publish", *M2, 1)]),
+        ("the author is whoever saved last", [("create", *M1), ("save", *M2), ("publish", *M2, 1), ("publish", *M1, 1)]),
+        ("the publisher must have seen this content", [("create", *S1), ("save", *S1), ("save", *S1), ("publish", *M1, 1), ("publish", *M1, 2)]),
+        ("one open draft, and a published row is closed", [("create", *S1), ("create", *M1), ("save", *S1), ("publish", *M1, 1), ("save", *S1), ("publish", *M2, 1), ("create", *S1)]),
+    ]
+    write("au", {"id": "AU-05", "kind": "draft-transitions", "title": "A version row moves only along the table, by a user holding the power, and never published by its author",
+                 "source": "PRD P0-9 / D66 / D68 / D70",
+                 "note": "Each scenario starts with `latestPublished` as the newest version and no draft. `sawRevision` is the save count of the content the publisher's "
+                         "impact diff ran on. `expected.row` is the newest row after the step; a refused step leaves it as it was.",
+                 "ops": "ops-v3", "latestPublished": 3, "statuses": ["draft", "published", "retired"],
+                 "moves": [{"from": a, "action": b, "to": c, "power": d} for a, b, c, d in DRAFT_MOVES], "refusals": REFUSALS,
+                 "scenarios": [{"name": n, "steps": draft_life("ops-v3", 3, st)} for n, st in scenarios]})
+
+    # ID (D71): every golden decision against a draft standing in for the plan (or ops) version it was decided under.
+    claims = [decision_fixture(gid, t, src, f) for gid, t, src, f in golden()]
+    shown = lambda e: {k: e[k] for k in ("outcome", "reasons", "payableCents")}
+    ded = lambda cents: dict(tiers={**TIER, "essential": {**TIER["essential"], "ded": {"breakdown": cents, "adh": cents}}})
+    ded_edit = lambda cents: edit("lookups", "deductibleCents", "rows", "ded.essential", "value", value=cents)
+    diffs = [
+        ("ID-01", "Essential deductible 5000 to 30000", "plan-v1", [ded_edit(30000)], dict(plan=ded(30000))),
+        ("ID-02", "plan-v2 as a draft over plan-v1: the Essential deductible at 10000", "plan-v1",
+         [edit("version", value=2), edit("effectiveFrom", value="2026-01-01"), ded_edit(10000)], dict(plan=PLANS["plan-v2"])),
+        ("ID-03", "The auto-approve limit raised to 80000: a referral becomes an approval", "ops-v1",
+         [edit("authority", "system", "approveUpToCents", value=80000), edit("rules", "E23", "rows", "E23.pass", "when", 0, "value", value=80000),
+          edit("rules", "E23", "rows", "E23.fail", "when", 0, "value", value=80000),
+          edit("rules", "E23", "rows", "E23.fail", "then", "noteText", value="Payable {amt} above auto-approve limit 80000.")], dict(ops=dict(auto_limit=80000))),
+        ("ID-04", "Plus per-claim limit 100000 to 150000: no golden claim reaches either", "plan-v1",
+         [edit("lookups", "perClaimLimitCents", "rows", "pcl.plus", "value", value=150000)], dict(plan=dict(tiers={**TIER, "plus": {**TIER["plus"], "pcl": 150000}}))),
+    ]
+    for fid, title, base, edits, draft in diffs:
+        changed = []
+        for c in claims:
+            after = adjudicate(c["facts"], draft.get("plan", c["plan"]), draft.get("ops", c["ops"]))
+            if shown(after) != shown(c["expected"]): changed.append({"claim": c["id"], "before": shown(c["expected"]), "after": shown(after)})
+        write("id", {"id": fid, "kind": "impact-diff", "title": title, "source": "PRD P0-9 / D71",
+                     "note": "The draft is `base` with `edits` applied. It stands in for the version of its kind each claim was decided under; the claim's facts, asOf and other version stay.",
+                     "base": base, "edits": edits, "claims": [c["id"] for c in claims],
+                     "expected": {"changed": changed, "unchanged": len(claims) - len(changed)}})
+
+
 def build_pay():
     base = dict(start=dt.date(2025, 1, 15), dol=dt.date(2025, 9, 15))
     cases = [
@@ -777,5 +878,5 @@ def build_re():
 
 
 if __name__ == "__main__":
-    build_re(); build_pay(); build_gc(); build_phase2(); build_phase3()
+    build_re(); build_pay(); build_gc(); build_phase2(); build_phase3(); build_phase4()
     print("fixtures written to", os.path.normpath(ROOT))

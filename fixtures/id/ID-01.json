@@ -1,0 +1,66 @@
+{
+  "id": "ID-01",
+  "kind": "impact-diff",
+  "title": "Essential deductible 5000 to 30000",
+  "source": "PRD P0-9 / D71",
+  "note": "The draft is `base` with `edits` applied. It stands in for the version of its kind each claim was decided under; the claim's facts, asOf and other version stay.",
+  "base": "plan-v1",
+  "edits": [
+    {
+      "path": [
+        "lookups",
+        "deductibleCents",
+        "rows",
+        "ded.essential",
+        "value"
+      ],
+      "value": 30000
+    }
+  ],
+  "claims": [
+    "GC-01",
+    "GC-02",
+    "GC-03",
+    "GC-04",
+    "GC-05",
+    "GC-06",
+    "GC-07",
+    "GC-08",
+    "GC-09",
+    "GC-10",
+    "GC-12",
+    "GC-13",
+    "GC-14"
+  ],
+  "expected": {
+    "changed": [
+      {
+        "claim": "GC-01",
+        "before": {
+          "outcome": "APPROVE",
+          "reasons": [],
+          "payableCents": 25000
+        },
+        "after": {
+          "outcome": "APPROVE",
+          "reasons": [],
+          "payableCents": 0
+        }
+      },
+      {
+        "claim": "GC-13",
+        "before": {
+          "outcome": "PARTIAL",
+          "reasons": [],
+          "payableCents": 50000
+        },
+        "after": {
+          "outcome": "APPROVE",
+          "reasons": [],
+          "payableCents": 32000
+        }
+      }
+    ],
+    "unchanged": 11
+  }
+}

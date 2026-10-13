@@ -1,0 +1,65 @@
+{
+  "id": "ID-02",
+  "kind": "impact-diff",
+  "title": "plan-v2 as a draft over plan-v1: the Essential deductible at 10000",
+  "source": "PRD P0-9 / D71",
+  "note": "The draft is `base` with `edits` applied. It stands in for the version of its kind each claim was decided under; the claim's facts, asOf and other version stay.",
+  "base": "plan-v1",
+  "edits": [
+    {
+      "path": [
+        "version"
+      ],
+      "value": 2
+    },
+    {
+      "path": [
+        "effectiveFrom"
+      ],
+      "value": "2026-01-01"
+    },
+    {
+      "path": [
+        "lookups",
+        "deductibleCents",
+        "rows",
+        "ded.essential",
+        "value"
+      ],
+      "value": 10000
+    }
+  ],
+  "claims": [
+    "GC-01",
+    "GC-02",
+    "GC-03",
+    "GC-04",
+    "GC-05",
+    "GC-06",
+    "GC-07",
+    "GC-08",
+    "GC-09",
+    "GC-10",
+    "GC-12",
+    "GC-13",
+    "GC-14"
+  ],
+  "expected": {
+    "changed": [
+      {
+        "claim": "GC-01",
+        "before": {
+          "outcome": "APPROVE",
+          "reasons": [],
+          "payableCents": 25000
+        },
+        "after": {
+          "outcome": "APPROVE",
+          "reasons": [],
+          "payableCents": 20000
+        }
+      }
+    ],
+    "unchanged": 12
+  }
+}

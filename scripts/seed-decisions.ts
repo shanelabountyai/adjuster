@@ -80,7 +80,7 @@ export async function seedDecisions(db: Db, store: DocumentStore = new LocalDisk
   await db.query('TRUNCATE "TierAssignment", "Payment", "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
   await seedOverrideReasons(db);
   const versions: Record<string, string> = {};
-  for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2']) versions[name] = await publishRuleSet(db, read(`rules/electronics/${name}.json`));
+  for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2', 'ops-v3']) versions[name] = await publishRuleSet(db, read(`rules/electronics/${name}.json`));
 
   const users: Record<string, string> = {};
   const staff = async (tier: string) => {

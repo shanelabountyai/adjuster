@@ -1,0 +1,605 @@
+{
+  "id": "AU-05",
+  "kind": "draft-transitions",
+  "title": "A version row moves only along the table, by a user holding the power, and never published by its author",
+  "source": "PRD P0-9 / D66 / D68 / D70",
+  "note": "Each scenario starts with `latestPublished` as the newest version and no draft. `sawRevision` is the save count of the content the publisher's impact diff ran on. `expected.row` is the newest row after the step; a refused step leaves it as it was.",
+  "ops": "ops-v3",
+  "latestPublished": 3,
+  "statuses": [
+    "draft",
+    "published",
+    "retired"
+  ],
+  "moves": [
+    {
+      "from": null,
+      "action": "create",
+      "to": "draft",
+      "power": "author_rules"
+    },
+    {
+      "from": "draft",
+      "action": "save",
+      "to": "draft",
+      "power": "author_rules"
+    },
+    {
+      "from": "draft",
+      "action": "publish",
+      "to": "published",
+      "power": "publish_rules"
+    }
+  ],
+  "refusals": [
+    "DRAFT_EXISTS",
+    "NOT_A_DRAFT",
+    "OUT_OF_AUTHORITY",
+    "PUBLISHER_IS_AUTHOR",
+    "DIFF_STALE"
+  ],
+  "scenarios": [
+    {
+      "name": "one person drafts, another publishes",
+      "steps": [
+        {
+          "action": "create",
+          "by": {
+            "user": "u-senior-1",
+            "tier": "senior"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": null,
+              "revision": 0
+            }
+          }
+        },
+        {
+          "action": "save",
+          "by": {
+            "user": "u-senior-1",
+            "tier": "senior"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": null,
+              "revision": 1
+            }
+          }
+        },
+        {
+          "action": "publish",
+          "by": {
+            "user": "u-manager-1",
+            "tier": "manager"
+          },
+          "sawRevision": 1,
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "published",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": "u-manager-1",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "who may draft",
+      "steps": [
+        {
+          "action": "create",
+          "by": {
+            "user": "u-adjuster-1",
+            "tier": "adjuster"
+          },
+          "expected": {
+            "allowed": false,
+            "error": "OUT_OF_AUTHORITY",
+            "row": null
+          }
+        },
+        {
+          "action": "create",
+          "by": {
+            "user": "u-manager-1",
+            "tier": "manager"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-manager-1",
+              "publishedBy": null,
+              "revision": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "who may publish",
+      "steps": [
+        {
+          "action": "create",
+          "by": {
+            "user": "u-senior-1",
+            "tier": "senior"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": null,
+              "revision": 0
+            }
+          }
+        },
+        {
+          "action": "save",
+          "by": {
+            "user": "u-senior-1",
+            "tier": "senior"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": null,
+              "revision": 1
+            }
+          }
+        },
+        {
+          "action": "publish",
+          "by": {
+            "user": "u-senior-2",
+            "tier": "senior"
+          },
+          "sawRevision": 1,
+          "expected": {
+            "allowed": false,
+            "error": "OUT_OF_AUTHORITY",
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": null,
+              "revision": 1
+            }
+          }
+        },
+        {
+          "action": "publish",
+          "by": {
+            "user": "u-manager-1",
+            "tier": "manager"
+          },
+          "sawRevision": 1,
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "published",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": "u-manager-1",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "the author cannot publish, whatever the tier",
+      "steps": [
+        {
+          "action": "create",
+          "by": {
+            "user": "u-manager-1",
+            "tier": "manager"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-manager-1",
+              "publishedBy": null,
+              "revision": 0
+            }
+          }
+        },
+        {
+          "action": "save",
+          "by": {
+            "user": "u-manager-1",
+            "tier": "manager"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-manager-1",
+              "publishedBy": null,
+              "revision": 1
+            }
+          }
+        },
+        {
+          "action": "publish",
+          "by": {
+            "user": "u-manager-1",
+            "tier": "manager"
+          },
+          "sawRevision": 1,
+          "expected": {
+            "allowed": false,
+            "error": "PUBLISHER_IS_AUTHOR",
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-manager-1",
+              "publishedBy": null,
+              "revision": 1
+            }
+          }
+        },
+        {
+          "action": "publish",
+          "by": {
+            "user": "u-manager-2",
+            "tier": "manager"
+          },
+          "sawRevision": 1,
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "published",
+              "version": 4,
+              "authoredBy": "u-manager-1",
+              "publishedBy": "u-manager-2",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "the author is whoever saved last",
+      "steps": [
+        {
+          "action": "create",
+          "by": {
+            "user": "u-manager-1",
+            "tier": "manager"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-manager-1",
+              "publishedBy": null,
+              "revision": 0
+            }
+          }
+        },
+        {
+          "action": "save",
+          "by": {
+            "user": "u-manager-2",
+            "tier": "manager"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-manager-2",
+              "publishedBy": null,
+              "revision": 1
+            }
+          }
+        },
+        {
+          "action": "publish",
+          "by": {
+            "user": "u-manager-2",
+            "tier": "manager"
+          },
+          "sawRevision": 1,
+          "expected": {
+            "allowed": false,
+            "error": "PUBLISHER_IS_AUTHOR",
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-manager-2",
+              "publishedBy": null,
+              "revision": 1
+            }
+          }
+        },
+        {
+          "action": "publish",
+          "by": {
+            "user": "u-manager-1",
+            "tier": "manager"
+          },
+          "sawRevision": 1,
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "published",
+              "version": 4,
+              "authoredBy": "u-manager-2",
+              "publishedBy": "u-manager-1",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "the publisher must have seen this content",
+      "steps": [
+        {
+          "action": "create",
+          "by": {
+            "user": "u-senior-1",
+            "tier": "senior"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": null,
+              "revision": 0
+            }
+          }
+        },
+        {
+          "action": "save",
+          "by": {
+            "user": "u-senior-1",
+            "tier": "senior"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": null,
+              "revision": 1
+            }
+          }
+        },
+        {
+          "action": "save",
+          "by": {
+            "user": "u-senior-1",
+            "tier": "senior"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": null,
+              "revision": 2
+            }
+          }
+        },
+        {
+          "action": "publish",
+          "by": {
+            "user": "u-manager-1",
+            "tier": "manager"
+          },
+          "sawRevision": 1,
+          "expected": {
+            "allowed": false,
+            "error": "DIFF_STALE",
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": null,
+              "revision": 2
+            }
+          }
+        },
+        {
+          "action": "publish",
+          "by": {
+            "user": "u-manager-1",
+            "tier": "manager"
+          },
+          "sawRevision": 2,
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "published",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": "u-manager-1",
+              "revision": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "one open draft, and a published row is closed",
+      "steps": [
+        {
+          "action": "create",
+          "by": {
+            "user": "u-senior-1",
+            "tier": "senior"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": null,
+              "revision": 0
+            }
+          }
+        },
+        {
+          "action": "create",
+          "by": {
+            "user": "u-manager-1",
+            "tier": "manager"
+          },
+          "expected": {
+            "allowed": false,
+            "error": "DRAFT_EXISTS",
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": null,
+              "revision": 0
+            }
+          }
+        },
+        {
+          "action": "save",
+          "by": {
+            "user": "u-senior-1",
+            "tier": "senior"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": null,
+              "revision": 1
+            }
+          }
+        },
+        {
+          "action": "publish",
+          "by": {
+            "user": "u-manager-1",
+            "tier": "manager"
+          },
+          "sawRevision": 1,
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "published",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": "u-manager-1",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "action": "save",
+          "by": {
+            "user": "u-senior-1",
+            "tier": "senior"
+          },
+          "expected": {
+            "allowed": false,
+            "error": "NOT_A_DRAFT",
+            "row": {
+              "status": "published",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": "u-manager-1",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "action": "publish",
+          "by": {
+            "user": "u-manager-2",
+            "tier": "manager"
+          },
+          "sawRevision": 1,
+          "expected": {
+            "allowed": false,
+            "error": "NOT_A_DRAFT",
+            "row": {
+              "status": "published",
+              "version": 4,
+              "authoredBy": "u-senior-1",
+              "publishedBy": "u-manager-1",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "action": "create",
+          "by": {
+            "user": "u-senior-1",
+            "tier": "senior"
+          },
+          "expected": {
+            "allowed": true,
+            "error": null,
+            "row": {
+              "status": "draft",
+              "version": 5,
+              "authoredBy": "u-senior-1",
+              "publishedBy": null,
+              "revision": 0
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

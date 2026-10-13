@@ -1,0 +1,24 @@
+{
+  "id": "AU-01",
+  "kind": "draft-validation",
+  "title": "A cell names a fact the dictionary does not have: the draft cannot be published",
+  "source": "PRD P0-9 / D70",
+  "base": "ops-v3",
+  "edits": [
+    {
+      "path": [
+        "rules",
+        "E5",
+        "rows",
+        "E5.fail",
+        "when",
+        0,
+        "fact"
+      ],
+      "value": "claim.serialNumber"
+    }
+  ],
+  "expectedCodes": [
+    "UNKNOWN_FACT"
+  ]
+}

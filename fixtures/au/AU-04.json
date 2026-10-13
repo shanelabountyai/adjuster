@@ -1,0 +1,23 @@
+{
+  "id": "AU-04",
+  "kind": "draft-validation",
+  "title": "A denial with no text for the file note: the draft cannot be published",
+  "source": "PRD P0-9 / D70",
+  "base": "plan-v2",
+  "edits": [
+    {
+      "path": [
+        "rules",
+        "E7",
+        "rows",
+        "E7.fail",
+        "then",
+        "noteText"
+      ],
+      "remove": true
+    }
+  ],
+  "expectedCodes": [
+    "MISSING_TEMPLATE"
+  ]
+}

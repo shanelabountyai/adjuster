@@ -5,7 +5,7 @@
   "source": "domain brief s11",
   "asOf": "2028-01-27",
   "plan": "plan-v1",
-  "ops": "ops-v2",
+  "ops": "ops-v3",
   "facts": {
     "contract.planCode": "plus",
     "contract.status": "active",

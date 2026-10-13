@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { calcStepTraceSchema } from '@/rules/schema';
 import { validateDictionary, validateRuleSet } from '@/rules/validate';
+import { applyEdits } from '../helpers/edits';
 
 // Phase 1 task 1.3: the schemas and publish-time checks. Rule data and fixtures are read from disk, never built here.
 const json = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
@@ -24,6 +25,23 @@ describe('RE-11 / RE-12 fixtures: what must fail validation', () => {
     const fx = json(`fixtures/re/${id}.json`);
     for (const c of fx.cases) it(`${id} ${c.name}`, () => expect(codes(c.ruleSet)).toEqual([...c.expectedCodes].sort()));
   }
+});
+
+// Task 4.1 (D70, D71): a draft is a published file with edits applied. Each AU draft fails with exactly its code; each ID draft is publishable.
+describe('AU-01..04 and ID fixtures: drafts', () => {
+  const draft = (fx: { base: string; edits: Parameters<typeof applyEdits>[1] }) => applyEdits(json(`rules/electronics/${fx.base}.json`), fx.edits);
+  for (const f of readdirSync('fixtures/au').filter((n) => n !== 'AU-05.json')) {
+    const fx = json(`fixtures/au/${f}`);
+    it(`${fx.id} ${fx.title}`, () => {
+      expect(validateRuleSet(json(`rules/electronics/${fx.base}.json`), dict!)).toEqual([]);
+      expect(validateRuleSet(draft(fx), dict!).map((i) => i.code)).toEqual(fx.expectedCodes);
+    });
+  }
+  for (const f of readdirSync('fixtures/id')) {
+    const fx = json(`fixtures/id/${f}`);
+    it(`${fx.id} validates clean`, () => expect(validateRuleSet(draft(fx), dict!)).toEqual([]));
+  }
+  it('an edit whose path names nothing throws', () => expect(() => applyEdits(plan, [{ path: ['rules', 'E99', 'rows'], value: [] }])).toThrow('does not resolve'));
 });
 
 describe('closed vocabulary and publish rules', () => {
