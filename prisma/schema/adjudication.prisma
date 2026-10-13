@@ -3,19 +3,27 @@
 
 // D2: one row per whole rule set. `body` is the rules/*.json file; `contentHash` is sha256Hex(body) (D5),
 // set at publish. Published rows only ever change status to retired (VP-01).
+// Task 4.2, D70: a draft is a copy of `basedOn`; `authoredBy` is whoever saved it last, `publishedBy` never that user
+// (CHECK). Both are User ids with no FK, as on AuditEvent, and null on a version loaded from a file. One open draft
+// per kind and product (a partial unique index, hand-written in 20261013000000_draft_rows).
 model RuleSetVersion {
-  id            String     @id @default(uuid()) @db.Uuid
+  id            String           @id @default(uuid()) @db.Uuid
   kind          String // plan | ops
   product       String
   version       Int
-  status        String     @default("draft") // draft | published | retired
-  effectiveFrom DateTime   @db.Date
+  status        String           @default("draft") // draft | published | retired
+  effectiveFrom DateTime         @db.Date
   body          Json
   contentHash   String?
-  publishedAt   DateTime?  @db.Timestamptz(6)
-  createdAt     DateTime   @default(now()) @db.Timestamptz(6)
-  planDecisions Decision[] @relation("planVersion")
-  opsDecisions  Decision[] @relation("opsVersion")
+  publishedAt   DateTime?        @db.Timestamptz(6)
+  authoredBy    String?          @db.Uuid
+  publishedBy   String?          @db.Uuid
+  basedOnId     String?          @db.Uuid
+  basedOn       RuleSetVersion?  @relation("basedOn", fields: [basedOnId], references: [id], onDelete: Restrict)
+  drafts        RuleSetVersion[] @relation("basedOn")
+  createdAt     DateTime         @default(now()) @db.Timestamptz(6)
+  planDecisions Decision[]       @relation("planVersion")
+  opsDecisions  Decision[]       @relation("opsVersion")
   contracts     Contract[]
 
   @@unique([kind, product, version])
