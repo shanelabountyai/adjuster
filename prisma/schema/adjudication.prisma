@@ -177,6 +177,10 @@ model Decision {
   overrideTier               String?
   overrideTotalIncurredCents Int?
   overrideBy                 String?         @db.Uuid
+  // Task 4.5, D75, D79: on the engine row an appeal's decision writes, who decided the appeal and the tier they held.
+  // One per claim (partial unique index "Decision_one_appeal", in the migration).
+  appealBy                   String?         @db.Uuid
+  appealTier                 String?
   createdAt                  DateTime        @default(now()) @db.Timestamptz(6)
 
   @@index([claimId])

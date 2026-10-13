@@ -7,7 +7,7 @@ import { type DocumentStore, LocalDiskDocumentStore, reviewDocument, uploadDocum
 import { assignTier } from '@/adjudication/authority';
 import { runNoResponse } from '@/adjudication/no-response';
 import { mockPaymentProvider } from '@/adjudication/payments';
-import { acceptEvidence, adjudicateClaim, openClaim, overrideDecision, payClaim, reopenClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
+import { acceptEvidence, adjudicateClaim, decideAppeal, fileAppeal, openClaim, overrideDecision, payClaim, reopenClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
 
 // The clean seed for decisions:verify (task 2.11): both plan and both ops versions published, then every claim filed
 // as a contract and a claim and decided by the pipeline, which picks the versions. GC-01..10 and 12..14, the RV-01
@@ -17,6 +17,7 @@ import { acceptEvidence, adjudicateClaim, openClaim, overrideDecision, payClaim,
 // that document carries are entered with the acceptance. The bytes are a placeholder line under uploads/ (gitignored).
 // Task 3.12: GC-11 and GC-15 are played event by event through the services (no response, waiver, override, payment,
 // reopen), and GC-05's referral is signed off. The two lives go first: the no-response job reads every open claim.
+// Task 4.5: the six appeal lives AP-01..06 are played too, refused actions skipped, so verify reads real appeal rows.
 const read = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
 const onContract = ([k]: [string, unknown]) => k.startsWith('contract.') || k.startsWith('product.');
 
@@ -45,7 +46,7 @@ export async function acceptDocument(db: Db, store: DocumentStore, claimId: stri
   await reviewDocument(db, { versionId, result: 'accepted', userId: null, facts });
 }
 
-export type LifeEvent = { asOf: string; action: { type: string; facts: Record<string, unknown>; doc: string; version: string; by: string; reasonText: string; reasonCode: string; reason: string } };
+export type LifeEvent = { asOf: string; action: { type: string; facts: Record<string, unknown>; doc: string; version: string; by: string; reasonText: string; reasonCode: string; reason: string; signOff?: { reasonCode: string; reasonText: string } } };
 /** A claim life being played: `versions` maps a fixture's version label to the id its upload got, `staff` gives a user holding a tier. */
 export type Life = { db: Db; store: DocumentStore; claimId: string; planVersionId: string | undefined; staff: (tier: string) => Promise<string>; versions: Map<string, string> };
 
@@ -68,6 +69,8 @@ export async function playEvent({ db, store, claimId, planVersionId, staff, vers
     case 'override': return overrideDecision(db, { claimId, userId: await staff(a.by), reasonCode: a.reasonCode, reasonText: a.reasonText, asOf });
     case 'pay': return payClaim(db, mockPaymentProvider, { claimId, asOf, userId: null });
     case 'reopen': return reopenClaim(db, { claimId, userId: await staff('adjuster'), reason: a.reason });
+    case 'appeal': return fileAppeal(db, { claimId, userId: null, reason: a.reason });
+    case 'decide_appeal': return decideAppeal(db, { claimId, userId: await staff(a.by), asOf, signOff: a.signOff });
     default: throw new Error(`playEvent: ${a.type}`);
   }
 }
@@ -87,10 +90,10 @@ export async function seedDecisions(db: Db, store: DocumentStore = new LocalDisk
     if (!users[tier]) await assignTier(db, { userId: (users[tier] = randomUUID()), tier, by: null });
     return users[tier]!;
   };
-  for (const n of ['11', '15']) {
-    const fx: { id: string; plan: string; events: LifeEvent[] } = read(`fixtures/gc/GC-${n}.json`);
+  for (const path of ['gc/GC-11', 'gc/GC-15', ...[1, 2, 3, 4, 5, 6].map((n) => `ap/AP-0${n}`)]) {
+    const fx: { id: string; plan: string; events: (LifeEvent & { expected: { refused?: string } })[] } = read(`fixtures/${path}.json`);
     const life: Life = { db, store, claimId: fx.id, planVersionId: versions[fx.plan], staff, versions: new Map() };
-    for (const [i, e] of fx.events.entries()) await playEvent(life, e, i);
+    for (const [i, e] of fx.events.entries()) if (!e.expected.refused) await playEvent(life, e, i);
   }
 
   const golden = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14].map((n) => read(`fixtures/gc/GC-${String(n).padStart(2, '0')}.json`));

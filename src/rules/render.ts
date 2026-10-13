@@ -14,6 +14,8 @@ export type DecisionRecord = {
   documents: { type: string; version: number; versionId: string; sha256: string }[];
   waivers: { type: string; tier: string; asOf: string; by: string | null; reasonText: string }[];
   // An override row carries the engine's trace (D59 c): its own date, amount, author and authority are columns.
+  // On the engine row an appeal's decision wrote (D75): who decided the appeal.
+  appeal?: { by: string; tier: string } | null;
   override: { overridesId: string; asOf: string; payableCents: number; by: string | null; tier: string; totalIncurredCents: number; opsHash: string; reasonCode: string; reasonText: string } | null;
 };
 
@@ -52,7 +54,7 @@ const HEAD = {
  * referral reads as the approval it is (D59 b), on the override's date, with none of the referral's reasons and
  * nothing of who signed or why (D62).
  */
-export function renderLetter(t: Trace, rec?: Pick<DecisionRecord, 'override'>): string {
+export function renderLetter(t: Trace, rec?: Pick<DecisionRecord, 'override' | 'appeal'>): string {
   const { reasons, payableCents, contractFulfilled } = t.decision;
   const outcome = rec?.override ? 'APPROVE' : t.decision.outcome;
   const shown = rec?.override ? [] : t.rules.filter((r) => reasons.includes(r.ruleId) && r.claimantVisible && r.claimantText !== null);
@@ -68,7 +70,8 @@ export function renderLetter(t: Trace, rec?: Pick<DecisionRecord, 'override'>): 
     lines.push(...moved.map((s) => mathLine(s, labels[s.id]!)), `Amount payable: ${money(payableCents!)}.`);
     if (contractFulfilled) lines.push('This payment fulfils your contract.');
   }
-  if (outcome === 'DENY') lines.push('You may appeal this decision.');
+  // D75: a claim is appealed once, so the denial an appeal ends in says so instead of offering another.
+  if (outcome === 'DENY') lines.push(rec?.appeal ? 'This decision was made on your appeal and is final.' : 'You may appeal this decision.');
   if (outcome === 'PEND') lines.push(shown.length ? 'Please send us what is listed above. We will decide your claim when we have it.'
     : 'You do not need to send anything now. We will contact you if we need something from you.');
   return `${lines.join('\n')}\n`;
@@ -94,7 +97,7 @@ export function renderNote(t: Trace, rec?: DecisionRecord): string {
     `${d.outcome} as of ${t.asOf}. ${d.outcome === 'REFER' && d.payableCents !== null ? `Calculated payable cents: ${d.payableCents}, not approved`
       : `Payable cents: ${d.payableCents ?? 'none'}`}. Contract fulfilled: ${d.contractFulfilled ?? 'not determined'}.`,
     ...(rec ? [
-      ...(o ? [] : [`Decided by the engine (${rec.engine}), decision ${rec.decisionId}; no person.`]),
+      ...(o ? [] : [`Decided by the engine (${rec.engine}), decision ${rec.decisionId}; ${rec.appeal ? `on appeal, decided by ${who(rec.appeal.by)} at tier ${rec.appeal.tier}` : 'no person'}.`]),
       ...(rec.documents.length + rec.waivers.length ? [] : ['Documents relied on: none.']),
       ...rec.documents.map((v) => `Document relied on: ${v.type} version ${v.version}, id ${v.versionId}, sha256 ${v.sha256}.`),
       ...rec.waivers.map((w) => `Document waived: ${w.type}, by ${who(w.by)} at tier ${w.tier} on ${w.asOf}: ${w.reasonText}`),

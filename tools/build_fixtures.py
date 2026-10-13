@@ -444,6 +444,7 @@ class Life:
         self.intake = {k: v for k, v in full.items() if k not in from_docs and not k.startswith("docs.")}
         self.versions, self.waived, self.rows, self.events = {}, set(), [], []
         self.status, self.engine, self.current, self.paid, self.pay_status, self.level, self.pend_on = None, None, None, 0, "NONE", 0, None
+        self.appealed, self.acted = False, set()  # D75: one appeal a claim; the tiers that overrode or waived on it (one person per tier)
 
     def doc(self, d):
         if d in self.waived: return "waived"
@@ -461,14 +462,15 @@ class Life:
             assert legal(self.status, to), f"{self.status} -> {to}"
             self.status = to
 
-    def run(self, asof):
-        """D40 with D47: the input is asOf, the facts and the accepted document versions. Unchanged = nothing written."""
+    def run(self, asof, appeal=None):
+        """D40 with D47: the input is asOf, the facts and the accepted document versions. Unchanged = nothing written.
+        An appeal's decision (D75, D79) is always a row, names who decided it, and leaves the status to its caller."""
         f, relied = self.snapshot(), sorted(k for k, v in self.versions.items() if v["status"] == "accepted")
-        if self.engine is not None and self.rows[self.engine]["input"] == (asof, f, relied): return
+        if not appeal and self.engine is not None and self.rows[self.engine]["input"] == (asof, f, relied): return
         ops = select_ops(D(asof))
         e = adjudicate(f, self.plan, ops)
-        self.move("IN_REVIEW", STATUS_FOR[e["outcome"]])
-        self.rows.append(dict(input=(asof, f, relied), shown={
+        if not appeal: self.move("IN_REVIEW", STATUS_FOR[e["outcome"]])
+        self.rows.append(dict(input=(asof, f, relied), shown={**({"appeal": {"by": appeal}} if appeal else {}),
             "kind": "engine", "ops": ops, "outcome": e["outcome"], "reasons": e["reasons"], "payableCents": e["payableCents"],
             "path": e["valuation"] and e["valuation"]["path"], "aggregateRemainingAfterCents": e["valuation"] and e["valuation"]["steps"][-1]["outputCents"],
             "contractFulfilled": e["contractFulfilled"], "notPassed": [r for r in e["rules"] if r["result"] != "PASS"],
@@ -507,8 +509,8 @@ class Life:
     def accept(self, asof, ver, step=None, **entered):
         v = self.versions[ver]
         assert v["status"] == "received"
-        v.update(status="accepted", facts={n: entered.get(n, self.full[n]) for n in FROM_DOC[ver.split("/")[0]]})
-        self.run(asof)
+        v.update(status="accepted", facts={**{n: self.full[n] for n in FROM_DOC[ver.split("/")[0]]}, **entered})  # an acceptance may carry any input fact (D55 c)
+        if self.status != "UNDER_APPEAL": self.run(asof)  # D79: under appeal only the appeal's decision runs the engine
         self.ev(asof, {"type": "accept", "version": ver, "facts": v["facts"]}, step)
 
     def file(self, asof, *docs, step=None):
@@ -517,7 +519,7 @@ class Life:
     def waive(self, asof, d, tier, text, step=None):
         a = authority(select_ops(D(asof)), tier, "waive_documents", self.paid, 0)
         assert a["allowed"] and doc_legal(self.doc(d), "waive")
-        self.waived.add(d)
+        self.waived.add(d); self.acted.add(tier)
         self.run(asof)
         self.ev(asof, {"type": "waive", "doc": d, "by": tier, "reasonText": text}, step)
 
@@ -538,6 +540,7 @@ class Life:
         self.rows.append(dict(shown={"kind": "override", "ops": ops, "outcome": "APPROVE", "payableCents": e["payableCents"], "overrides": self.engine,
                                      "by": tier, "totalIncurredCents": a["totalIncurredCents"], "documentVersions": e["documentVersions"]}))
         self.current = len(self.rows) - 1
+        self.acted.add(tier)
         self.move("DECIDED")
         self.ev(asof, {"type": "override", "by": tier, "outcome": "APPROVE", "amountCents": e["payableCents"], "reasonCode": code, "reasonText": text}, step)
 
@@ -550,8 +553,45 @@ class Life:
         self.ev(asof, {"type": "pay"}, step, paymentCents=due)
 
     def reopen(self, asof, reason, step=None):
+        a = {"type": "reopen", "reason": reason}
+        if self.rows[self.engine]["shown"].get("appeal") and self.rows[self.engine]["shown"]["outcome"] == "DENY":
+            return self.ev(asof, a, step, refused="APPEAL_FINAL")  # D75: a denial upheld on appeal is the end of the claim
         self.move("REOPENED")
-        self.ev(asof, {"type": "reopen", "reason": reason}, step)
+        self.ev(asof, a, step)
+
+    # ---- appeal (D75, D79). A refused action is an event too: `expected.refused` is its code and nothing else has moved.
+    def appeal(self, asof, reason, step=None):
+        a = {"type": "appeal", "reason": reason}
+        code = ("ALREADY_APPEALED" if self.appealed else
+                None if self.status == "DECIDED" and self.rows[self.current]["shown"]["outcome"] == "DENY" else "ILLEGAL_TRANSITION")
+        if code: return self.ev(asof, a, step, refused=code)
+        self.appealed = True
+        self.move("UNDER_APPEAL")
+        self.ev(asof, a, step)
+
+    def decide(self, asof, tier, signoff=None, step=None):
+        """The engine runs on the facts as they stand; the decider lets a denial or an approval stand, or signs off a referral
+        at the engine's amount. Refusals in the order tested: not under appeal, own decision, not decidable, out of authority."""
+        a = {"type": "decide_appeal", "by": tier, **({"signOff": dict(zip(("reasonCode", "reasonText"), signoff))} if signoff else {})}
+        ops = select_ops(D(asof))
+        e = adjudicate(self.snapshot(), self.plan, ops)
+        refer = e["outcome"] == "REFER"
+        power = "clear_flags" if any(r.startswith("F") for r in e["reasons"]) else None
+        code = ("NOT_UNDER_APPEAL" if self.status != "UNDER_APPEAL" else
+                "APPEAL_OWN_DECISION" if tier in self.acted else
+                "APPEAL_NOT_DECIDABLE" if e["outcome"] == "PEND" or (refer and (not signoff or e["payableCents"] is None)) else
+                None if authority(ops, tier, "decide_appeals", self.paid, e["payableCents"] or 0)["allowed"]
+                and (not refer or authority(ops, tier, power, self.paid, e["payableCents"])["allowed"]) else "OUT_OF_AUTHORITY")
+        if code: return self.ev(asof, a, step, refused=code)
+        self.run(asof, appeal=tier)
+        if refer:
+            au = authority(ops, tier, power, self.paid, e["payableCents"])
+            self.rows.append(dict(shown={"kind": "override", "ops": ops, "outcome": "APPROVE", "payableCents": e["payableCents"], "overrides": self.engine,
+                                         "by": tier, "totalIncurredCents": au["totalIncurredCents"], "documentVersions": self.rows[self.engine]["shown"]["documentVersions"]}))
+            self.current = len(self.rows) - 1
+        self.move("DECIDED")
+        if e["outcome"] == "DENY": self.move("CLOSED")
+        self.ev(asof, a, step)
 
     def write(self, sub, fid, title, source, note=None):
         write(sub, {"id": fid, "kind": "lifecycle", "title": title, "source": source, **({"note": note} if note else {}), "plan": self.plan, "events": self.events})
@@ -625,6 +665,8 @@ def build_phase3():
                  "moves": [{"from": a, "action": b, "to": c} for a, b, c in DOC_MOVES],
                  "rejectionReasons": REJECTION_REASONS})
 
+    build_appeals()
+
     gc5 = json.load(open(os.path.join(ROOT, "gc", "GC-05.json")))
     asof = iso(D(gc5["asOf"]) + dt.timedelta(days=1))
     gc5["signoff"] = {"asOf": asof, "by": "adjuster", "outcome": "APPROVE", "amountCents": gc5["expected"]["payableCents"], "reasonCode": "SIGN_OFF",
@@ -632,6 +674,55 @@ def build_phase3():
                       "expected": {"kind": "override", "ops": select_ops(D(asof)), "outcome": "APPROVE", "payableCents": gc5["expected"]["payableCents"], "claimStatus": "DECIDED",
                                    "authority": authority(select_ops(D(asof)), "adjuster", None, 0, gc5["expected"]["payableCents"])}}
     write("gc", gc5)
+
+
+# ------------------------------------------------------------------ Phase 4: the appeal (AP)  D75, D79
+
+def build_appeals():
+    gcs = {g[0]: g[3] for g in golden()}
+    src = "PRD item 13 / D75 / D79"
+    four = ("damagePhotos", "incidentStatement", "proofOfPurchase", "repairEstimate")
+    scratched = lambda **kw: Life(facts("plus", peril="adh", **kw, **{"claim.cosmeticOnly": True}))  # denied at FNOL on E7, nothing asked for
+    works = {"claim.cosmeticOnly": False}  # what the photos show; entered with their acceptance
+
+    c = Life(gcs["GC-14"]); c.open("2025-09-20")
+    c.appeal("2025-09-27", "The repair shop was recommended by the retailer")
+    c.decide("2025-09-29", "adjuster"); c.decide("2025-09-29", "senior")
+    c.reopen("2025-10-20", "supplemental")
+    c.write("ap", "AP-01", "An appeal that brings nothing new: the denial is upheld, the claim closes and cannot be reopened", src,
+            "GC-14's claim. The appeal's decision is a new engine row that supersedes the denial and names who let it stand. An adjuster does not hold decide_appeals.")
+
+    c = scratched(price=80000, R=70000, C=20000); c.open("2025-09-17")
+    c.appeal("2025-09-24", "The crack runs through the display and the touch layer no longer responds; photos attached")
+    c.accept("2025-09-24", c.upload("2025-09-24", "damagePhotos"), **works); c.decide("2025-09-25", "senior")
+    c.file("2025-09-26", "incidentStatement", "proofOfPurchase", "repairEstimate"); c.decide("2025-09-27", "senior"); c.pay("2025-09-28")
+    c.write("ap", "AP-02", "An appeal that brings documents: the photos show more than scratches, and the claim is approved", src,
+            "EV-01's claim, filed as cosmetic. Under appeal an acceptance decides nothing. With three documents still to come the engine would pend, so the appeal cannot be decided yet.")
+
+    c = Life(gcs["GC-05"]); c.open("2025-09-17"); c.file("2025-09-17", *four)
+    c.override("2025-09-18", "senior", "SIGN_OFF", "Replacement value checked against the catalog"); c.pay("2025-09-19")
+    c.reopen("2025-10-01", "supplemental"); c.accept("2025-10-01", c.upload("2025-10-01", "repairEstimate"), **{"claim.commercialUse": True})
+    c.appeal("2025-10-08", "The television is in a home office, not a shop")
+    c.decide("2025-10-09", "senior"); c.decide("2025-10-09", "manager")
+    c.write("ap", "AP-03", "Nobody decides an appeal on a claim they overrode on: the senior adjuster is refused, the manager decides", src,
+            "GC-05's claim, signed off and paid, then denied on a supplemental estimate that reports commercial use. One person per tier. Money paid stays paid.")
+
+    c = Life(gcs["GC-02"]); c.open("2025-09-17")
+    c.appeal("2025-09-24", "The retailer said accidents were covered"); c.decide("2025-09-26", "senior")
+    c.appeal("2025-10-05", "Please look again")
+    c.write("ap", "AP-04", "A claim is appealed once: a second appeal is refused", src, "GC-02's claim.")
+
+    c = Life(gcs["GC-01"]); c.open("2025-09-17"); c.file("2025-09-17", *four)
+    c.appeal("2025-09-24", "The amount is too low"); c.decide("2025-09-24", "senior")
+    c.write("ap", "AP-05", "Only a denial is appealed: an approved claim's appeal is refused, and nothing is decided on a claim not under appeal", src, "GC-01's claim.")
+
+    c = scratched(price=150000, R=140000, C=90000); c.open("2025-09-17")
+    c.appeal("2025-09-24", "The hinge is broken and the lid does not close; photos and the estimate attached")
+    c.accept("2025-09-24", c.upload("2025-09-24", "damagePhotos"), **works); c.file("2025-09-24", "incidentStatement", "proofOfPurchase", "repairEstimate")
+    c.decide("2025-09-26", "senior"); c.decide("2025-09-26", "adjuster", ("SIGN_OFF", "Estimate itemized and consistent with the parts catalog"))
+    c.decide("2025-09-26", "senior", ("SIGN_OFF", "Estimate itemized and consistent with the parts catalog")); c.pay("2025-09-27")
+    c.write("ap", "AP-06", "An appeal the engine refers: the person deciding it signs off the engine's amount, or it is not decided", src,
+            "Above the auto-approve limit. The engine row names who decided the appeal; the override beside it is the same person's.")
 
 
 # ------------------------------------------------------------------ Phase 4: authoring (AU, OV-04) and the impact diff (ID)  D68-D75

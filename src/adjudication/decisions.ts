@@ -13,7 +13,7 @@ import { checkDictionaryHash, validateDictionary } from '@/rules/validate';
 export type Db = { query: <R = Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<{ rows: R[] }> };
 
 export const FAILURE_CODES = ['RULESET_HASH_MISMATCH', 'FACTS_HASH_MISMATCH', 'REPLAY_DIVERGED', 'EXPLANATION_INCONSISTENT',
-  'VERSION_NOT_EFFECTIVE', 'CHAIN_BROKEN', 'OVERRIDE_INVALID', 'OVERRIDE_UNAUTHORIZED', 'SEMANTICS_UNSUPPORTED'] as const;
+  'VERSION_NOT_EFFECTIVE', 'CHAIN_BROKEN', 'OVERRIDE_INVALID', 'OVERRIDE_UNAUTHORIZED', 'APPEAL_UNAUTHORIZED', 'SEMANTICS_UNSUPPORTED'] as const;
 export type Failure = { code: (typeof FAILURE_CODES)[number]; id: string; detail: string };
 
 type Version = { id: string; kind: string; product: string; version: number; status: string; effectiveFrom: string; body: RuleSet; contentHash: string | null };
@@ -22,6 +22,7 @@ type Row = {
   facts: Snapshot; documentVersions: string[]; inputHash: string; outputHash: string; engineSemanticsVersion: string; outcome: string; payableCents: number | null;
   explanation: unknown; supersedesId: string | null; overridesId: string | null; createdAt: Date;
   overrideReasonCode: string | null; overrideReasonText: string | null; overrideTier: string | null; overrideTotalIncurredCents: number | null;
+  overrideBy: string | null; appealBy: string | null; appealTier: string | null;
 };
 
 // D47: the accepted document versions are an input, so a replacement upload with the same facts is a new decision.
@@ -51,7 +52,7 @@ export const loadVersions = async (db: Db) => new Map((await db.query<Version>(
   `SELECT "id", "kind", "product", "version", "status", "effectiveFrom"::text AS "effectiveFrom", "body", "contentHash" FROM "RuleSetVersion"`,
 )).rows.map((v) => [v.id, v]));
 
-export async function recordDecision(db: Db, d: { claimId: string; planVersionId: string; opsVersionId: string; snapshot: Snapshot; documentVersions: string[]; asOf: string; supersedesId?: string }) {
+export async function recordDecision(db: Db, d: { claimId: string; planVersionId: string; opsVersionId: string; snapshot: Snapshot; documentVersions: string[]; asOf: string; supersedesId?: string; appeal?: { by: string; tier: string } }) {
   const versions = await loadVersions(db);
   const [plan, ops] = [versions.get(d.planVersionId)!, versions.get(d.opsVersionId)!];
   const { dict } = validateDictionary(dictFile(plan.body));
@@ -59,10 +60,10 @@ export async function recordDecision(db: Db, d: { claimId: string; planVersionId
   const row = { asOf: d.asOf, facts: d.snapshot, documentVersions: d.documentVersions, planHash: plan.contentHash!, opsHash: ops.contentHash! };
   const { rows } = await db.query<{ id: string }>(
     `INSERT INTO "Decision" ("id", "claimId", "planVersionId", "planHash", "opsVersionId", "opsHash", "asOf", "facts", "inputHash", "outputHash",
-       "engineSemanticsVersion", "outcome", "payableCents", "explanation", "supersedesId", "documentVersions")
-     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING "id"`,
+       "engineSemanticsVersion", "outcome", "payableCents", "explanation", "supersedesId", "documentVersions", "appealBy", "appealTier")
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::uuid, $17) RETURNING "id"`,
     [d.claimId, d.planVersionId, row.planHash, d.opsVersionId, row.opsHash, d.asOf, JSON.stringify(d.snapshot), inputHashOf(row), sha256Hex(trace),
-      ENGINE_SEMANTICS_VERSION, trace.decision.outcome, trace.decision.payableCents, trace, d.supersedesId ?? null, d.documentVersions]);
+      ENGINE_SEMANTICS_VERSION, trace.decision.outcome, trace.decision.payableCents, trace, d.supersedesId ?? null, d.documentVersions, d.appeal?.by ?? null, d.appeal?.tier ?? null]);
   return rows[0]!.id;
 }
 
@@ -77,6 +78,7 @@ export async function verifyDecisions(db: Db, until?: string): Promise<{ checked
   const pins = new Map((await db.query<{ claimId: string; planVersionId: string }>(
     `SELECT c."id" AS "claimId", k."planVersionId" FROM "Claim" c JOIN "Contract" k ON k."id" = c."contractId"`,
   )).rows.map((r) => [r.claimId, r.planVersionId]));
+  const waivers = (await db.query<{ claimId: string; waivedBy: string | null; waivedAt: Date }>('SELECT "claimId", "waivedBy", "waivedAt" FROM "DocumentWaiver"')).rows;
   const failures: Failure[] = [];
   const fail = (code: Failure['code'], id: string, detail: string) => failures.push({ code, id, detail });
 
@@ -138,9 +140,21 @@ export async function verifyDecisions(db: Db, until?: string): Promise<{ checked
       }
     } else if (d.supersedesId) {
       // D13: same claim, same plan version, later, and on changed facts (an unchanged inputHash is a no-op).
+      // D79: an appeal's decision is the exception: it is a row even when nothing changed.
       const prev = byId.get(d.supersedesId);
-      if (!prev || prev.overridesId || prev.claimId !== d.claimId || prev.planVersionId !== d.planVersionId || prev.inputHash === d.inputHash || prev.createdAt > d.createdAt)
+      if (!prev || prev.overridesId || prev.claimId !== d.claimId || prev.planVersionId !== d.planVersionId || (prev.inputHash === d.inputHash && !d.appealBy) || prev.createdAt > d.createdAt)
         fail('CHAIN_BROKEN', d.id, `supersedes ${d.supersedesId}`);
+    }
+
+    if (d.appealBy) {
+      // D75: the stored tier, under this row's ops version (checked above to be the one in force on its date), must hold
+      // the power to decide appeals and the limit for the amount; and whoever decided made no earlier override or waiver
+      // on the claim. The sign-off of this very row is written with it, so it is not earlier.
+      const check = checkAuthority(ops.body.authority ?? [], d.appealTier, 'decide_appeals', 0, d.payableCents ?? 0);
+      const own = all.some((o) => o.claimId === d.claimId && o.overrideBy === d.appealBy && o.createdAt < d.createdAt)
+        || waivers.some((w) => w.claimId === d.claimId && w.waivedBy === d.appealBy && w.waivedAt < d.createdAt);
+      if (!check.allowed) fail('APPEAL_UNAUTHORIZED', d.id, `tier ${d.appealTier} lacks ${check.lacks.join(' and ')} to decide an appeal`);
+      else if (own) fail('APPEAL_UNAUTHORIZED', d.id, `user ${d.appealBy} overrode or waived on claim ${d.claimId} before deciding its appeal`);
     }
   }
 

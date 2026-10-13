@@ -1,0 +1,759 @@
+{
+  "id": "AP-02",
+  "kind": "lifecycle",
+  "title": "An appeal that brings documents: the photos show more than scratches, and the claim is approved",
+  "source": "PRD item 13 / D75 / D79",
+  "note": "EV-01's claim, filed as cosmetic. Under appeal an acceptance decides nothing. With three documents still to come the engine would pend, so the appeal cannot be decided yet.",
+  "plan": "plan-v1",
+  "events": [
+    {
+      "asOf": "2025-09-17",
+      "action": {
+        "type": "open",
+        "facts": {
+          "contract.planCode": "plus",
+          "contract.status": "active",
+          "contract.termStart": "2025-01-15",
+          "contract.termEnd": "2028-01-14",
+          "contract.waitingEndsOn": "2025-02-14",
+          "product.purchaseDate": "2025-01-15",
+          "product.purchasePriceCents": 80000,
+          "claim.peril": "adh",
+          "claim.dateOfLoss": "2025-09-15",
+          "claim.dateReported": "2025-09-17",
+          "claim.cosmeticOnly": true,
+          "claim.preExisting": false,
+          "claim.consumableOrAccessory": false,
+          "claim.unauthorizedRepair": "none",
+          "claim.commercialUse": false,
+          "claim.intentionalOrAbuse": false,
+          "claim.inMfrWarrantyOrRecall": false,
+          "claim.productUnavailable": false,
+          "claim.softwareOrData": false,
+          "claim.externalCause": false,
+          "claim.claimantIsHolder": true,
+          "claim.replacementValueCents": 70000,
+          "history.priorClaims": [],
+          "history.claimantContractsWithClaims": 1
+        }
+      },
+      "expected": {
+        "claimStatus": "DECIDED",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "requested",
+          "damagePhotos": "requested",
+          "incidentStatement": "requested",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {},
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "DENY",
+          "reasons": [
+            "E7"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E7",
+              "result": "DENY",
+              "missing": []
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-24",
+      "action": {
+        "type": "appeal",
+        "reason": "The crack runs through the display and the touch layer no longer responds; photos attached"
+      },
+      "expected": {
+        "claimStatus": "UNDER_APPEAL",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "requested",
+          "damagePhotos": "requested",
+          "incidentStatement": "requested",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {},
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "DENY",
+          "reasons": [
+            "E7"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E7",
+              "result": "DENY",
+              "missing": []
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-24",
+      "action": {
+        "type": "upload",
+        "doc": "damagePhotos",
+        "version": "damagePhotos/1"
+      },
+      "expected": {
+        "claimStatus": "UNDER_APPEAL",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "requested",
+          "damagePhotos": "received",
+          "incidentStatement": "requested",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "damagePhotos/1": "received"
+        },
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "DENY",
+          "reasons": [
+            "E7"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E7",
+              "result": "DENY",
+              "missing": []
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-24",
+      "action": {
+        "type": "accept",
+        "version": "damagePhotos/1",
+        "facts": {
+          "evidence.photoMetaDateBeforeLoss": false,
+          "evidence.documentHashOnOtherClaim": false,
+          "claim.cosmeticOnly": false
+        }
+      },
+      "expected": {
+        "claimStatus": "UNDER_APPEAL",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "requested",
+          "damagePhotos": "accepted",
+          "incidentStatement": "requested",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "damagePhotos/1": "accepted"
+        },
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "DENY",
+          "reasons": [
+            "E7"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E7",
+              "result": "DENY",
+              "missing": []
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-25",
+      "action": {
+        "type": "decide_appeal",
+        "by": "senior"
+      },
+      "expected": {
+        "claimStatus": "UNDER_APPEAL",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "requested",
+          "damagePhotos": "accepted",
+          "incidentStatement": "requested",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "damagePhotos/1": "accepted"
+        },
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "DENY",
+          "reasons": [
+            "E7"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E7",
+              "result": "DENY",
+              "missing": []
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        },
+        "refused": "APPEAL_NOT_DECIDABLE"
+      }
+    },
+    {
+      "asOf": "2025-09-26",
+      "action": {
+        "type": "upload",
+        "doc": "incidentStatement",
+        "version": "incidentStatement/1"
+      },
+      "expected": {
+        "claimStatus": "UNDER_APPEAL",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "requested",
+          "damagePhotos": "accepted",
+          "incidentStatement": "received",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "received"
+        },
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "DENY",
+          "reasons": [
+            "E7"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E7",
+              "result": "DENY",
+              "missing": []
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-26",
+      "action": {
+        "type": "accept",
+        "version": "incidentStatement/1",
+        "facts": {
+          "claim.accountChanged": false
+        }
+      },
+      "expected": {
+        "claimStatus": "UNDER_APPEAL",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "requested",
+          "repairEstimate": "requested",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted"
+        },
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "DENY",
+          "reasons": [
+            "E7"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E7",
+              "result": "DENY",
+              "missing": []
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-26",
+      "action": {
+        "type": "upload",
+        "doc": "proofOfPurchase",
+        "version": "proofOfPurchase/1"
+      },
+      "expected": {
+        "claimStatus": "UNDER_APPEAL",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "received",
+          "repairEstimate": "requested",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted",
+          "proofOfPurchase/1": "received"
+        },
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "DENY",
+          "reasons": [
+            "E7"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E7",
+              "result": "DENY",
+              "missing": []
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-26",
+      "action": {
+        "type": "accept",
+        "version": "proofOfPurchase/1",
+        "facts": {
+          "evidence.proofOfPurchaseDate": "2025-01-15"
+        }
+      },
+      "expected": {
+        "claimStatus": "UNDER_APPEAL",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "accepted",
+          "repairEstimate": "requested",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted",
+          "proofOfPurchase/1": "accepted"
+        },
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "DENY",
+          "reasons": [
+            "E7"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E7",
+              "result": "DENY",
+              "missing": []
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-26",
+      "action": {
+        "type": "upload",
+        "doc": "repairEstimate",
+        "version": "repairEstimate/1"
+      },
+      "expected": {
+        "claimStatus": "UNDER_APPEAL",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "accepted",
+          "repairEstimate": "received",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted",
+          "proofOfPurchase/1": "accepted",
+          "repairEstimate/1": "received"
+        },
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "DENY",
+          "reasons": [
+            "E7"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E7",
+              "result": "DENY",
+              "missing": []
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-26",
+      "action": {
+        "type": "accept",
+        "version": "repairEstimate/1",
+        "facts": {
+          "claim.coveredRepairCents": 20000,
+          "claim.serialMatchesContract": true,
+          "evidence.estimateFromNetwork": true,
+          "evidence.estimatorIsPayee": false
+        }
+      },
+      "expected": {
+        "claimStatus": "UNDER_APPEAL",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "accepted",
+          "repairEstimate": "accepted",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted",
+          "proofOfPurchase/1": "accepted",
+          "repairEstimate/1": "accepted"
+        },
+        "decisionRows": 1,
+        "decision": {
+          "row": 0,
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "DENY",
+          "reasons": [
+            "E7"
+          ],
+          "payableCents": null,
+          "path": null,
+          "aggregateRemainingAfterCents": null,
+          "contractFulfilled": null,
+          "notPassed": [
+            {
+              "ruleId": "E5",
+              "result": "PEND",
+              "missing": [
+                "claim.serialMatchesContract"
+              ]
+            },
+            {
+              "ruleId": "E7",
+              "result": "DENY",
+              "missing": []
+            }
+          ],
+          "supersedes": null,
+          "documentVersions": []
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-27",
+      "action": {
+        "type": "decide_appeal",
+        "by": "senior"
+      },
+      "expected": {
+        "claimStatus": "DECIDED",
+        "paymentStatus": "NONE",
+        "paidCents": 0,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "accepted",
+          "repairEstimate": "accepted",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted",
+          "proofOfPurchase/1": "accepted",
+          "repairEstimate/1": "accepted"
+        },
+        "decisionRows": 2,
+        "decision": {
+          "row": 1,
+          "appeal": {
+            "by": "senior"
+          },
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "APPROVE",
+          "reasons": [],
+          "payableCents": 12500,
+          "path": "repair",
+          "aggregateRemainingAfterCents": 187500,
+          "contractFulfilled": false,
+          "notPassed": [],
+          "supersedes": 0,
+          "documentVersions": [
+            "damagePhotos/1",
+            "incidentStatement/1",
+            "proofOfPurchase/1",
+            "repairEstimate/1"
+          ]
+        }
+      }
+    },
+    {
+      "asOf": "2025-09-28",
+      "action": {
+        "type": "pay"
+      },
+      "expected": {
+        "claimStatus": "CLOSED",
+        "paymentStatus": "PAID",
+        "paidCents": 12500,
+        "reminderLevel": 0,
+        "docs": {
+          "proofOfPurchase": "accepted",
+          "repairEstimate": "accepted",
+          "damagePhotos": "accepted",
+          "incidentStatement": "accepted",
+          "secondEstimate": "requested",
+          "transferProof": "requested"
+        },
+        "versions": {
+          "damagePhotos/1": "accepted",
+          "incidentStatement/1": "accepted",
+          "proofOfPurchase/1": "accepted",
+          "repairEstimate/1": "accepted"
+        },
+        "decisionRows": 2,
+        "decision": {
+          "row": 1,
+          "appeal": {
+            "by": "senior"
+          },
+          "kind": "engine",
+          "ops": "ops-v1",
+          "outcome": "APPROVE",
+          "reasons": [],
+          "payableCents": 12500,
+          "path": "repair",
+          "aggregateRemainingAfterCents": 187500,
+          "contractFulfilled": false,
+          "notPassed": [],
+          "supersedes": 0,
+          "documentVersions": [
+            "damagePhotos/1",
+            "incidentStatement/1",
+            "proofOfPurchase/1",
+            "repairEstimate/1"
+          ]
+        },
+        "paymentCents": 12500
+      }
+    }
+  ]
+}

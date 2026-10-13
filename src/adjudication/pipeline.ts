@@ -17,6 +17,8 @@ import { selectVersions } from '@/rules/select';
 // A person's sign-off of a referral is a second row beside the engine's, never a change to it (task 3.8, D48, D59).
 // Paying sends the part of the current decision's amount the claim has not been paid, and closes it (task 3.9, D51j, D60).
 // A supplemental is an explicit reopen of a closed claim by staff; the new facts then decide it as any others do (task 3.10, D61).
+// A denial may be appealed once. Under appeal nothing decides the claim but the appeal's decision: the engine on the facts
+// as they then stand, let stand or signed off by someone who holds the power and made no override or waiver on the claim (task 4.5, D75, D79).
 
 const STATUS_FOR: Record<string, ClaimStatus> = { APPROVE: 'DECIDED', PARTIAL: 'DECIDED', DENY: 'DECIDED', PEND: 'PENDING_EVIDENCE', REFER: 'REFERRED' };
 
@@ -77,34 +79,36 @@ export type Override = { claimId: string; userId: string | null; reasonCode: str
  * refused before anything is written. A referral with no amount (a rule gap) is never approved this way.
  * Total incurred is the larger of what the claim has been paid and this amount (D50).
  */
-export const overrideDecision = (db: Db, o: Override): Promise<{ decisionId: string; outcome: string; claimStatus: ClaimStatus }> =>
-  tx(db, async () => {
-    const engine = (await db.query<{ id: string; outcome: string; payableCents: number | null; asOf: string; planVersionId: string; opsVersionId: string; reasons: string[] }>(
-      `SELECT "id", "outcome", "payableCents", "asOf"::text AS "asOf", "planVersionId", "opsVersionId", "explanation"->'decision'->'reasons' AS "reasons"
-       FROM "Decision" d WHERE "claimId" = $1 AND "overridesId" IS NULL
-         AND NOT EXISTS (SELECT 1 FROM "Decision" n WHERE n."supersedesId" = d."id" OR n."overridesId" = d."id")`, [o.claimId])).rows[0];
-    if (!engine || engine.outcome !== 'REFER' || engine.payableCents === null || o.asOf < engine.asOf)
-      throw new Error(`NOT_OVERRIDABLE: claim ${o.claimId} has no referral with an amount, dated on or before ${o.asOf}, that is still its decision`);
+export const overrideDecision = (db: Db, o: Override): Promise<Decided> => tx(db, () => override(db, o));
 
-    const versions = await loadVersions(db);
-    const [plan, decidedUnder] = [versions.get(engine.planVersionId)!, versions.get(engine.opsVersionId)!];
-    const selected = selectVersions({ planVersion: plan.id }, [...versions.values()].filter((v) => v.product === plan.product).map((v) => ({ ...v, name: v.id })), o.asOf);
-    if ('error' in selected) throw new Error(`${selected.error}: ${selected.kind} on ${o.asOf}`);
-    const tier = await tierOf(db, o.userId);
-    const power = powerToOverride([...plan.body.rules, ...decidedUnder.body.rules], engine.reasons);
-    const check = checkAuthority(selected.ops.body.authority ?? [], tier, power, await paidCents(db, o.claimId), engine.payableCents);
-    if (!check.allowed) throw new OutOfAuthorityError(tier, check.lacks, `an override of decision ${engine.id}`);
+type Decided = { decisionId: string; outcome: string; claimStatus: ClaimStatus };
+async function override(db: Db, o: Override): Promise<Decided> {
+  const engine = (await db.query<{ id: string; outcome: string; payableCents: number | null; asOf: string; planVersionId: string; opsVersionId: string; reasons: string[] }>(
+    `SELECT "id", "outcome", "payableCents", "asOf"::text AS "asOf", "planVersionId", "opsVersionId", "explanation"->'decision'->'reasons' AS "reasons"
+     FROM "Decision" d WHERE "claimId" = $1 AND "overridesId" IS NULL
+       AND NOT EXISTS (SELECT 1 FROM "Decision" n WHERE n."supersedesId" = d."id" OR n."overridesId" = d."id")`, [o.claimId])).rows[0];
+  if (!engine || engine.outcome !== 'REFER' || engine.payableCents === null || o.asOf < engine.asOf)
+    throw new Error(`NOT_OVERRIDABLE: claim ${o.claimId} has no referral with an amount, dated on or before ${o.asOf}, that is still its decision`);
 
-    const { rows } = await db.query<{ id: string }>(
-      `INSERT INTO "Decision" ("id", "claimId", "planVersionId", "planHash", "opsVersionId", "opsHash", "asOf", "facts", "documentVersions", "inputHash", "outputHash",
-         "engineSemanticsVersion", "outcome", "payableCents", "explanation", "overridesId", "overrideReasonCode", "overrideReasonText", "overrideTier", "overrideTotalIncurredCents", "overrideBy")
-       SELECT gen_random_uuid(), "claimId", "planVersionId", "planHash", $2, $3, $4::date, "facts", "documentVersions", "inputHash", "outputHash",
-         "engineSemanticsVersion", 'APPROVE', "payableCents", "explanation", "id", $5, $6, $7, $8, $9::uuid
-       FROM "Decision" WHERE "id" = $1 RETURNING "id"`,
-      [engine.id, selected.ops.id, selected.ops.contentHash, o.asOf, o.reasonCode, o.reasonText, tier, check.totalIncurredCents, o.userId]);
-    await transitionClaim(db, o.claimId, 'DECIDED', { userId: o.userId, reason: `override: ${o.reasonCode}` });
-    return { decisionId: rows[0]!.id, outcome: 'APPROVE', claimStatus: 'DECIDED' };
-  });
+  const versions = await loadVersions(db);
+  const [plan, decidedUnder] = [versions.get(engine.planVersionId)!, versions.get(engine.opsVersionId)!];
+  const selected = selectVersions({ planVersion: plan.id }, [...versions.values()].filter((v) => v.product === plan.product).map((v) => ({ ...v, name: v.id })), o.asOf);
+  if ('error' in selected) throw new Error(`${selected.error}: ${selected.kind} on ${o.asOf}`);
+  const tier = await tierOf(db, o.userId);
+  const power = powerToOverride([...plan.body.rules, ...decidedUnder.body.rules], engine.reasons);
+  const check = checkAuthority(selected.ops.body.authority ?? [], tier, power, await paidCents(db, o.claimId), engine.payableCents);
+  if (!check.allowed) throw new OutOfAuthorityError(tier, check.lacks, `an override of decision ${engine.id}`);
+
+  const { rows } = await db.query<{ id: string }>(
+    `INSERT INTO "Decision" ("id", "claimId", "planVersionId", "planHash", "opsVersionId", "opsHash", "asOf", "facts", "documentVersions", "inputHash", "outputHash",
+       "engineSemanticsVersion", "outcome", "payableCents", "explanation", "overridesId", "overrideReasonCode", "overrideReasonText", "overrideTier", "overrideTotalIncurredCents", "overrideBy")
+     SELECT gen_random_uuid(), "claimId", "planVersionId", "planHash", $2, $3, $4::date, "facts", "documentVersions", "inputHash", "outputHash",
+       "engineSemanticsVersion", 'APPROVE', "payableCents", "explanation", "id", $5, $6, $7, $8, $9::uuid
+     FROM "Decision" WHERE "id" = $1 RETURNING "id"`,
+    [engine.id, selected.ops.id, selected.ops.contentHash, o.asOf, o.reasonCode, o.reasonText, tier, check.totalIncurredCents, o.userId]);
+  await transitionClaim(db, o.claimId, 'DECIDED', { userId: o.userId, reason: `override: ${o.reasonCode}` });
+  return { decisionId: rows[0]!.id, outcome: 'APPROVE', claimStatus: 'DECIDED' };
+}
 
 export type Pay = { claimId: string; asOf: string; userId: string | null };
 
@@ -161,11 +165,66 @@ export const reopenClaim = (db: Db, r: Reopen): Promise<{ claimStatus: ClaimStat
     const claim = (await db.query<{ status: ClaimStatus }>('SELECT "status" FROM "Claim" WHERE "id" = $1 FOR UPDATE', [r.claimId])).rows[0];
     if (!claim) throw new Error(`Claim ${r.claimId} not found`);
     if (claim.status !== 'CLOSED') throw new IllegalTransitionError(claim.status, 'REOPENED', 'only a closed claim is reopened for a supplemental');
+    // D75: a denial upheld on appeal is the end of the claim. Nothing follows it, so the appeal's row is still the decision.
+    if ((await db.query(`SELECT 1 FROM "Decision" WHERE "claimId" = $1 AND "appealBy" IS NOT NULL AND "outcome" = 'DENY'`, [r.claimId])).rows.length)
+      throw new Error(`APPEAL_FINAL: claim ${r.claimId} was denied on appeal and is not reopened`);
     await transitionClaim(db, r.claimId, 'REOPENED', { userId: r.userId, reason: r.reason });
     return { claimStatus: 'REOPENED' };
   });
 
-async function run(db: Db, claimId: string, asOf: string, { userId }: By): Promise<PipelineResult> {
+export type Appeal = { claimId: string; userId: string | null; reason: string };
+
+/**
+ * Files an appeal: the claim moves to UNDER_APPEAL with the reason on the status-change audit event. The status table
+ * lets only a decided claim whose current decision is a denial through, and a claim is appealed once.
+ */
+export const fileAppeal = (db: Db, a: Appeal): Promise<{ claimStatus: ClaimStatus }> =>
+  tx(db, async () => {
+    if (!a.reason.trim()) throw new Error(`REASON_REQUIRED: an appeal on claim ${a.claimId} needs a reason`);
+    if ((await db.query('SELECT 1 FROM "Decision" WHERE "claimId" = $1 AND "appealBy" IS NOT NULL', [a.claimId])).rows.length)
+      throw new Error(`ALREADY_APPEALED: claim ${a.claimId} has had its appeal`);
+    await transitionClaim(db, a.claimId, 'UNDER_APPEAL', { userId: a.userId, reason: a.reason });
+    return { claimStatus: 'UNDER_APPEAL' };
+  });
+
+export type AppealDecision = { claimId: string; userId: string | null; asOf: string; signOff?: { reasonCode: string; reasonText: string } };
+
+/**
+ * Decides an appeal. The engine runs on the facts as they now stand and its decision supersedes the denial, naming who
+ * decided the appeal. A denial or an approval stands; a referral with an amount is signed off by the same person at
+ * that amount (`signOff`, an override under D59), so no appeal is decided for an amount the engine did not calculate.
+ * Refused, in this order, with nothing written: a claim not under appeal, a user with no tier, one who overrode or
+ * waived on the claim, an engine result that is a pend or a referral not signed off, and a tier without the power to
+ * decide appeals or the limit for the amount, under the ops version in force on `asOf`. A denial upheld closes the claim.
+ */
+export const decideAppeal = (db: Db, a: AppealDecision): Promise<Decided> =>
+  tx(db, async () => {
+    const claim = (await db.query<{ status: ClaimStatus }>('SELECT "status" FROM "Claim" WHERE "id" = $1 FOR UPDATE', [a.claimId])).rows[0];
+    if (claim?.status !== 'UNDER_APPEAL') throw new Error(`NOT_UNDER_APPEAL: claim ${a.claimId} is ${claim?.status ?? 'not on file'}`);
+    const tier = await tierOf(db, a.userId);
+    if (!a.userId || !tier) throw new OutOfAuthorityError(tier, ['tier'], `the appeal on claim ${a.claimId}`);
+    const own = await db.query(
+      `SELECT 1 FROM "Decision" WHERE "claimId" = $1 AND "overrideBy" = $2::uuid
+       UNION ALL SELECT 1 FROM "DocumentWaiver" WHERE "claimId" = $1 AND "waivedBy" = $2::uuid`, [a.claimId, a.userId]);
+    if (own.rows.length) throw new Error(`APPEAL_OWN_DECISION: user ${a.userId} overrode or waived on claim ${a.claimId} and does not decide its appeal`);
+
+    const { decisionId } = await run(db, a.claimId, a.asOf, a, { by: a.userId, tier });
+    const d = (await db.query<{ outcome: string; payableCents: number | null; opsVersionId: string }>(
+      'SELECT "outcome", "payableCents", "opsVersionId" FROM "Decision" WHERE "id" = $1', [decisionId])).rows[0]!;
+    if (d.outcome === 'PEND' || (d.outcome === 'REFER' && (!a.signOff || d.payableCents === null)))
+      throw new Error(`APPEAL_NOT_DECIDABLE: on ${a.asOf} the engine gives ${d.outcome} on claim ${a.claimId}; the appeal waits for what is missing or for a sign-off`);
+    const tiers = (await loadVersions(db)).get(d.opsVersionId)!.body.authority ?? [];
+    const check = checkAuthority(tiers, tier, 'decide_appeals', await paidCents(db, a.claimId), d.payableCents ?? 0);
+    if (!check.allowed) throw new OutOfAuthorityError(tier, check.lacks, `the appeal on claim ${a.claimId}`);
+
+    if (d.outcome === 'REFER') return override(db, { claimId: a.claimId, userId: a.userId, asOf: a.asOf, ...a.signOff! });
+    const by = { userId: a.userId, reason: 'appeal decided' };
+    await transitionClaim(db, a.claimId, 'DECIDED', by);
+    if (d.outcome === 'DENY') await transitionClaim(db, a.claimId, 'CLOSED', by);
+    return { decisionId: decisionId!, outcome: d.outcome, claimStatus: d.outcome === 'DENY' ? 'CLOSED' : 'DECIDED' };
+  });
+
+async function run(db: Db, claimId: string, asOf: string, { userId }: By, appeal?: { by: string; tier: string }): Promise<PipelineResult> {
   const by = { userId };
   const refer = async (error: 'CONTRACT_NOT_FOUND' | 'NO_EFFECTIVE_VERSION', detail: string) => {
     await transitionClaim(db, claimId, 'REFERRED', { ...by, reason: `${error}: ${detail}` });
@@ -189,16 +248,19 @@ async function run(db: Db, claimId: string, asOf: string, { userId }: By): Promi
   const { documentVersions } = evidence;
 
   // Re-adjudication (D13, D40). The claim's current engine decision is the one no later engine row supersedes.
-  const prev = (await db.query<{ id: string; inputHash: string; planVersionId: string; outcome: string }>(
-    `SELECT "id", "inputHash", "planVersionId", "outcome" FROM "Decision" d WHERE "claimId" = $1 AND "overridesId" IS NULL
+  const prev = (await db.query<{ id: string; inputHash: string; planVersionId: string; outcome: string; asOf: string }>(
+    `SELECT "id", "inputHash", "planVersionId", "outcome", "asOf"::text AS "asOf" FROM "Decision" d WHERE "claimId" = $1 AND "overridesId" IS NULL
        AND NOT EXISTS (SELECT 1 FROM "Decision" n WHERE n."supersedesId" = d."id")`, [claimId])).rows[0];
   // PL-02: the same input is a no-op in any status. Nothing is written, not even a status move.
-  if (prev && selected && !('error' in selected)
-    && inputHashOf({ asOf, facts: snapshot, documentVersions, planHash: selected.plan.contentHash!, opsHash: selected.ops.contentHash! }) === prev.inputHash)
+  // D79: nor is anything while the claim is under appeal, whatever was accepted or waived, until the appeal is decided.
+  if (prev && !appeal && (claim.status === 'UNDER_APPEAL' || (selected && !('error' in selected)
+    && inputHashOf({ asOf, facts: snapshot, documentVersions, planHash: selected.plan.contentHash!, opsHash: selected.ops.contentHash! }) === prev.inputHash)))
     return { decisionId: prev.id, outcome: prev.outcome, claimStatus: claim.status };
+  if (appeal && (!prev || asOf < prev.asOf)) throw new Error(`Claim ${claimId}: an appeal decided on ${asOf} is before the decision it appeals`);
 
   // A changed input may only be decided from a status the table lets into IN_REVIEW; any other throws here.
-  await transitionClaim(db, claimId, 'IN_REVIEW', by);
+  // An appeal's decision is always a row (D75) and its status moves are its caller's.
+  if (!appeal) await transitionClaim(db, claimId, 'IN_REVIEW', by);
 
   // The one short-circuit (non-negotiable 7): without a contract there is no plan to pin and no rule to run.
   if (!selected) return refer('CONTRACT_NOT_FOUND', claim.contractId);
@@ -206,10 +268,11 @@ async function run(db: Db, claimId: string, asOf: string, { userId }: By): Promi
   if (prev && prev.planVersionId !== selected.plan.id) throw new Error(`Claim ${claimId}: decision ${prev.id} is under a plan version its contract does not pin`);
 
   // PL-03: the new decision supersedes the current one, under the same plan and the ops version in force on this asOf.
-  const decisionId = await recordDecision(db, { claimId, planVersionId: selected.plan.id, opsVersionId: selected.ops.id, snapshot, documentVersions, asOf, supersedesId: prev?.id });
+  const decisionId = await recordDecision(db, { claimId, planVersionId: selected.plan.id, opsVersionId: selected.ops.id, snapshot, documentVersions, asOf, supersedesId: prev?.id, appeal });
   const { outcome } = (await db.query<{ outcome: string }>('SELECT "outcome" FROM "Decision" WHERE "id" = $1', [decisionId])).rows[0]!;
   const claimStatus = STATUS_FOR[outcome];
   if (!claimStatus) throw new Error(`No claim status for outcome ${outcome}`);
+  if (appeal) return { decisionId, outcome, claimStatus: claim.status };
   await transitionClaim(db, claimId, claimStatus, by);
   return { decisionId, outcome, claimStatus };
 }

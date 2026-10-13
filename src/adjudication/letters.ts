@@ -11,6 +11,7 @@ type Row = {
   claimId: string; explanation: unknown; engineSemanticsVersion: string; documentVersions: string[]; facts: Record<string, unknown>;
   asOf: string; payableCents: number | null; opsHash: string; overridesId: string | null; overrideBy: string | null; overrideTier: string | null;
   overrideTotalIncurredCents: number | null; overrideReasonCode: string | null; overrideReasonText: string | null;
+  appealBy: string | null; appealTier: string | null;
 };
 
 export async function readDecisionRecord(db: Db, decisionId: string): Promise<{ trace: Trace; record: DecisionRecord }> {
@@ -27,6 +28,7 @@ export async function readDecisionRecord(db: Db, decisionId: string): Promise<{ 
     trace: traceSchema.parse(d.explanation),
     record: {
       decisionId, engine: d.engineSemanticsVersion, facts: d.facts, documents, waivers,
+      appeal: d.appealBy === null ? null : { by: d.appealBy, tier: d.appealTier! },
       override: d.overridesId === null ? null : {
         overridesId: d.overridesId, asOf: d.asOf, payableCents: d.payableCents!, by: d.overrideBy, tier: d.overrideTier!,
         totalIncurredCents: d.overrideTotalIncurredCents!, opsHash: d.opsHash, reasonCode: d.overrideReasonCode!, reasonText: d.overrideReasonText!,

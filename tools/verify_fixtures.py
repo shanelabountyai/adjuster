@@ -78,7 +78,22 @@ LIFE_KEY = {
     "EV-05": dict(rows=[P, P, P, P, (E_, "APPROVE", 25000)], end=("DECIDED", "NONE", 0)),
     "GC-11": dict(rows=[P, P, P, P, (E_, "APPROVE", 22500)], end=("DECIDED", "NONE", 0)),
     "GC-15": dict(rows=[P, P, P, P, P, (E_, "REFER", 85100), (O_, "APPROVE", 85100), (E_, "REFER", 170100), (O_, "APPROVE", 170100)], end=("CLOSED", "PAID", 170100)),
+    # D75, D79. A = the engine row an appeal's decision writes. Cents by hand from domain brief s1 and s4:
+    # AP-02 20000 - 7500; AP-03 GC-05's 77500; AP-06 90000 - 7500, above ops-v1's 50000 auto-approve limit.
+    "AP-01": dict(rows=[(E_, "DENY", None), ("A", "DENY", None)], end=("CLOSED", "NONE", 0)),
+    "AP-02": dict(rows=[(E_, "DENY", None), ("A", "APPROVE", 12500)], end=("CLOSED", "PAID", 12500)),
+    "AP-03": dict(rows=[P, P, P, P, (E_, "REFER", 77500), (O_, "APPROVE", 77500), (E_, "DENY", None), ("A", "DENY", None)], end=("CLOSED", "PAID", 77500)),
+    "AP-04": dict(rows=[(E_, "DENY", None), ("A", "DENY", None)], end=("CLOSED", "NONE", 0)),
+    "AP-05": dict(rows=[P, P, P, P, (E_, "APPROVE", 25000)], end=("DECIDED", "NONE", 0)),
+    "AP-06": dict(rows=[(E_, "DENY", None), ("A", "REFER", 82500), (O_, "APPROVE", 82500)], end=("CLOSED", "PAID", 82500)),
 }
+# D75, D79, typed: every refused action of each appeal life, in order, as (action, tier, code)
+AP_KEY = {"AP-01": [("decide_appeal", "adjuster", "OUT_OF_AUTHORITY"), ("reopen", None, "APPEAL_FINAL")],
+          "AP-02": [("decide_appeal", "senior", "APPEAL_NOT_DECIDABLE")],
+          "AP-03": [("decide_appeal", "senior", "APPEAL_OWN_DECISION")],
+          "AP-04": [("appeal", None, "ALREADY_APPEALED")],
+          "AP-05": [("appeal", None, "ILLEGAL_TRANSITION"), ("decide_appeal", "senior", "NOT_UNDER_APPEAL")],
+          "AP-06": [("decide_appeal", "senior", "APPEAL_NOT_DECIDABLE"), ("decide_appeal", "adjuster", "OUT_OF_AUTHORITY")]}
 # GC-15, typed from domain brief s11: how each numbered step ends (claim status, the current decision's outcome and cents, cents paid so far)
 GC15_KEY = {1: ("PENDING_EVIDENCE", "PEND", None, 0), 2: ("PENDING_EVIDENCE", "PEND", None, 0), 3: ("PENDING_EVIDENCE", "PEND", None, 0),
             5: ("REFERRED", "REFER", 85100, 0), 6: ("DECIDED", "APPROVE", 85100, 0), 7: ("CLOSED", "APPROVE", 85100, 85100), 8: ("CLOSED", "APPROVE", 170100, 170100)}
@@ -372,7 +387,7 @@ def replay(fid, f):
     doc_types = [x["id"][5:] for x in dic["facts"] if x["id"].startswith("docs.")]
     flag_ids = {r["id"] for r in RS["ops-v1"]["rules"] if r["kind"] == "flag"}
     edges = {(t["from"], t["to"]) for t in fx["PL-01"]["transitions"]}
-    s = dict(status=None, intake={}, vers={}, waived=[], rows=[], eng=None, cur=None, paid=0, pay="NONE", level=0, pend_on=None, last=None)
+    s = dict(status=None, intake={}, vers={}, waived=[], rows=[], eng=None, cur=None, paid=0, pay="NONE", level=0, pend_on=None, last=None, appealed=False, acted=[])
     of = lambda ver: ver.split("/")[0]
 
     def doc(d):
@@ -384,17 +399,20 @@ def replay(fid, f):
             chk((s["status"], to) in edges, f"{fid} event {i}: {s['status']} -> {to} is not in PL-01")
             s["status"] = to
 
-    def run(i, asof):
+    def engine(asof):
         facts = {**s["intake"], **{f"docs.{d}": doc(d) for d in doc_types}}
         relied = sorted(k for k, v in s["vers"].items() if v["status"] == "accepted")
         for k in relied: facts.update(s["vers"][k]["facts"])
-        if s["last"] == (asof, facts, relied): return
         ops_name = pick_ops(asof, FILE_VERSIONS)
-        got = decide(RS[f["plan"]], RS[ops_name], dic, facts)
+        return facts, relied, ops_name, decide(RS[f["plan"]], RS[ops_name], dic, facts)
+
+    def run(i, asof, appeal=None):
+        facts, relied, ops_name, got = engine(asof)
+        if not appeal and s["last"] == (asof, facts, relied): return
         chk(not any(r["result"] == "GAP" for r in got["rules"]), f"{fid} event {i}: a rule had no matching row")
-        move(i, "IN_REVIEW", PL_STATUS_FOR[got["outcome"]])
+        if not appeal: move(i, "IN_REVIEW", PL_STATUS_FOR[got["outcome"]])
         v = got["valuation"]
-        s["rows"].append({"kind": "engine", "ops": ops_name, "outcome": got["outcome"], "reasons": got["reasons"], "payableCents": got["payableCents"],
+        s["rows"].append({**({"appeal": {"by": appeal}} if appeal else {}), "kind": "engine", "ops": ops_name, "outcome": got["outcome"], "reasons": got["reasons"], "payableCents": got["payableCents"],
                           "path": v and v["path"], "aggregateRemainingAfterCents": v and v["steps"][-1]["outputCents"], "contractFulfilled": got["contractFulfilled"],
                           "notPassed": [r for r in got["rules"] if r["result"] != "PASS"], "supersedes": s["eng"], "documentVersions": relied})
         s.update(last=(asof, facts, relied), eng=len(s["rows"]) - 1, cur=len(s["rows"]) - 1, level=0, pend_on=asof if got["outcome"] == "PEND" else None)
@@ -424,10 +442,10 @@ def replay(fid, f):
             if t == "accept":
                 chk(all(byid.get(x, {}).get("source") == "input" for x in a["facts"]), f"{fid} event {i}: entered facts must be input facts")
                 v["facts"] = a["facts"]
-                run(i, asof)
+                if s["status"] != "UNDER_APPEAL": run(i, asof)  # D79: under appeal only the appeal's decision runs the engine
         elif t == "waive":
             chk(authority(pick_ops(asof, FILE_VERSIONS), a["by"], "waive_documents", s["paid"], 0)["allowed"] and a["reasonText"], f"{fid} event {i}: waiver without the power or a reason")
-            s["waived"].append(a["doc"])
+            s["waived"].append(a["doc"]); s["acted"].append(a["by"])
             run(i, asof)
         elif t == "tick":
             if s["status"] == "PENDING_EVIDENCE":
@@ -443,6 +461,7 @@ def replay(fid, f):
             s["rows"].append({"kind": "override", "ops": ops_name, "outcome": a["outcome"], "payableCents": a["amountCents"], "overrides": s["eng"], "by": a["by"],
                               "totalIncurredCents": au["totalIncurredCents"], "documentVersions": e["documentVersions"]})
             s["cur"] = len(s["rows"]) - 1
+            s["acted"].append(a["by"])
             move(i, "DECIDED")
         elif t == "pay":
             d = s["rows"][s["cur"]]
@@ -452,7 +471,34 @@ def replay(fid, f):
             s.update(paid=s["paid"] + due, pay="PAID")
             extra = {"paymentCents": due}
         elif t == "reopen":
-            move(i, "REOPENED")
+            e = s["rows"][s["eng"]]
+            if "appeal" in e and e["outcome"] == "DENY": extra = {"refused": "APPEAL_FINAL"}
+            else: move(i, "REOPENED")
+        elif t == "appeal":  # D75: once, with a reason, and only against a denial (PL-01's guard on DECIDED -> UNDER_APPEAL)
+            chk(a["reason"].strip(), f"{fid} event {i}: an appeal needs a reason")
+            guard = next(x.get("when") for x in fx["PL-01"]["transitions"] if (x["from"], x["to"]) == ("DECIDED", "UNDER_APPEAL"))
+            if s["appealed"]: extra = {"refused": "ALREADY_APPEALED"}
+            elif not (s["status"] == "DECIDED" and guard == "denied" and s["rows"][s["cur"]]["outcome"] == "DENY"): extra = {"refused": "ILLEGAL_TRANSITION"}
+            else:
+                s["appealed"] = True
+                move(i, "UNDER_APPEAL")
+        elif t == "decide_appeal":  # D75, D79: the tests in order; the first that fails is the refusal
+            _, _, ops_name, got = engine(asof)
+            so, cents = a.get("signOff"), got["payableCents"]
+            au = lambda power, amount: authority(ops_name, a["by"], power, s["paid"], amount)
+            flag = "clear_flags" if flag_ids & set(got["reasons"]) else None
+            if s["status"] != "UNDER_APPEAL": extra = {"refused": "NOT_UNDER_APPEAL"}
+            elif a["by"] in s["acted"]: extra = {"refused": "APPEAL_OWN_DECISION"}
+            elif got["outcome"] == "PEND" or (got["outcome"] == "REFER" and (cents is None or not (so and so["reasonCode"] and so["reasonText"]))): extra = {"refused": "APPEAL_NOT_DECIDABLE"}
+            elif not au("decide_appeals", cents or 0)["allowed"] or (got["outcome"] == "REFER" and not au(flag, cents)["allowed"]): extra = {"refused": "OUT_OF_AUTHORITY"}
+            else:
+                run(i, asof, a["by"])
+                if got["outcome"] == "REFER":
+                    s["rows"].append({"kind": "override", "ops": ops_name, "outcome": "APPROVE", "payableCents": cents, "overrides": s["eng"], "by": a["by"],
+                                      "totalIncurredCents": au(flag, cents)["totalIncurredCents"], "documentVersions": s["rows"][s["eng"]]["documentVersions"]})
+                    s["cur"] = len(s["rows"]) - 1
+                move(i, "DECIDED")
+                if got["outcome"] == "DENY": move(i, "CLOSED")
         else:
             chk(False, f"{fid} event {i}: unknown action {t}")
         got = {"claimStatus": s["status"], "paymentStatus": s["pay"], "paidCents": s["paid"], "reminderLevel": s["level"], "docs": {d: doc(d) for d in doc_types},
@@ -461,9 +507,11 @@ def replay(fid, f):
         chk(got == e, f"{fid} event {i} ({t}): replay disagrees with the oracle on " + ", ".join(k for k in sorted(set(got) | set(e)) if got.get(k) != e.get(k)))
 
     key = LIFE_KEY[fid]
-    chk([("E" if r["kind"] == "engine" else "O", r["outcome"], r["payableCents"]) for r in s["rows"]] == key["rows"], f"{fid}: decision rows differ from the key")
+    chk([("A" if "appeal" in r else "E" if r["kind"] == "engine" else "O", r["outcome"], r["payableCents"]) for r in s["rows"]] == key["rows"], f"{fid}: decision rows differ from the key")
+    refused = [(ev["action"]["type"], ev["action"].get("by"), ev["expected"]["refused"]) for ev in f["events"] if "refused" in ev["expected"]]
+    chk(refused == AP_KEY.get(fid, []), f"{fid}: refused actions differ from the key: {refused}")
     chk((s["status"], s["pay"], s["paid"]) == key["end"], f"{fid}: ends {s['status']} {s['pay']} {s['paid']}, key {key['end']}")
-    chk(all(r["outcome"] != "DENY" for r in s["rows"]) or fid == "EV-02", f"{fid}: a denial where none belongs")
+    chk(all(r["outcome"] != "DENY" for r in s["rows"]) or fid == "EV-02" or fid in AP_KEY, f"{fid}: a denial where none belongs")
     return s
 
 
@@ -650,5 +698,5 @@ if fails:
     for m in fails: print(" -", m)
     sys.exit(1)
 print(f"OK ({len(fx)} fixtures: {sum(1 for f in fx.values() if f['id'].startswith('RE'))} RE, {sum(1 for f in fx.values() if f['id'].startswith('PAY'))} PAY, "
-      f"{sum(1 for f in fx.values() if f['id'].startswith('GC'))} GC, {sum(1 for f in fx.values() if f['id'][:2] in ('RV', 'VP', 'PL', 'EV', 'OV', 'AU', 'ID'))} RV/VP/PL/EV/OV/AU/ID; "
+      f"{sum(1 for f in fx.values() if f['id'].startswith('GC'))} GC, {sum(1 for f in fx.values() if f['id'][:2] in ('RV', 'VP', 'PL', 'EV', 'OV', 'AU', 'ID', 'AP'))} RV/VP/PL/EV/OV/AU/ID/AP; "
       "payables match the brief to the cent)")

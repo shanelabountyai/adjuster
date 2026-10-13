@@ -10,7 +10,7 @@ import { readReminderLevel, runNoResponse } from '@/adjudication/no-response';
 import { transitionClaim } from '@/adjudication/claim-status';
 import { mockPaymentProvider, paidCents } from '@/adjudication/payments';
 import { renderDecision } from '@/adjudication/letters';
-import { acceptEvidence, adjudicateClaim, overrideDecision, payClaim, reopenClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
+import { acceptEvidence, adjudicateClaim, decideAppeal, fileAppeal, overrideDecision, payClaim, reopenClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
 import { fileClaim, playEvent } from '../../scripts/seed-decisions';
 import { seedOverrideReasons, staffAt } from '../helpers/tiers';
 
@@ -19,6 +19,7 @@ import { seedOverrideReasons, staffAt } from '../helpers/tiers';
 // Task 3.5 (D51a, D51d, D51f, D56): filing, accepting and waiving decide the claim themselves; an upload does not.
 // Task 3.6 (D51h, D51i, D57): the no-response job reminds and closes on the injected date, and an upload reopens.
 // Task 3.9 (D50, D51j, D60): paying sends what the claim has not been paid of its current decision's amount, and closes it.
+// Task 4.5 (D75, D79): an appeal is filed against a denial once and decided by the engine and a person who may; a refused action is an event that moves nothing.
 // Every event is checked against the fixture: both statuses, cents paid, documents, reminder level, the decision and what each rule that did not pass is missing.
 
 const read = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
@@ -43,27 +44,31 @@ const upload = (claimId: string, type: string, n = 1) =>
 const accept = (versionId: string, facts?: Record<string, unknown>) => reviewDocument(client, { versionId, result: 'accepted', userId: null, facts });
 const decision = async (id: string | null) => (await client.query('SELECT * FROM "Decision" WHERE "id" = $1', [id])).rows[0];
 
-type Action = { type: string; facts: Record<string, unknown>; doc: string; version: string; by: string; reasonText: string; reasonCode: string; reason: string };
+type Action = { type: string; facts: Record<string, unknown>; doc: string; version: string; by: string; reasonText: string; reasonCode: string; reason: string; signOff?: { reasonCode: string; reasonText: string } };
 type NotPassed = { ruleId: string; result: string; missing: string[] };
 type Expected = { row: number; kind: string; outcome: string; payableCents: number | null; reasons: string[]; notPassed: NotPassed[]; documentVersions: string[]; supersedes: number | null;
-  overrides: number; totalIncurredCents: number };
-type Life = { plan: string; events: { asOf: string; action: Action; expected: { claimStatus: string; paymentStatus: string; paidCents: number; paymentCents?: number; reminderLevel: number; docs: Record<string, string>; decisionRows: number; decision: Expected } }[] };
+  overrides: number; totalIncurredCents: number; appeal?: { by: string } };
+type Life = { plan: string; events: { asOf: string; action: Action; expected: { claimStatus: string; paymentStatus: string; paidCents: number; paymentCents?: number; refused?: string; reminderLevel: number; docs: Record<string, string>; decisionRows: number; decision: Expected } }[] };
 
 /**
  * Plays a claim life's events through the services and returns the label of each version id. `before` runs ahead of
- * each event.
+ * each event. One person per tier for the whole life, so "the senior adjuster" is the same user each time.
  */
 async function play(id: string, fx: Life, before?: (a: Action) => Promise<unknown>) {
   const versions = new Map<string, string>();
   const label = { get: (v: string) => [...versions].find(([, id]) => id === v)?.[0], has: (v: string) => [...versions.values()].includes(v) };
-  const life = { db: client, store, claimId: id, planVersionId: versionIds[fx.plan], versions, staff: async (tier: string) => (await staffAt(client, [tier]))[tier]! };
+  const users: Record<string, string> = {};
+  const life = { db: client, store, claimId: id, planVersionId: versionIds[fx.plan], versions, staff: async (tier: string) => (users[tier] ??= (await staffAt(client, [tier]))[tier]!) };
   for (const [i, ev] of fx.events.entries()) {
     const { action: a, expected: e } = ev;
     await before?.(a);
-    const r = await playEvent(life, ev, i);
-    if (a.type === 'pay') expect([i, 'paymentCents' in r && r.paymentCents]).toEqual([i, e.paymentCents]);
+    // A refused action throws its code and the state below is still the state before it.
+    const r: object | string = await playEvent(life, ev, i).catch((err: { code?: string; message: string }) => err.code ?? err.message.split(':')[0]!);
+    expect([i, typeof r === 'string' ? r : undefined]).toEqual([i, e.refused]);
+    if (a.type === 'pay') expect([i, typeof r === 'object' && 'paymentCents' in r && r.paymentCents]).toEqual([i, e.paymentCents]);
 
-    const rows = (await client.query('SELECT * FROM "Decision" WHERE "claimId" = $1 ORDER BY "createdAt"', [id])).rows;
+    // An appeal's sign-off is written with its engine row, in one transaction and so at one time: the engine row first.
+    const rows = (await client.query('SELECT * FROM "Decision" WHERE "claimId" = $1 ORDER BY "createdAt", "overridesId" IS NOT NULL', [id])).rows;
     const d = rows[e.decision.row];
     const { status, paymentStatus } = (await client.query('SELECT "status", "paymentStatus" FROM "Claim" WHERE "id" = $1', [id])).rows[0];
     expect([i, status, paymentStatus, await paidCents(client, id), await readReminderLevel(client, id), (await readDocumentStatuses(client, id)).docs])
@@ -75,7 +80,7 @@ async function play(id: string, fx: Life, before?: (a: Action) => Promise<unknow
     }
     expect([i, rows.length, d.outcome, d.payableCents, d.explanation.decision.reasons, d.documentVersions.map((v: string) => label.get(v)).sort()])
       .toEqual([i, e.decisionRows, e.decision.outcome, e.decision.payableCents, e.decision.reasons, e.decision.documentVersions]);
-    expect([i, d.supersedesId]).toEqual([i, e.decision.supersedes === null ? null : rows[e.decision.supersedes].id]);
+    expect([i, d.supersedesId, d.appealTier]).toEqual([i, e.decision.supersedes === null ? null : rows[e.decision.supersedes].id, e.decision.appeal?.by ?? null]);
     const notPassed = (d.explanation.rules as NotPassed[]).filter((r) => r.result !== 'PASS').map(({ ruleId, result, missing }) => ({ ruleId, result, missing }));
     expect([i, notPassed]).toEqual([i, e.decision.notPassed]);
   }
@@ -167,7 +172,7 @@ describe('payment', () => {
 });
 
 describe('supplemental (task 3.10, D61)', () => {
-  const reopened = () => client.query(`SELECT "actorUserId", "data" FROM "AuditEvent" WHERE "targetId" = 'E-GC-15' AND "data"->>'to' = 'REOPENED'`);
+  const reopened = () => client.query(`SELECT "actorUserId", "data" FROM "AuditEvent" WHERE "targetId" = 'E-GC-15' AND "data"->>'to' = 'REOPENED' ORDER BY "id"`);
 
   it('a reopen needs a closed claim, a tier and a reason, and writes the reason on the audit event', async () => {
     const { adjuster } = await staffAt(client, ['adjuster']);
@@ -328,5 +333,79 @@ describe('letters and notes from stored rows', () => {
     for (const hidden of [signed.action.reasonText, signed.action.reasonCode, waive.action.reasonText, over.overrideBy, 'F2', 'tier', 'review'])
       expect(override.letter).not.toContain(hidden);
     await expect(renderDecision(client, '00000000-0000-4000-8000-000000000000')).rejects.toThrow('no decision');
+  });
+});
+
+// Task 4.5 (D75, D79).
+describe('appeal', () => {
+  const ap = (n: number): Life => read(`fixtures/ap/AP-0${n}.json`);
+  const appealRow = async (id: string) => (await client.query('SELECT * FROM "Decision" WHERE "claimId" = $1 AND "appealBy" IS NOT NULL', [id])).rows[0];
+
+  it.each([
+    [1, 'a denial upheld closes the claim for good; an adjuster may not decide it'],
+    [2, 'documents brought on appeal are accepted without deciding, and the appeal waits until the engine can decide'],
+    [3, 'the person who overrode on the claim is refused, and the manager decides'],
+    [4, 'a second appeal is refused'],
+    [5, 'an approval is not appealed, and nothing is decided on a claim not under appeal'],
+    [6, 'a referral on appeal is signed off by the person deciding, at the engine\'s amount'],
+  ])('AP-0%i: %s', async (n) => {
+    await play(`E-AP-0${n}`, ap(n));
+    expect((await verifyDecisions(client)).failures).toEqual([]);
+  });
+
+  it('the appeal row names its decider and tier; the reason is on the audit event; the letters say what comes next', async () => {
+    await play('E-AP-01', ap(1));
+    const [first, last] = (await client.query(`SELECT * FROM "Decision" WHERE "claimId" = 'E-AP-01' ORDER BY "createdAt"`)).rows;
+    expect([first.appealBy, last.appealTier, last.supersedesId, last.outcome]).toEqual([null, 'senior', first.id, 'DENY']);
+    const filed = (await client.query(`SELECT "data" FROM "AuditEvent" WHERE "targetId" = 'E-AP-01' AND "data"->>'to' = 'UNDER_APPEAL' ORDER BY "id" DESC LIMIT 1`)).rows[0].data;
+    expect([filed.reason, filed.decisionId]).toEqual([ap(1).events[1]!.action.reason, first.id]);
+    const [denied, upheld] = [await renderDecision(client, first.id), await renderDecision(client, last.id)];
+    expect(denied.letter.trimEnd().split('\n').at(-1)).toBe('You may appeal this decision.');
+    expect(upheld.letter.trimEnd().split('\n').at(-1)).toBe('This decision was made on your appeal and is final.');
+    expect(upheld.letter).not.toContain('You may appeal');
+    expect(upheld.note).toContain(`decision ${last.id}; on appeal, decided by user ${last.appealBy} at tier senior.`);
+    expect(denied.note).toContain('; no person.');
+  });
+
+  it('an appeal needs a reason, a decider needs a tier, and an appeal is not decided before the denial it appeals', async () => {
+    const fx = ap(4);
+    await play('E-AP-04', { ...fx, events: fx.events.slice(0, 1) });
+    await expect(fileAppeal(client, { claimId: 'E-AP-04', userId: null, reason: ' ' })).rejects.toThrow(/REASON_REQUIRED/);
+    await fileAppeal(client, { claimId: 'E-AP-04', userId: null, reason: 'x' });
+    await expect(fileAppeal(client, { claimId: 'E-AP-04', userId: null, reason: 'x' })).rejects.toMatchObject({ code: 'ILLEGAL_TRANSITION' });
+    const { senior } = await staffAt(client, ['senior']);
+    await expect(decideAppeal(client, { claimId: 'E-AP-04', userId: null, asOf: '2025-09-29' })).rejects.toMatchObject({ code: 'OUT_OF_AUTHORITY', lacks: ['tier'] });
+    await expect(decideAppeal(client, { claimId: 'E-AP-04', userId: senior, asOf: '2025-09-16' })).rejects.toThrow('before the decision it appeals');
+    expect([await statuses('E-AP-04'), (await client.query('SELECT count(*)::int AS n FROM "Decision"')).rows[0].n]).toEqual([['UNDER_APPEAL', 'NONE'], 1]);
+  });
+
+  it('an appeal decided the same day with nothing new is still a row, and verifies (D79)', async () => {
+    const fx = ap(4);
+    await play('E-AP-04', { ...fx, events: fx.events.slice(0, 2) });
+    const { senior } = await staffAt(client, ['senior']);
+    expect(await decideAppeal(client, { claimId: 'E-AP-04', userId: senior, asOf: fx.events[0]!.asOf })).toMatchObject({ outcome: 'DENY', claimStatus: 'CLOSED' });
+    const rows = (await client.query('SELECT "inputHash" FROM "Decision"')).rows;
+    expect([rows.length, rows[0].inputHash === rows[1].inputHash]).toEqual([2, true]);
+    expect(await verifyDecisions(client)).toEqual({ checked: 2, failures: [] });
+  });
+
+  it('whoever waived a document on the claim does not decide its appeal either', async () => {
+    const fx = ap(2);
+    const { senior, manager } = await staffAt(client, ['senior', 'manager']);
+    await play('E-AP-02', { ...fx, events: fx.events.slice(0, 4) }); // under appeal, the photos accepted
+    await waiveEvidence(client, { claimId: 'E-AP-02', type: 'incidentStatement', reasonText: 'x', asOf: '2025-09-26', userId: senior });
+    expect((await client.query('SELECT count(*)::int AS n FROM "Decision"')).rows[0].n).toBe(1); // a waiver under appeal decides nothing
+    await expect(decideAppeal(client, { claimId: 'E-AP-02', userId: senior, asOf: '2025-09-27' })).rejects.toThrow(/APPEAL_OWN_DECISION/);
+    await expect(decideAppeal(client, { claimId: 'E-AP-02', userId: manager, asOf: '2025-09-27' })).rejects.toThrow(/APPEAL_NOT_DECIDABLE/);
+  });
+
+  it('the database refuses a second appeal row on a claim, and an appeal marker on a row that supersedes nothing', async () => {
+    await play('E-AP-01', ap(1));
+    const row = await appealRow('E-AP-01');
+    const copy = (id: string, set: object) => client.query(
+      `INSERT INTO "Decision" SELECT (jsonb_populate_record(NULL::"Decision", to_jsonb(d) || jsonb_build_object('id', gen_random_uuid()) || $2::jsonb)).* FROM "Decision" d WHERE "id" = $1`, [id, JSON.stringify(set)]);
+    await expect(copy(row.id, { supersedesId: row.id })).rejects.toMatchObject({ constraint: 'Decision_one_appeal' });
+    await expect(copy(row.supersedesId, { appealBy: row.appealBy, appealTier: 'senior' })).rejects.toMatchObject({ constraint: 'decision_appeal' });
+    await expect(copy(row.supersedesId, { supersedesId: row.id, appealTier: 'senior' })).rejects.toMatchObject({ constraint: 'decision_appeal' });
   });
 });

@@ -9,7 +9,8 @@ import { seedDecisions } from '../../scripts/seed-decisions';
 import { staffAt } from '../helpers/tiers';
 
 // Task 1.11, reseeded by 2.11 and 3.12. The clean seed (19 claims through the pipeline, four versions) verifies; each tamper TM-01..TM-08, written below the service with
-// raw SQL and the immutability triggers switched off, fails with exactly its one code. TM-09 is task 2.8's (D41), OVERRIDE_UNAUTHORIZED is 3.8's (D48).
+// raw SQL and the immutability triggers switched off, fails with exactly its one code. TM-09 is task 2.8's (D41), OVERRIDE_UNAUTHORIZED is 3.8's (D48),
+// APPEAL_UNAUTHORIZED is 4.5's (D75).
 
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 const connected = client.connect();
@@ -38,7 +39,7 @@ const copyOf = (id: string, set: string) => tamper(
 
 describe('decisions:verify', () => {
   it('reports OK on the clean seed', async () => {
-    expect(await verifyDecisions(client)).toEqual({ checked: 32, failures: [] }); // 17 engine rows, GC-05's sign-off, GC-11's five and GC-15's nine
+    expect(await verifyDecisions(client)).toEqual({ checked: 54, failures: [] }); // 17 engine rows, GC-05's sign-off, GC-11's five, GC-15's nine and the 22 of AP-01..06
     expect((await verifyDecisions(client, '2025-07-18')).checked).toBe(3); // --as-of: GC-03, GC-08 and GC-12
   });
 
@@ -144,6 +145,15 @@ describe('decisions:verify', () => {
   it('a sign-off rewritten to a tier that does not hold its amount → OVERRIDE_UNAUTHORIZED (D48)', async () => {
     await tamper(`UPDATE "Decision" SET "overrideTier" = 'system' WHERE "id" = $1`, [ids['GC-05-signoff']]);
     expect(await codes()).toEqual(['OVERRIDE_UNAUTHORIZED']);
+  });
+
+  it('an appeal row rewritten to a tier without the power, or to the person who overrode on the claim → APPEAL_UNAUTHORIZED (D75)', async () => {
+    const failed = async () => (await verifyDecisions(client)).failures.map((f) => [f.code, f.detail.includes('overrode')]);
+    await tamper(`UPDATE "Decision" SET "appealTier" = 'adjuster' WHERE "claimId" = 'AP-01' AND "appealBy" IS NOT NULL`);
+    expect(await failed()).toEqual([['APPEAL_UNAUTHORIZED', false]]);
+    await tamper(`UPDATE "Decision" SET "appealTier" = 'senior' WHERE "claimId" = 'AP-01' AND "appealBy" IS NOT NULL`);
+    await tamper(`UPDATE "Decision" SET "appealBy" = (SELECT "overrideBy" FROM "Decision" WHERE "claimId" = 'AP-03' AND "overrideBy" IS NOT NULL) WHERE "claimId" = 'AP-03' AND "appealBy" IS NOT NULL`);
+    expect(await failed()).toEqual([['APPEAL_UNAUTHORIZED', true]]);
   });
 
   it('TM-08 a decision stamped with semantics this engine lacks → SEMANTICS_UNSUPPORTED', async () => {
