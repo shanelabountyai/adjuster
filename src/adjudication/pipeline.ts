@@ -2,6 +2,7 @@ import { tierOf } from '@/adjudication/authority';
 import { type ClaimStatus, transitionClaim } from '@/adjudication/claim-status';
 import { type Db, inputHashOf, loadVersions, recordDecision } from '@/adjudication/decisions';
 import { type DocumentStore, OutOfAuthorityError, readDocumentStatuses, readEvidence, reviewDocument, type Upload, uploadDocument, type UploadedVersion, waiveDocument, type Waiver } from '@/adjudication/documents';
+import { paidCents, type PaymentProvider } from '@/adjudication/payments';
 import { checkAuthority, powerToOverride } from '@/rules/authority';
 import type { Snapshot } from '@/rules/derive';
 import { selectVersions } from '@/rules/select';
@@ -14,6 +15,7 @@ import { selectVersions } from '@/rules/select';
 // (task 3.5, D51a, D51d, D56), so a change the status table will not let be decided is not made at all.
 // An upload decides nothing, but one on a claim closed for no response reopens it in the same transaction (task 3.6, D51i).
 // A person's sign-off of a referral is a second row beside the engine's, never a change to it (task 3.8, D48, D59).
+// Paying sends the part of the current decision's amount the claim has not been paid, and closes it (task 3.9, D51j, D60).
 
 const STATUS_FOR: Record<string, ClaimStatus> = { APPROVE: 'DECIDED', PARTIAL: 'DECIDED', DENY: 'DECIDED', PEND: 'PENDING_EVIDENCE', REFER: 'REFERRED' };
 
@@ -72,7 +74,7 @@ export type Override = { claimId: string; userId: string | null; reasonCode: str
  * amount by a person. The override row repeats what the engine decided on (facts, documents, trace and both hashes)
  * and is dated `asOf`, under the ops version in force that day, whose tiers are the ones tested. Out of authority is
  * refused before anything is written. A referral with no amount (a rule gap) is never approved this way.
- * Seam (3.9): paid is 0 until payments are recorded; total incurred is then the larger of paid and this amount (D50).
+ * Total incurred is the larger of what the claim has been paid and this amount (D50).
  */
 export const overrideDecision = (db: Db, o: Override): Promise<{ decisionId: string; outcome: string; claimStatus: ClaimStatus }> =>
   tx(db, async () => {
@@ -89,7 +91,7 @@ export const overrideDecision = (db: Db, o: Override): Promise<{ decisionId: str
     if ('error' in selected) throw new Error(`${selected.error}: ${selected.kind} on ${o.asOf}`);
     const tier = await tierOf(db, o.userId);
     const power = powerToOverride([...plan.body.rules, ...decidedUnder.body.rules], engine.reasons);
-    const check = checkAuthority(selected.ops.body.authority ?? [], tier, power, 0, engine.payableCents);
+    const check = checkAuthority(selected.ops.body.authority ?? [], tier, power, await paidCents(db, o.claimId), engine.payableCents);
     if (!check.allowed) throw new OutOfAuthorityError(tier, check.lacks, `an override of decision ${engine.id}`);
 
     const { rows } = await db.query<{ id: string }>(
@@ -101,6 +103,46 @@ export const overrideDecision = (db: Db, o: Override): Promise<{ decisionId: str
       [engine.id, selected.ops.id, selected.ops.contentHash, o.asOf, o.reasonCode, o.reasonText, tier, check.totalIncurredCents, o.userId]);
     await transitionClaim(db, o.claimId, 'DECIDED', { userId: o.userId, reason: `override: ${o.reasonCode}` });
     return { decisionId: rows[0]!.id, outcome: 'APPROVE', claimStatus: 'DECIDED' };
+  });
+
+export type Pay = { claimId: string; asOf: string; userId: string | null };
+
+/**
+ * Pays a decided claim. The current decision's amount is the claim's total, so what goes out is the part not yet
+ * paid and the deductible is taken once (D51j). Nothing due is a no-op that writes nothing: a denial, an approval
+ * at 0, a claim already paid, a recomputed total below what was paid. A claim the status table will not let be paid
+ * (a referral nobody signed off) throws. The payment row, its audit event and the moves to CLOSED are one transaction.
+ */
+export const payClaim = (db: Db, provider: PaymentProvider, p: Pay): Promise<{ paymentCents: number; claimStatus: ClaimStatus }> =>
+  tx(db, async () => {
+    // The row lock makes two payers take turns; the second then finds nothing due.
+    const claim = (await db.query<{ status: ClaimStatus }>('SELECT "status" FROM "Claim" WHERE "id" = $1 FOR UPDATE', [p.claimId])).rows[0];
+    if (!claim) throw new Error(`Claim ${p.claimId} not found`);
+    const d = (await db.query<{ id: string; payableCents: number | null; asOf: string }>(
+      `SELECT "id", "payableCents", "asOf"::text AS "asOf" FROM "Decision" d WHERE "claimId" = $1
+         AND NOT EXISTS (SELECT 1 FROM "Decision" n WHERE n."supersedesId" IN (d."id", d."overridesId") OR n."overridesId" = d."id")`, [p.claimId])).rows[0];
+    const due = d && d.payableCents !== null ? d.payableCents - await paidCents(db, p.claimId) : 0;
+    if (!d || due <= 0) return { paymentCents: 0, claimStatus: claim.status };
+    if (p.asOf < d.asOf) throw new Error(`Claim ${p.claimId}: a payment on ${p.asOf} is before its decision of ${d.asOf}`);
+
+    const by = { userId: p.userId };
+    const mark = (paymentStatus: string) => db.query('UPDATE "Claim" SET "paymentStatus" = $2 WHERE "id" = $1', [p.claimId, paymentStatus]);
+    await transitionClaim(db, p.claimId, 'PAYMENT_PENDING', by);
+    await mark('PENDING');
+    // ponytail: the provider is called inside the transaction, so PENDING is never seen and a crash after a real
+    // provider paid leaves no row. A real one needs PENDING committed first and a retry on the same key (the decision id).
+    const { ref } = await provider.pay({ idempotencyKey: d.id, claimId: p.claimId, amountCents: due });
+    await db.query(
+      `WITH made AS (
+         INSERT INTO "Payment" ("id", "decisionId", "amountCents", "providerRef", "asOf", "paidBy")
+         VALUES (gen_random_uuid(), $1, $2, $3, $4::date, $5::uuid) RETURNING "id")
+       INSERT INTO "AuditEvent" ("actorUserId", "action", "targetType", "targetId", "data")
+       SELECT $5::uuid, 'claim.paid', 'Claim', $6, $7::jsonb FROM made`,
+      [d.id, due, ref, p.asOf, p.userId, p.claimId, JSON.stringify({ decisionId: d.id, amountCents: due, providerRef: ref, asOf: p.asOf })]);
+    await transitionClaim(db, p.claimId, 'PAID', by);
+    await mark('PAID');
+    await transitionClaim(db, p.claimId, 'CLOSED', by);
+    return { paymentCents: due, claimStatus: 'CLOSED' };
   });
 
 async function run(db: Db, claimId: string, asOf: string, { userId }: By): Promise<PipelineResult> {

@@ -19,7 +19,7 @@ let store: LocalDiskDocumentStore;
 afterAll(() => client.end());
 beforeEach(async () => {
   await connected;
-  await client.query('TRUNCATE "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
+  await client.query('TRUNCATE "Payment", "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
   // an upload's type is checked against the dictionary of the plan the claim's contract pins (task 3.3)
   const plan = await publishRuleSet(client, JSON.parse(readFileSync('rules/electronics/plan-v1.json', 'utf8')));
   await client.query(`INSERT INTO "Contract" ("id", "planVersionId", "facts") VALUES ('CT-1', $1, '{}')`, [plan]);

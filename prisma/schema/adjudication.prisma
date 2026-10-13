@@ -161,6 +161,7 @@ model Decision {
   overrides                  Decision?       @relation("override", fields: [overridesId], references: [id], onDelete: Restrict)
   overriddenBy               Decision[]      @relation("override")
   reminders                  ClaimReminder[]
+  payment                    Payment?
   overrideReasonCode         String?
   overrideReason             OverrideReason? @relation(fields: [overrideReasonCode], references: [code], onDelete: Restrict)
   overrideReasonText         String?
@@ -190,6 +191,19 @@ model ClaimReminder {
   sentAt     DateTime @default(now()) @db.Timestamptz(6)
 
   @@unique([decisionId, level])
+}
+
+// Task 3.9, D60. Money paid on a decision: the part of its amount the claim had not been paid yet. Insert-only
+// (trigger), at most one per decision. What a claim has been paid is the sum over its decisions.
+model Payment {
+  id          String   @id @default(uuid()) @db.Uuid
+  decisionId  String   @unique @db.Uuid
+  decision    Decision @relation(fields: [decisionId], references: [id], onDelete: Restrict)
+  amountCents Int
+  providerRef String
+  asOf        DateTime @db.Date
+  paidBy      String?  @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
 }
 
 // Task 3.7 (D49, D58). A user's authority tier. Insert-only: the latest row for a user is the one in force, and a

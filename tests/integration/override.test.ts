@@ -22,7 +22,7 @@ const versionIds: Record<string, string> = {};
 let staff: Record<'system' | 'adjuster', string>;
 beforeEach(async () => {
   await connected;
-  await client.query('TRUNCATE "TierAssignment", "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
+  await client.query('TRUNCATE "TierAssignment", "Payment", "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
   for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
   await seedOverrideReasons(client);
   staff = await staffAt(client, ['system', 'adjuster']);

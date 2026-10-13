@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type Db, dictFile, loadVersions } from '@/adjudication/decisions';
 import { tierOf } from '@/adjudication/authority';
+import { paidCents } from '@/adjudication/payments';
 import { checkAuthority } from '@/rules/authority';
 import type { FactValue } from '@/rules/evaluate';
 import { selectVersions } from '@/rules/select';
@@ -239,8 +240,7 @@ export type Waiver = { claimId: string; type: string; reasonText: string; asOf: 
  * the assignment table (D49) and must hold the `waive_documents` power under the ops version in force on `asOf`; both
  * are stored on the row. A waiver needs no upload and is final. The document's move only: `waiveEvidence` also
  * decides the claim (D56).
- * Seam (3.9): a waiver approves no money, so only a tier that could approve nothing fails on amount. The oracle
- * tests it against what the claim has been paid, which nothing records until the mock payment.
+ * A waiver approves no money, so its total incurred is what the claim has been paid (D50, D60).
  */
 export async function waiveDocument(db: Db, w: Waiver): Promise<void> {
   const { pin, types, versions } = await rulesFor(db, w.claimId);
@@ -248,7 +248,7 @@ export async function waiveDocument(db: Db, w: Waiver): Promise<void> {
   const selected = selectVersions({ planVersion: pin.planVersionId }, versions.map((v) => ({ ...v, name: v.id })), w.asOf);
   if ('error' in selected) throw new Error(`${selected.error}: ${selected.kind} on ${w.asOf}`);
   const tier = await tierOf(db, w.userId);
-  const check = checkAuthority(selected.ops.body.authority ?? [], tier, 'waive_documents', 0, 0);
+  const check = checkAuthority(selected.ops.body.authority ?? [], tier, 'waive_documents', await paidCents(db, w.claimId), 0);
   if (!check.allowed) throw new OutOfAuthorityError(tier, check.lacks, 'waive_documents');
   const { rows } = await db.query(
     `WITH made AS (

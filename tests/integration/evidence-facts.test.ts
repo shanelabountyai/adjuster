@@ -7,14 +7,18 @@ import pg from 'pg';
 import { publishRuleSet, verifyDecisions } from '@/adjudication/decisions';
 import { enterFact, LocalDiskDocumentStore, readDocumentStatuses, readEvidence, reviewDocument } from '@/adjudication/documents';
 import { readReminderLevel, runNoResponse } from '@/adjudication/no-response';
-import { acceptEvidence, adjudicateClaim, openClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
-import { staffAt } from '../helpers/tiers';
+import { transitionClaim } from '@/adjudication/claim-status';
+import { mockPaymentProvider, paidCents } from '@/adjudication/payments';
+import { acceptEvidence, adjudicateClaim, openClaim, overrideDecision, payClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
+import { fileClaim } from '../../scripts/seed-decisions';
+import { seedOverrideReasons, staffAt } from '../helpers/tiers';
 
 // Task 3.4 (D47, D55): a fact is a row someone entered, from a document version or on their own word. The snapshot
 // reads those rows, a document's facts count only while its version is accepted, and the decision names the versions.
 // Task 3.5 (D51a, D51d, D51f, D56): filing, accepting and waiving decide the claim themselves; an upload does not.
 // Task 3.6 (D51h, D51i, D57): the no-response job reminds and closes on the injected date, and an upload reopens.
-// Every event is checked against the fixture: status, documents, reminder level, the decision and what each rule that did not pass is missing.
+// Task 3.9 (D50, D51j, D60): paying sends what the claim has not been paid of its current decision's amount, and closes it.
+// Every event is checked against the fixture: both statuses, cents paid, documents, reminder level, the decision and what each rule that did not pass is missing.
 
 const read = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -24,8 +28,9 @@ const versionIds: Record<string, string> = {};
 afterAll(() => client.end());
 beforeEach(async () => {
   await connected;
-  await client.query('TRUNCATE "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
+  await client.query('TRUNCATE "Payment", "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"');
   for (const name of ['plan-v1', 'ops-v1']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
+  await seedOverrideReasons(client);
   const root = await mkdtemp(join(tmpdir(), 'adjuster-facts-'));
   store = new LocalDiskDocumentStore(root);
   return () => rm(root, { recursive: true });
@@ -38,16 +43,21 @@ const upload = (claimId: string, type: string, n = 1) =>
 const accept = (versionId: string, facts?: Record<string, unknown>) => reviewDocument(client, { versionId, result: 'accepted', userId: null, facts });
 const decision = async (id: string | null) => (await client.query('SELECT * FROM "Decision" WHERE "id" = $1', [id])).rows[0];
 
-type Action = { type: string; facts: Record<string, unknown>; doc: string; version: string; by: string; reasonText: string };
+type Action = { type: string; facts: Record<string, unknown>; doc: string; version: string; by: string; reasonText: string; reasonCode: string; reason: string };
 type NotPassed = { ruleId: string; result: string; missing: string[] };
-type Expected = { row: number; outcome: string; payableCents: number | null; reasons: string[]; notPassed: NotPassed[]; documentVersions: string[]; supersedes: number | null };
-type Life = { plan: string; events: { asOf: string; action: Action; expected: { claimStatus: string; reminderLevel: number; docs: Record<string, string>; decisionRows: number; decision: Expected } }[] };
+type Expected = { row: number; kind: string; outcome: string; payableCents: number | null; reasons: string[]; notPassed: NotPassed[]; documentVersions: string[]; supersedes: number | null;
+  overrides: number; totalIncurredCents: number };
+type Life = { plan: string; events: { asOf: string; action: Action; expected: { claimStatus: string; paymentStatus: string; paidCents: number; paymentCents?: number; reminderLevel: number; docs: Record<string, string>; decisionRows: number; decision: Expected } }[] };
 
-/** Plays a claim life's open, upload, accept, waive and tick events through the services and returns the label of each version id. */
-async function play(id: string, fx: Life) {
+/**
+ * Plays a claim life's events through the services and returns the label of each version id. `before` runs ahead of
+ * each event. A reopen is the status move alone: the supplemental's own service is task 3.10.
+ */
+async function play(id: string, fx: Life, before?: (a: Action) => Promise<unknown>) {
   const label = new Map<string, string>();
   const idOf = (l: string) => [...label].find(([, v]) => v === l)![0];
   for (const [i, { asOf, action: a, expected: e }] of fx.events.entries()) {
+    await before?.(a);
     if (a.type === 'open') {
       const facts = Object.entries(a.facts);
       await client.query('INSERT INTO "Contract" ("id", "planVersionId", "facts") VALUES ($1, $2, $3)', [`CT-${id}`, versionIds[fx.plan], Object.fromEntries(facts.filter(onContract))]);
@@ -56,17 +66,26 @@ async function play(id: string, fx: Life) {
     else if (a.type === 'accept') await acceptEvidence(client, { versionId: idOf(a.version), facts: a.facts, userId: null }, asOf);
     else if (a.type === 'waive') await waiveEvidence(client, { claimId: id, type: a.doc, reasonText: a.reasonText, asOf, userId: (await staffAt(client, [a.by]))[a.by] ?? null });
     else if (a.type === 'tick') await runNoResponse(client, asOf);
+    else if (a.type === 'override') await overrideDecision(client, { claimId: id, userId: (await staffAt(client, [a.by]))[a.by]!, reasonCode: a.reasonCode, reasonText: a.reasonText, asOf });
+    else if (a.type === 'pay') expect([i, (await payClaim(client, mockPaymentProvider, { claimId: id, asOf, userId: null })).paymentCents]).toEqual([i, e.paymentCents]);
+    else if (a.type === 'reopen') await transitionClaim(client, id, 'REOPENED', { userId: null, reason: a.reason });
     else throw new Error(`play: ${a.type}`);
 
     const rows = (await client.query('SELECT * FROM "Decision" WHERE "claimId" = $1 ORDER BY "createdAt"', [id])).rows;
     const d = rows[e.decision.row];
+    const { status, paymentStatus } = (await client.query('SELECT "status", "paymentStatus" FROM "Claim" WHERE "id" = $1', [id])).rows[0];
+    expect([i, status, paymentStatus, await paidCents(client, id), await readReminderLevel(client, id), (await readDocumentStatuses(client, id)).docs])
+      .toEqual([i, e.claimStatus, e.paymentStatus, e.paidCents, e.reminderLevel, e.docs]);
+    if (e.decision.kind === 'override') {
+      expect([i, rows.length, d.outcome, d.payableCents, d.overridesId, d.overrideTier, d.overrideTotalIncurredCents])
+        .toEqual([i, e.decisionRows, e.decision.outcome, e.decision.payableCents, rows[e.decision.overrides].id, a.type === 'override' ? a.by : d.overrideTier, e.decision.totalIncurredCents]);
+      continue;
+    }
     expect([i, rows.length, d.outcome, d.payableCents, d.explanation.decision.reasons, d.documentVersions.map((v: string) => label.get(v)).sort()])
       .toEqual([i, e.decisionRows, e.decision.outcome, e.decision.payableCents, e.decision.reasons, e.decision.documentVersions]);
     expect([i, d.supersedesId]).toEqual([i, e.decision.supersedes === null ? null : rows[e.decision.supersedes].id]);
     const notPassed = (d.explanation.rules as NotPassed[]).filter((r) => r.result !== 'PASS').map(({ ruleId, result, missing }) => ({ ruleId, result, missing }));
     expect([i, notPassed]).toEqual([i, e.decision.notPassed]);
-    const { status } = (await client.query('SELECT "status" FROM "Claim" WHERE "id" = $1', [id])).rows[0];
-    expect([i, status, await readReminderLevel(client, id), (await readDocumentStatuses(client, id)).docs]).toEqual([i, e.claimStatus, e.reminderLevel, e.docs]);
   }
   return label;
 }
@@ -84,11 +103,71 @@ describe('evidence in the pipeline', () => {
     expect([n, (await readDocumentStatuses(client, 'E-EV-02')).docs.repairEstimate]).toEqual([1, 'received']);
   });
 
-  it('GC-15 to its waiver: waiving the second estimate decides the claim, which is referred', async () => {
-    const fx: Life = read('fixtures/gc/GC-15.json');
-    const upTo = fx.events.findIndex((e) => e.action.type === 'waive');
-    await play('E-GC-15', { ...fx, events: fx.events.slice(0, upTo + 1) });
+});
+
+const gc15: Life = read('fixtures/gc/GC-15.json');
+const gc15To = (type: string) => ({ ...gc15, events: gc15.events.slice(0, gc15.events.findIndex((e) => e.action.type === type) + 1) });
+const pay = (claimId: string, asOf: string, provider = mockPaymentProvider) => payClaim(client, provider, { claimId, asOf, userId: null });
+const payments = async () => (await client.query('SELECT "amountCents", "asOf"::text AS "asOf" FROM "Payment" ORDER BY "createdAt"')).rows;
+const statuses = async (id: string) => Object.values((await client.query('SELECT "status", "paymentStatus" FROM "Claim" WHERE "id" = $1', [id])).rows[0]);
+
+describe('payment', () => {
+  it('GC-15: 85100 is paid, the supplemental pays the 85000 not yet paid, and authority is tested on what is already paid', async () => {
+    const staff = await staffAt(client, ['system', 'adjuster']);
+    await play('E-GC-15', gc15, async (a) => {
+      // 85100 paid is incurred whatever is being approved (D50): a waiver approving nothing, then OV-02's 170100 total
+      if (a.type === 'accept' && a.version === 'repairEstimate/2')
+        await expect(waiveEvidence(client, { claimId: 'E-GC-15', type: 'repairEstimate', reasonText: 'x', asOf: '2025-09-10', userId: staff.system }))
+          .rejects.toMatchObject({ code: 'OUT_OF_AUTHORITY', lacks: ['amount', 'power'] });
+      if (a.type === 'override' && a.by === 'senior')
+        await expect(overrideDecision(client, { claimId: 'E-GC-15', userId: staff.adjuster, reasonCode: a.reasonCode, reasonText: a.reasonText, asOf: '2025-09-11' }))
+          .rejects.toMatchObject({ code: 'OUT_OF_AUTHORITY', lacks: ['amount'] });
+    });
+    expect(await payments()).toEqual([{ amountCents: 85100, asOf: '2025-08-21' }, { amountCents: 85000, asOf: '2025-09-12' }]);
     expect((await verifyDecisions(client)).failures).toEqual([]);
+
+    // paying twice is a no-op, and a payment made is never edited or removed
+    expect(await pay('E-GC-15', '2025-09-13')).toEqual({ paymentCents: 0, claimStatus: 'CLOSED' });
+    expect(await payments()).toHaveLength(2);
+    await expect(client.query('UPDATE "Payment" SET "amountCents" = 1')).rejects.toMatchObject({ constraint: 'document_append_only' });
+    await expect(client.query('DELETE FROM "Payment"')).rejects.toMatchObject({ constraint: 'document_append_only' });
+  });
+
+  it('a denial and an approval at 0 never pay; a referral nobody signed off cannot be paid', async () => {
+    await play('E-EV-02', read('fixtures/ev/EV-02.json'));
+    expect(await pay('E-EV-02', '2025-09-18')).toEqual({ paymentCents: 0, claimStatus: 'DECIDED' });
+
+    const zero = read('fixtures/gc/GC-06.json');
+    await fileClaim(client, store, versionIds[zero.plan], { id: 'E-GC-06', facts: zero.facts });
+    expect(await adjudicateClaim(client, 'E-GC-06', zero.asOf)).toMatchObject({ outcome: 'APPROVE', claimStatus: 'DECIDED' });
+    expect(await pay('E-GC-06', zero.asOf)).toEqual({ paymentCents: 0, claimStatus: 'DECIDED' });
+
+    await play('E-REFER', gc15To('waive'));
+    await expect(pay('E-REFER', '2025-08-20')).rejects.toMatchObject({ code: 'ILLEGAL_TRANSITION' });
+    expect([await statuses('E-REFER'), await payments()]).toEqual([['REFERRED', 'NONE'], []]);
+  });
+
+  it('a provider that fails leaves the claim decided and unpaid, and a payment is never dated before its decision', async () => {
+    await play('E-FAIL', gc15To('override'));
+    await expect(pay('E-FAIL', '2025-08-21', { pay: () => Promise.reject(new Error('provider down')) })).rejects.toThrow('provider down');
+    await expect(pay('E-FAIL', '2025-08-19')).rejects.toThrow('before its decision');
+    expect([await statuses('E-FAIL'), await payments()]).toEqual([['DECIDED', 'NONE'], []]);
+    expect(await pay('E-FAIL', '2025-08-21')).toEqual({ paymentCents: 85100, claimStatus: 'CLOSED' });
+    expect(await statuses('E-FAIL')).toEqual(['CLOSED', 'PAID']);
+  });
+
+  it('a recomputed total below what was paid: the paid money stays incurred and nothing more goes out', async () => {
+    const { adjuster } = await staffAt(client, ['adjuster']);
+    await play('E-LOWER', gc15To('pay'));
+    await transitionClaim(client, 'E-LOWER', 'REOPENED', { userId: null, reason: 'supplemental' });
+    const again = gc15.events.find((e) => e.action.version === 'repairEstimate/2' && e.action.type === 'accept')!.action;
+    const { versionId } = await upload('E-LOWER', 'repairEstimate', 2);
+    const engine = await acceptEvidence(client, { versionId, facts: { ...again.facts, 'claim.coveredRepairCents': 60000 }, userId: null }, '2025-09-10');
+    const o = await overrideDecision(client, { claimId: 'E-LOWER', userId: adjuster, reasonCode: 'FLAG_CLEARED', reasonText: 'x', asOf: '2025-09-11' });
+    const [e, d] = [await decision(engine.decisionId), await decision(o.decisionId)];
+    expect([e.outcome, e.payableCents < 85100, d.payableCents, d.overrideTotalIncurredCents]).toEqual(['REFER', true, e.payableCents, 85100]);
+    expect(await pay('E-LOWER', '2025-09-12')).toEqual({ paymentCents: 0, claimStatus: 'DECIDED' });
+    expect([await payments(), (await verifyDecisions(client)).failures]).toEqual([[{ amountCents: 85100, asOf: '2025-08-21' }], []]);
   });
 });
 
