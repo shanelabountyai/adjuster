@@ -21,7 +21,9 @@ let opsId = '';
 let versions: Record<string, string> = {};
 beforeEach(async () => {
   await connected;
-  ({ decisions: ids, versions } = await seedDecisions(client));
+  const seeded = await seedDecisions(client);
+  ids = seeded.decisions;
+  versions = seeded.versions.electronics!;
   opsId = versions['ops-v1']!;
 });
 

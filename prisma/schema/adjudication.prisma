@@ -88,22 +88,28 @@ model DocumentVersion {
   @@unique([documentId, version])
 }
 
-// Task 3.3, D54. The five rejection reasons of domain brief §8, seeded by the migration. Data: a sixth is a row.
+// Task 3.3, D54. The rejection reasons of domain brief §8, seeded by the migration. Data: a sixth is a row.
+// Task 4.7, D85: one list per product (§12 for the second), so the key is (product, code).
 model DocumentRejectionReason {
-  code    String           @id
+  product String
+  code    String
   reviews DocumentReview[]
+
+  @@id([product, code])
 }
 
 // Task 3.3, D53. What a person said of one version, once: accepted, or rejected with a reason. Insert-only (trigger).
 model DocumentReview {
-  id         String                   @id @default(uuid()) @db.Uuid
-  versionId  String                   @unique @db.Uuid
-  version    DocumentVersion          @relation(fields: [versionId], references: [id], onDelete: Restrict)
-  result     String // accepted | rejected
-  reasonCode String?
-  reason     DocumentRejectionReason? @relation(fields: [reasonCode], references: [code], onDelete: Restrict)
-  reviewedBy String?                  @db.Uuid
-  reviewedAt DateTime                 @default(now()) @db.Timestamptz(6)
+  id            String                   @id @default(uuid()) @db.Uuid
+  versionId     String                   @unique @db.Uuid
+  version       DocumentVersion          @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  result        String // accepted | rejected
+  reasonCode    String?
+  // D85: the product of the claim's plan, set by the statement that rejects, exactly when there is a reason (CHECK).
+  reasonProduct String?
+  reason        DocumentRejectionReason? @relation(fields: [reasonProduct, reasonCode], references: [product, code], onDelete: Restrict, map: "DocumentReview_reasonCode_fkey")
+  reviewedBy    String?                  @db.Uuid
+  reviewedAt    DateTime                 @default(now()) @db.Timestamptz(6)
 }
 
 // Task 3.3, D53. A waiver is of the document slot, not of a version, so it needs no upload. Insert-only (trigger).

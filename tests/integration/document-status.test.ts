@@ -33,8 +33,7 @@ beforeEach(async () => {
   for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
   // The template's resetDb truncates every table, the migration's reference rows included, so whether they are still
   // there depends on which file ran first. Put back exactly what the migration seeds, by running its own statement.
-  await client.query(readFileSync('prisma/migrations/20261005010000_document_status/migration.sql', 'utf8')
-    .match(/INSERT INTO "DocumentRejectionReason"[^;]+/)![0] + ' ON CONFLICT DO NOTHING');
+  await client.query(readFileSync('prisma/migrations/20261013020000_rejection_reason_product/migration.sql', 'utf8').match(/INSERT INTO "DocumentRejectionReason"[^;]+/)![0]);
   staff = await staffAt(client, TIERS);
   root = await mkdtemp(join(tmpdir(), 'adjuster-docs-'));
   store = new LocalDiskDocumentStore(root);
@@ -191,10 +190,16 @@ describe('moves the table does not have write nothing', () => {
 
 describe('the database rules', () => {
   it('holds exactly the fixture’s rejection reasons, and a review names one of them exactly when it rejects', async () => {
-    expect((await client.query(`SELECT "code" FROM "DocumentRejectionReason"`)).rows.map((r) => r.code).sort()).toEqual([...ev06.rejectionReasons].sort());
+    const reasons = async (product: string) => (await client.query(`SELECT "code" FROM "DocumentRejectionReason" WHERE "product" = $1`, [product])).rows.map((r) => r.code).sort();
+    expect(await reasons('electronics')).toEqual([...ev06.rejectionReasons].sort());
+    // D85: each product has its own list (domain brief §12). The claim here is on an electronics plan, so furniture's reason is refused.
+    expect(await reasons('furniture')).toEqual(['date_inconsistent', 'illegible', 'incomplete', 'item_mismatch', 'wrong_document']);
+    expect((await client.query(`SELECT DISTINCT "product" FROM "DocumentRejectionReason"`)).rowCount).toBe(2);
     const id = await claim('DS-reason');
     const v = await upload(id, 'repairEstimate');
     await expect(reject(v.versionId, 'smudged')).rejects.toMatchObject({ constraint: 'DocumentReview_reasonCode_fkey' });
+    await expect(reject(v.versionId, 'item_mismatch')).rejects.toMatchObject({ constraint: 'DocumentReview_reasonCode_fkey' });
+    expect(await run(`INSERT INTO "DocumentReview" ("id", "versionId", "result", "reasonCode") VALUES (gen_random_uuid(), $1, 'rejected', 'illegible')`, [v.versionId])).toBe('document_review_reason_product');
     await expect(reject(v.versionId, null)).rejects.toMatchObject({ constraint: 'document_review_reason' });
     await expect(reviewDocument(client, { versionId: v.versionId, result: 'accepted', reason: 'illegible', userId: null })).rejects.toMatchObject({ constraint: 'document_review_reason' });
     const insert = (result: string) => run(`INSERT INTO "DocumentReview" ("id", "versionId", "result") VALUES (gen_random_uuid(), $1, $2)`, [v.versionId, result]);
@@ -202,6 +207,7 @@ describe('the database rules', () => {
     expect(await count('DocumentReview')).toBe(0);
     for (const reason of ev06.rejectionReasons) await reject((await upload(id, 'repairEstimate')).versionId, reason);
     expect(await count('DocumentReview')).toBe(5);
+    expect((await client.query(`SELECT DISTINCT "reasonProduct" FROM "DocumentReview"`)).rows).toEqual([{ reasonProduct: 'electronics' }]);
     expect(await insert('accepted')).toBe('accepted'); // v is superseded: the table is the service's, the database only keeps one review per version
     expect(await insert('accepted')).toBe('DocumentReview_versionId_key');
   });

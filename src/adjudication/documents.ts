@@ -198,6 +198,7 @@ export async function uploadDocument(db: Db, store: DocumentStore, u: Upload): P
  * Accepts or rejects one version, once, with the audit event in the same statement. This is the document's move only:
  * an acceptance that should decide the claim goes through the pipeline's `acceptEvidence` (D56). Only the latest version of a
  * document that is not waived is `received`; the insert holds that again, so a version superseded in between is not reviewed.
+ * D85: a reason is one of the product's own list. The statement reads the product from the claim's plan, and the foreign key refuses the rest.
  */
 export async function reviewDocument(db: Db, r: { versionId: string; result: Review; reason?: string | null; userId: string | null; facts?: Record<string, unknown> }): Promise<{ claimId: string }> {
   const v = (await db.query<{ claimId: string; type: string; version: number }>(
@@ -216,8 +217,10 @@ export async function reviewDocument(db: Db, r: { versionId: string; result: Rev
   const to = assertDocumentMove(from, action);
   const { rows } = await db.query(
     `WITH made AS (
-       INSERT INTO "DocumentReview" ("id", "versionId", "result", "reasonCode", "reviewedBy")
-       SELECT gen_random_uuid(), v."id", $2, $3, $4::uuid FROM "DocumentVersion" v JOIN "Document" d ON d."id" = v."documentId"
+       INSERT INTO "DocumentReview" ("id", "versionId", "result", "reasonCode", "reasonProduct", "reviewedBy")
+       SELECT gen_random_uuid(), v."id", $2, $3, CASE WHEN $3::text IS NOT NULL THEN p."product" END, $4::uuid
+       FROM "DocumentVersion" v JOIN "Document" d ON d."id" = v."documentId"
+         JOIN "Claim" c ON c."id" = d."claimId" JOIN "Contract" k ON k."id" = c."contractId" JOIN "RuleSetVersion" p ON p."id" = k."planVersionId"
        WHERE v."id" = $1 AND NOT EXISTS (SELECT 1 FROM "DocumentVersion" n WHERE n."documentId" = v."documentId" AND n."version" > v."version")
          AND NOT EXISTS (SELECT 1 FROM "DocumentWaiver" w WHERE w."claimId" = d."claimId" AND w."type" = d."type")
        RETURNING "id"),

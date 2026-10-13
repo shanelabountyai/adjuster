@@ -2,7 +2,7 @@
 """Second derivation for Adjuster's fixtures. Exit 0 and print OK only if every frozen fixture agrees.
 
 build_fixtures.py adjudicates procedurally from the domain brief. This script derives the same answers a DIFFERENT way:
-it interprets rules/electronics/{facts,plan,ops}-v1.json (the rule data the product will load) with decimal.Decimal
+it interprets the rule data of every product under rules/ (the files the product will load) with decimal.Decimal
 arithmetic and Kleene three-valued logic, and checks the result against the fixtures and against answer keys typed
 in below straight from the brief. So it proves two things at once: the fixtures are right, and the rule data encodes
 the brief. It is a test oracle in tools/, not product code. Stdlib only.
@@ -12,7 +12,7 @@ from decimal import Decimal, ROUND_HALF_UP, getcontext
 
 getcontext().prec = 60
 HERE = os.path.dirname(os.path.abspath(__file__))
-FIX, RULES = os.path.join(HERE, "..", "fixtures"), os.path.join(HERE, "..", "rules", "electronics")
+FIX, RULES = os.path.join(HERE, "..", "fixtures"), os.path.join(HERE, "..", "rules")
 fails = []
 
 
@@ -57,6 +57,8 @@ PL_STATUS_FOR = {"APPROVE": "DECIDED", "PARTIAL": "DECIDED", "DENY": "DECIDED", 
 EV06_KEY = ("requested>upload>received received>upload>received rejected>upload>received accepted>upload>received "
             "received>accept>accepted received>reject>rejected requested>waive>waived received>waive>waived rejected>waive>waived")
 REJECT_KEY = "illegible wrong_document serial_mismatch date_inconsistent incomplete"
+# D85, typed from the brief's s8 and s12: each product's own list, as the migration that added the product column seeds it
+REJECT_BY_PRODUCT = {"electronics": REJECT_KEY, "furniture": "illegible wrong_document item_mismatch date_inconsistent incomplete"}
 OV_KEY = {"OV-01": [True, True, False, True, True], "OV-02": [False, True, True, False], "OV-03": [True, True, True, False, False, False, False],
           "OV-04": [True, False, True, True, False]}  # D68: senior and up draft, the manager publishes
 # Phase 4 (D68-D71). AU-01..04: the one code each draft must fail with, typed from PRD P0-9's list.
@@ -252,10 +254,22 @@ def decide(plan, ops, dic, facts):
 
 # ------------------------------------------------------------------ checks
 
-dic = load(f"{RULES}/facts-v1.json")
-RS = {os.path.basename(p)[:-5]: load(p) for p in glob.glob(f"{RULES}/plan-*.json") + glob.glob(f"{RULES}/ops-*.json")}
-plan, ops = RS["plan-v1"], RS["ops-v1"]
-byid = {x["id"]: x for x in dic["facts"]}
+# D85: every directory under rules/ is a product. A fixture names its product; the frozen ones name none and are the first product's.
+PRODUCTS = {os.path.basename(d): {os.path.basename(p)[:-5]: load(p) for p in glob.glob(f"{d}/plan-*.json") + glob.glob(f"{d}/ops-*.json")} for d in sorted(glob.glob(f"{RULES}/*")) if os.path.isdir(d)}
+product_of = lambda f: f.get("product", "electronics")
+
+
+def use(product):
+    """The rule files the checks below read: one product's, with its v1 pair as the default."""
+    global dic, RS, plan, ops, byid, FILE_VERSIONS
+    RS = PRODUCTS[product]
+    plan, ops = RS["plan-v1"], RS["ops-v1"]
+    dic = load(f"{RULES}/{product}/{plan['factDictionary']}.json")
+    byid = {x["id"]: x for x in dic["facts"]}
+    FILE_VERSIONS = [dict(name=n, kind=r["kind"], status="published", effectiveFrom=r["effectiveFrom"]) for n, r in RS.items()]
+
+
+use("electronics")
 
 # D35: each v2 is its v1 plus exactly the typed edits, nothing else
 import copy
@@ -312,7 +326,12 @@ def defects(rs):
     return sorted(out)
 
 
-for name, r in RS.items(): chk(defects(r) == [], f"{name}: a published file has {defects(r)}")
+for product in PRODUCTS:
+    use(product)
+    for name, r in RS.items():
+        chk(defects(r) == [], f"{product}/{name}: a published file has {defects(r)}")
+        chk(r["product"] == product and r["factDictionary"] == dic["id"], f"{product}/{name}: names another product or dictionary")
+use("electronics")
 
 
 def replay_draft(f):
@@ -349,8 +368,6 @@ def pick_ops(asof, versions):
     return None
 
 
-FILE_VERSIONS = [dict(name=n, kind=r["kind"], status="published", effectiveFrom=r["effectiveFrom"]) for n, r in RS.items()]
-
 # rule data against the brief's s1 table, typed here independently
 L = {l["id"]: {r["id"]: r for r in l["rows"]} for l in plan["lookups"]}
 val = lambda l, r: L[l][r]["value"]
@@ -384,6 +401,7 @@ def authority(ops_name, tier, power, paid, amount):
 
 def replay(fid, f):
     """Second derivation of a claim's life. State comes only from each event's action; every event's expected block must equal it."""
+    use(product_of(f))
     doc_types = [x["id"][5:] for x in dic["facts"] if x["id"].startswith("docs.")]
     flag_ids = {r["id"] for r in RS["ops-v1"]["rules"] if r["kind"] == "flag"}
     edges = {(t["from"], t["to"]) for t in fx["PL-01"]["transitions"]}
@@ -561,8 +579,14 @@ want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY) 
        sorted(AU_KEY) + ["AU-05"] + sorted(ID_KEY)
 chk(sorted(fx) == sorted(want), f"fixture set differs: missing {sorted(set(want) - set(fx))}, extra {sorted(set(fx) - set(want))}")
 
+sql = open(os.path.join(HERE, "..", "prisma/migrations/20261013020000_rejection_reason_product/migration.sql")).read().split('INSERT INTO "DocumentRejectionReason"')[1].split(";")[0]
+seeded = re.findall(r"\('([a-z_]+)', '([a-z_]+)'\)", sql)
+chk({p: " ".join(c for q_, c in seeded if q_ == p) for p in dict(seeded)} == REJECT_BY_PRODUCT, f"rejection reasons by product differ from the brief: {seeded}")
+chk(set(PRODUCTS) <= set(REJECT_BY_PRODUCT), f"a product under rules/ has no rejection reasons: {sorted(set(PRODUCTS) - set(REJECT_BY_PRODUCT))}")
+
 for fid, f in fx.items():
     k = f["kind"]
+    use(product_of(f))
     if k in ("decision", "valuation"):
         inputs = [x for x in f["facts"] if byid.get(x, {}).get("source") != "input"]
         chk(not inputs, f"{fid}: facts not declared as inputs: {inputs}")

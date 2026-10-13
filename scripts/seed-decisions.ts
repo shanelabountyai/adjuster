@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import pg from 'pg';
 import { publishRuleSet } from '@/adjudication/decisions';
@@ -17,6 +17,7 @@ import { acceptEvidence, adjudicateClaim, decideAppeal, fileAppeal, openClaim, o
 // that document carries are entered with the acceptance. The bytes are a placeholder line under uploads/ (gitignored).
 // Task 3.12: GC-11 and GC-15 are played event by event through the services (no response, waiver, override, payment,
 // reopen), and GC-05's referral is signed off. The two lives go first: the no-response job reads every open claim.
+// Task 4.7: every product under rules/ is published (D85); the claims are still the first product's.
 // Task 4.5: the six appeal lives AP-01..06 are played too, refused actions skipped, so verify reads real appeal rows.
 const read = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
 const onContract = ([k]: [string, unknown]) => k.startsWith('contract.') || k.startsWith('product.');
@@ -26,6 +27,10 @@ const CARRIED: Record<string, string[]> = Object.fromEntries((read('fixtures/ev/
   .filter((e) => e.action.type === 'accept').map((e) => [e.action.version.split('/')[0], Object.keys(e.action.facts)]));
 
 type Db = Parameters<typeof publishRuleSet>[0];
+
+// D85: a fixture names its product. The frozen ones were written when there was one product and name none.
+const productOf = (fx: { product?: string }) => fx.product ?? 'electronics';
+const versionNo = (file: string) => Number(file.match(/^(?:plan|ops)-v(\d+)\.json$/)?.[1]);
 
 /** Files a fixture's flat fact list as a contract, a claim and its accepted documents. Facts of a document not yet accepted stay on the claim as filed. */
 export async function fileClaim(db: Db, store: DocumentStore, planVersionId: string | undefined, c: { id: string; facts: Record<string, unknown> }) {
@@ -82,8 +87,13 @@ export const seedOverrideReasons = (db: Db) => db.query(readFileSync('prisma/mig
 export async function seedDecisions(db: Db, store: DocumentStore = new LocalDiskDocumentStore('uploads/documents')) {
   await db.query('TRUNCATE "TierAssignment", "Payment", "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
   await seedOverrideReasons(db);
-  const versions: Record<string, string> = {};
-  for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2', 'ops-v3']) versions[name] = await publishRuleSet(db, read(`rules/electronics/${name}.json`));
+  // Every directory under rules/ is a product, and every plan and ops file in it is published, oldest version first.
+  const versions: Record<string, Record<string, string>> = {};
+  for (const product of readdirSync('rules').sort()) {
+    versions[product] = {};
+    for (const file of readdirSync(`rules/${product}`).filter((f) => !Number.isNaN(versionNo(f))).sort((a, b) => versionNo(a) - versionNo(b) || b.localeCompare(a)))
+      versions[product][file.slice(0, -5)] = await publishRuleSet(db, read(`rules/${product}/${file}`));
+  }
 
   const users: Record<string, string> = {};
   const staff = async (tier: string) => {
@@ -91,16 +101,16 @@ export async function seedDecisions(db: Db, store: DocumentStore = new LocalDisk
     return users[tier]!;
   };
   for (const path of ['gc/GC-11', 'gc/GC-15', ...[1, 2, 3, 4, 5, 6].map((n) => `ap/AP-0${n}`)]) {
-    const fx: { id: string; plan: string; events: (LifeEvent & { expected: { refused?: string } })[] } = read(`fixtures/${path}.json`);
-    const life: Life = { db, store, claimId: fx.id, planVersionId: versions[fx.plan], staff, versions: new Map() };
+    const fx: { id: string; product?: string; plan: string; events: (LifeEvent & { expected: { refused?: string } })[] } = read(`fixtures/${path}.json`);
+    const life: Life = { db, store, claimId: fx.id, planVersionId: versions[productOf(fx)]![fx.plan], staff, versions: new Map() };
     for (const [i, e] of fx.events.entries()) if (!e.expected.refused) await playEvent(life, e, i);
   }
 
   const golden = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14].map((n) => read(`fixtures/gc/GC-${String(n).padStart(2, '0')}.json`));
   const [soldBefore, soldAfter] = read('fixtures/rv/RV-01.json').cases;
-  const opsV2From: string = read('rules/electronics/ops-v2.json').effectiveFrom;
+  const opsV2From: string = read(`rules/${productOf(golden[0])}/ops-v2.json`).effectiveFrom;
   const dayBefore = new Date(Date.parse(opsV2From) - 86_400_000).toISOString().slice(0, 10);
-  const claims: { id: string; plan: string; facts: Record<string, unknown>; asOf: string }[] = [
+  const claims: { id: string; product?: string; plan: string; facts: Record<string, unknown>; asOf: string }[] = [
     ...golden,
     { ...soldBefore, id: 'RV-01-v1' }, { ...soldAfter, id: 'RV-01-v2' },
     { ...golden[0], id: 'OPS-v1-last-day', asOf: dayBefore }, { ...golden[0], id: 'OPS-v2-first-day', asOf: opsV2From },
@@ -108,7 +118,7 @@ export async function seedDecisions(db: Db, store: DocumentStore = new LocalDisk
 
   const decisions: Record<string, string> = {};
   for (const c of claims) {
-    await fileClaim(db, store, versions[c.plan], c);
+    await fileClaim(db, store, versions[productOf(c)]![c.plan], c);
     const r = await adjudicateClaim(db, c.id, c.asOf);
     if ('error' in r) throw new Error(`seed:decisions: ${c.id} was not decided (${r.error}: ${r.detail})`);
     decisions[c.id] = r.decisionId;
