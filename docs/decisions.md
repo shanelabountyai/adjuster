@@ -208,3 +208,14 @@ Open after 3.11:
 Open after 3.12:
 - **A reseed leaves the earlier seed's audit events.** The seed empties the claim tables but not `AuditEvent` (a template table), so in a database seeded twice GC-15's audit trail holds two lives under one claim id; only the events naming the current decision ids are this seed's. CI seeds once, so the gate is not affected. Empty it in the seed, or key seeded claim ids per run: Shane's to decide.
 - **`decisions-verify.test.ts` reseeds before each of its 15 tests** (about 0.4 s each on a quiet machine). Under two other projects' sweeps the seed passed the 20 s hook limit and every test in the file failed; that was the machine, not the code.
+
+## Phase 4
+
+Asked as four questions on 2026-10-13 while `docs/phase-4-tasks.md` was written; the rest of its *Decide first* list is 4.1's.
+
+| # | Decision | Applied |
+|---|----------|---------|
+| D64 | **The second product is a furniture protection plan** (Shane, 2026-10-13; closes O6). Chosen over an appliance plan, which is close enough to electronics to fit without effort, and an eyewear plan, which is small: furniture has perils electronics lacks, no serial number and a replacement that is a store credit, so it presses on the vocabulary. | 4.6 writes the brief |
+| D65 | **CP-01 is measured between two tags, after preparation** (Shane, 2026-10-13). Whatever the product needs from `src/` or a migration (a vocabulary extension, a product column on the rejection reasons) lands before the tag `cp-01-base`, each as its own decision, and the write-up counts them. From `cp-01-base` to `cp-01-done`, `src/` and `prisma/` are identical, checked in CI. Chosen over a zero diff with no preparation, which would mean cutting the product's rules to fit. | 4.7, 4.8 |
+| D66 | **The right to author and the right to publish a rule set are powers in the ops rule set** (Shane, 2026-10-13), beside `waive_documents`, read through `TierAssignment`, so no role name is tested in code. Costs a vocabulary entry and a new ops version. Publisher is never the author, by CHECK on the row. Chosen over the template's `admin` role. Which tiers hold each power is 4.1's. | 4.1 to 4.3 |
+| D67 | **Phase 4 also builds a read-only claim page, the rule coverage report and the appeal flow** (Shane, 2026-10-13). The appeal was not the recommended option (it is the largest of the three and was P1); Shane took it, so `UNDER_APPEAL` is exercised and a denied claim has an owner. The other P1 items stay out. The appeal's own rules are item 13 of the task file, at defaults until 4.1. | 4.5, 4.4, 4.12 |
