@@ -10,6 +10,7 @@ import type { Trace } from './adjudicate';
 export type DecisionRecord = {
   decisionId: string;
   engine: string;
+  facts: Record<string, unknown>; // the stored snapshot the decision was made on
   documents: { type: string; version: number; versionId: string; sha256: string }[];
   waivers: { type: string; tier: string; asOf: string; by: string | null; reasonText: string }[];
   // An override row carries the engine's trace (D59 c): its own date, amount, author and authority are columns.
@@ -75,7 +76,7 @@ export function renderLetter(t: Trace, rec?: Pick<DecisionRecord, 'override'>): 
 
 /**
  * The internal file note: who decided and at what authority, the documents relied on, versions, every non-PASS rule
- * with its values, flags included, and every calc step in cents. An amount beside a referral is the engine's
+ * with its values, flags included, the stored facts, and every calc step in cents. An amount beside a referral is the engine's
  * calculation, and the note says so.
  */
 export function renderNote(t: Trace, rec?: DecisionRecord): string {
@@ -106,6 +107,8 @@ export function renderNote(t: Trace, rec?: DecisionRecord): string {
       + (r.missing.length ? ` Missing: ${r.missing.join(', ')}.` : '')
       + ` Facts: ${Object.entries(r.factsRead).map(([k, v]) => `${k}=${String(v)}`).join('; ')}.`),
   ];
+  // Every stored input, sorted: where the dates behind a derived value such as a flag's day count are found (D62 h).
+  if (rec) lines.push('Facts as decided:', ...Object.keys(rec.facts).sort().map((k) => `${k}=${typeof rec.facts[k] === 'object' ? JSON.stringify(rec.facts[k]) : String(rec.facts[k])}`));
   if (t.valuation) {
     lines.push(`Valuation (${t.valuation.path}):`, ...t.valuation.steps.map((s) => `${s.id} ${s.op} ${s.reg}: ${!s.applied ? 'not applied'
       : `${s.inputCents ?? '-'}, ${s.operand ? `${s.operand.name ?? s.operand.kind} ${s.operand.value}` : 'min'} -> ${s.outputCents}`}${t.valuation!.labels[s.id] ? ` (${t.valuation!.labels[s.id]})` : ''}`));

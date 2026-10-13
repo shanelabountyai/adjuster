@@ -319,6 +319,9 @@ describe('letters and notes from stored rows', () => {
     expect(referral.note).toMatch(new RegExp(`Document waived: secondEstimate, by user [0-9a-f-]{36} at tier ${waive.action.by} on ${waive.asOf}: `));
     expect(referral.note).toContain(waive.action.reasonText);
     expect(referral.note).toContain('Calculated payable cents: 85100, not approved.');
+    expect(referral.note).toContain('Facts as decided:\nclaim.accountChanged=false\n');
+    expect(referral.note).toContain('\nclaim.coveredRepairCents=95000\n'); // the row's snapshot, not the claim's later facts
+    expect(referral.note).toContain('\ndocs.secondEstimate=waived\n');
     expect(referral.letter).toBe(`Decision as of ${waive.asOf}: Your claim needs review by an adjuster. No decision has been made yet.\n`);
     expect(fnol.note).not.toContain('Document waived'); // the first decision did not rely on a waiver made later
 

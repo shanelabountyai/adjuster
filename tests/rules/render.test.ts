@@ -88,7 +88,7 @@ describe('renderLetter', () => {
 describe('the decision row (3.11, D62)', () => {
   const override = { overridesId: 'engine-row', asOf: '2025-02-04', payableCents: 37500, by: 'u-1', tier: 'adjuster', totalIncurredCents: 37500,
     opsHash: 'f'.repeat(64), reasonCode: 'FLAG_CLEARED', reasonText: 'Receipt reissued by the retailer; original sale confirmed.' };
-  const rec = { decisionId: 'override-row', engine: 'adjuster.engine/7', waivers: [],
+  const rec = { decisionId: 'override-row', engine: 'adjuster.engine/7', waivers: [], facts: read('fixtures/gc/GC-12.json').facts as Record<string, unknown>,
     documents: [{ type: 'proofOfPurchase', version: 2, versionId: 'dv-1', sha256: 'a'.repeat(64) }] };
 
   it('GC-12 signed off: the letter is the approval with its math, on the override date, and says nothing of flags, reason or signer', () => {
@@ -111,6 +111,12 @@ describe('the decision row (3.11, D62)', () => {
     ]);
     expect(lines).toContain(`Document relied on: proofOfPurchase version 2, id dv-1, sha256 ${'a'.repeat(64)}.`);
     expect(lines.join('\n')).not.toContain('Decided by the engine');
+    // the dates behind F1's and F3's day counts, from the stored snapshot, in key order, before the valuation
+    const at = (l: string) => lines.indexOf(l);
+    expect(at('Facts as decided:')).toBeGreaterThan(0);
+    expect([at('claim.dateOfLoss=2025-01-31'), at('contract.waitingEndsOn=2025-01-29'), at('history.priorClaims=[]')].every((i) => i > at('Facts as decided:') && i < at('Valuation (repair):'))).toBe(true);
+    expect(at('claim.dateOfLoss=2025-01-31')).toBeLessThan(at('contract.waitingEndsOn=2025-01-29'));
+    expect(renderNote(gc('12'))).not.toContain('Facts as decided'); // the trace alone holds no snapshot
   });
 
   it('an engine decision names the engine, its documents and its waivers; with none it says none', () => {

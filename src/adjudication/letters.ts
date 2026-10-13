@@ -26,7 +26,7 @@ export async function readDecisionRecord(db: Db, decisionId: string): Promise<{ 
   return {
     trace: traceSchema.parse(d.explanation),
     record: {
-      decisionId, engine: d.engineSemanticsVersion, documents, waivers,
+      decisionId, engine: d.engineSemanticsVersion, facts: d.facts, documents, waivers,
       override: d.overridesId === null ? null : {
         overridesId: d.overridesId, asOf: d.asOf, payableCents: d.payableCents!, by: d.overrideBy, tier: d.overrideTier!,
         totalIncurredCents: d.overrideTotalIncurredCents!, opsHash: d.opsHash, reasonCode: d.overrideReasonCode!, reasonText: d.overrideReasonText!,
