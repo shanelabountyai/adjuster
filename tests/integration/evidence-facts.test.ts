@@ -9,7 +9,7 @@ import { enterFact, LocalDiskDocumentStore, readDocumentStatuses, readEvidence, 
 import { readReminderLevel, runNoResponse } from '@/adjudication/no-response';
 import { transitionClaim } from '@/adjudication/claim-status';
 import { mockPaymentProvider, paidCents } from '@/adjudication/payments';
-import { acceptEvidence, adjudicateClaim, openClaim, overrideDecision, payClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
+import { acceptEvidence, adjudicateClaim, openClaim, overrideDecision, payClaim, reopenClaim, uploadEvidence, waiveEvidence } from '@/adjudication/pipeline';
 import { fileClaim } from '../../scripts/seed-decisions';
 import { seedOverrideReasons, staffAt } from '../helpers/tiers';
 
@@ -51,7 +51,7 @@ type Life = { plan: string; events: { asOf: string; action: Action; expected: { 
 
 /**
  * Plays a claim life's events through the services and returns the label of each version id. `before` runs ahead of
- * each event. A reopen is the status move alone: the supplemental's own service is task 3.10.
+ * each event.
  */
 async function play(id: string, fx: Life, before?: (a: Action) => Promise<unknown>) {
   const label = new Map<string, string>();
@@ -68,7 +68,7 @@ async function play(id: string, fx: Life, before?: (a: Action) => Promise<unknow
     else if (a.type === 'tick') await runNoResponse(client, asOf);
     else if (a.type === 'override') await overrideDecision(client, { claimId: id, userId: (await staffAt(client, [a.by]))[a.by]!, reasonCode: a.reasonCode, reasonText: a.reasonText, asOf });
     else if (a.type === 'pay') expect([i, (await payClaim(client, mockPaymentProvider, { claimId: id, asOf, userId: null })).paymentCents]).toEqual([i, e.paymentCents]);
-    else if (a.type === 'reopen') await transitionClaim(client, id, 'REOPENED', { userId: null, reason: a.reason });
+    else if (a.type === 'reopen') await reopenClaim(client, { claimId: id, userId: (await staffAt(client, ['adjuster'])).adjuster, reason: a.reason });
     else throw new Error(`play: ${a.type}`);
 
     const rows = (await client.query('SELECT * FROM "Decision" WHERE "claimId" = $1 ORDER BY "createdAt"', [id])).rows;
@@ -156,10 +156,10 @@ describe('payment', () => {
     expect(await statuses('E-FAIL')).toEqual(['CLOSED', 'PAID']);
   });
 
-  it('a recomputed total below what was paid: the paid money stays incurred and nothing more goes out', async () => {
+  it('a recomputed total below what was paid: the paid money stays incurred, nothing more goes out, and the claim may close (D61)', async () => {
     const { adjuster } = await staffAt(client, ['adjuster']);
     await play('E-LOWER', gc15To('pay'));
-    await transitionClaim(client, 'E-LOWER', 'REOPENED', { userId: null, reason: 'supplemental' });
+    await reopenClaim(client, { claimId: 'E-LOWER', userId: adjuster, reason: 'supplemental' });
     const again = gc15.events.find((e) => e.action.version === 'repairEstimate/2' && e.action.type === 'accept')!.action;
     const { versionId } = await upload('E-LOWER', 'repairEstimate', 2);
     const engine = await acceptEvidence(client, { versionId, facts: { ...again.facts, 'claim.coveredRepairCents': 60000 }, userId: null }, '2025-09-10');
@@ -168,6 +168,29 @@ describe('payment', () => {
     expect([e.outcome, e.payableCents < 85100, d.payableCents, d.overrideTotalIncurredCents]).toEqual(['REFER', true, e.payableCents, 85100]);
     expect(await pay('E-LOWER', '2025-09-12')).toEqual({ paymentCents: 0, claimStatus: 'DECIDED' });
     expect([await payments(), (await verifyDecisions(client)).failures]).toEqual([[{ amountCents: 85100, asOf: '2025-08-21' }], []]);
+    await expect(transitionClaim(client, 'E-LOWER', 'PAYMENT_PENDING', { userId: null })).rejects.toMatchObject({ code: 'ILLEGAL_TRANSITION' });
+    await transitionClaim(client, 'E-LOWER', 'CLOSED', { userId: adjuster });
+    expect([await statuses('E-LOWER'), await paidCents(client, 'E-LOWER')]).toEqual([['CLOSED', 'PAID'], 85100]);
+  });
+});
+
+describe('supplemental (task 3.10, D61)', () => {
+  const reopened = () => client.query(`SELECT "actorUserId", "data" FROM "AuditEvent" WHERE "targetId" = 'E-GC-15' AND "data"->>'to' = 'REOPENED'`);
+
+  it('a reopen needs a closed claim, a tier and a reason, and writes the reason on the audit event', async () => {
+    const { adjuster } = await staffAt(client, ['adjuster']);
+    const before = (await reopened()).rows.length; // the audit log is never emptied
+    await play('E-GC-15', gc15To('override')); // DECIDED, not yet paid
+    await expect(reopenClaim(client, { claimId: 'E-GC-15', userId: adjuster, reason: 'supplemental' })).rejects.toMatchObject({ code: 'ILLEGAL_TRANSITION' });
+    await pay('E-GC-15', '2025-08-21');
+    await expect(reopenClaim(client, { claimId: 'E-GC-15', userId: null, reason: 'supplemental' })).rejects.toMatchObject({ code: 'OUT_OF_AUTHORITY', lacks: ['tier'] });
+    await expect(reopenClaim(client, { claimId: 'E-GC-15', userId: adjuster, reason: ' ' })).rejects.toThrow(/REASON_REQUIRED/);
+    expect([await statuses('E-GC-15'), (await reopened()).rows.length]).toEqual([['CLOSED', 'PAID'], before]);
+
+    expect(await reopenClaim(client, { claimId: 'E-GC-15', userId: adjuster, reason: 'teardown found more damage' })).toEqual({ claimStatus: 'REOPENED' });
+    const { rows } = await reopened();
+    expect([rows.length, rows.at(-1).actorUserId, rows.at(-1).data.reason]).toEqual([before + 1, adjuster, 'teardown found more damage']);
+    await expect(reopenClaim(client, { claimId: 'E-GC-15', userId: adjuster, reason: 'again' })).rejects.toMatchObject({ code: 'ILLEGAL_TRANSITION' });
   });
 });
 
@@ -198,6 +221,8 @@ describe('no response', () => {
     expect(await readReminderLevel(client, 'E-AGAIN')).toBe(0);
     expect(await runNoResponse(client, '2025-10-17')).toMatchObject({ reminded: [{ claimId: 'E-AGAIN', level: 1 }], closed: [] }); // day 30 of the first PEND, 16 of this one
     expect(await runNoResponse(client, '2025-10-31')).toMatchObject({ closed: ['E-AGAIN'] });
+    // closed for no response is reopened by its upload, never by the supplemental's reopen (D61 a)
+    await expect(reopenClaim(client, { claimId: 'E-AGAIN', userId: (await staffAt(client, ['adjuster'])).adjuster, reason: 'supplemental' })).rejects.toMatchObject({ code: 'ILLEGAL_TRANSITION' });
     const late = await upload('E-AGAIN', 'damagePhotos');
     expect((await client.query(`SELECT "status" FROM "Claim" WHERE "id" = 'E-AGAIN'`)).rows[0].status).toBe('REOPENED');
     await acceptEvidence(client, { versionId: late.versionId, userId: null }, '2025-11-03');

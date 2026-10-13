@@ -1,5 +1,5 @@
 import { tierOf } from '@/adjudication/authority';
-import { type ClaimStatus, transitionClaim } from '@/adjudication/claim-status';
+import { type ClaimStatus, IllegalTransitionError, transitionClaim } from '@/adjudication/claim-status';
 import { type Db, inputHashOf, loadVersions, recordDecision } from '@/adjudication/decisions';
 import { type DocumentStore, OutOfAuthorityError, readDocumentStatuses, readEvidence, reviewDocument, type Upload, uploadDocument, type UploadedVersion, waiveDocument, type Waiver } from '@/adjudication/documents';
 import { paidCents, type PaymentProvider } from '@/adjudication/payments';
@@ -16,6 +16,7 @@ import { selectVersions } from '@/rules/select';
 // An upload decides nothing, but one on a claim closed for no response reopens it in the same transaction (task 3.6, D51i).
 // A person's sign-off of a referral is a second row beside the engine's, never a change to it (task 3.8, D48, D59).
 // Paying sends the part of the current decision's amount the claim has not been paid, and closes it (task 3.9, D51j, D60).
+// A supplemental is an explicit reopen of a closed claim by staff; the new facts then decide it as any others do (task 3.10, D61).
 
 const STATUS_FOR: Record<string, ClaimStatus> = { APPROVE: 'DECIDED', PARTIAL: 'DECIDED', DENY: 'DECIDED', PEND: 'PENDING_EVIDENCE', REFER: 'REFERRED' };
 
@@ -143,6 +144,25 @@ export const payClaim = (db: Db, provider: PaymentProvider, p: Pay): Promise<{ p
     await mark('PAID');
     await transitionClaim(db, p.claimId, 'CLOSED', by);
     return { paymentCents: due, claimStatus: 'CLOSED' };
+  });
+
+export type Reopen = { claimId: string; userId: string | null; reason: string };
+
+/**
+ * Reopens a closed claim for a supplemental. Only a user who holds a tier may, and only with a reason, which goes on
+ * the status-change audit event. Nothing is approved here, so no amount is tested: the override or waiver that
+ * approves the new total is tested on total incurred. A claim closed for no response reopens by its upload instead.
+ */
+export const reopenClaim = (db: Db, r: Reopen): Promise<{ claimStatus: ClaimStatus }> =>
+  tx(db, async () => {
+    if (!r.reason.trim()) throw new Error(`REASON_REQUIRED: reopening claim ${r.claimId} needs a reason`);
+    const tier = await tierOf(db, r.userId);
+    if (!tier) throw new OutOfAuthorityError(tier, ['tier'], `reopening claim ${r.claimId}`);
+    const claim = (await db.query<{ status: ClaimStatus }>('SELECT "status" FROM "Claim" WHERE "id" = $1 FOR UPDATE', [r.claimId])).rows[0];
+    if (!claim) throw new Error(`Claim ${r.claimId} not found`);
+    if (claim.status !== 'CLOSED') throw new IllegalTransitionError(claim.status, 'REOPENED', 'only a closed claim is reopened for a supplemental');
+    await transitionClaim(db, r.claimId, 'REOPENED', { userId: r.userId, reason: r.reason });
+    return { claimStatus: 'REOPENED' };
   });
 
 async function run(db: Db, claimId: string, asOf: string, { userId }: By): Promise<PipelineResult> {

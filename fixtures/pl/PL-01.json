@@ -157,6 +157,42 @@
       ]
     },
     {
+      "name": "supplemental above what was paid",
+      "from": "DECIDED",
+      "decision": {
+        "outcome": "APPROVE",
+        "payableCents": 170100,
+        "paidCents": 85100
+      },
+      "legal": [
+        "PAYMENT_PENDING"
+      ]
+    },
+    {
+      "name": "supplemental equal to what was paid",
+      "from": "DECIDED",
+      "decision": {
+        "outcome": "APPROVE",
+        "payableCents": 85100,
+        "paidCents": 85100
+      },
+      "legal": [
+        "CLOSED"
+      ]
+    },
+    {
+      "name": "supplemental below what was paid",
+      "from": "DECIDED",
+      "decision": {
+        "outcome": "APPROVE",
+        "payableCents": 50000,
+        "paidCents": 85100
+      },
+      "legal": [
+        "CLOSED"
+      ]
+    },
+    {
       "name": "no current decision is not a pass",
       "from": "DECIDED",
       "decision": null,

@@ -45,7 +45,8 @@ PL01_KEY = ("OPEN>PENDING_EVIDENCE OPEN>IN_REVIEW PENDING_EVIDENCE>IN_REVIEW IN_
             "DECIDED>PAYMENT_PENDING?payable PAYMENT_PENDING>PAID PAID>CLOSED IN_REVIEW>DECIDED REFERRED>PENDING_EVIDENCE "
             "PENDING_EVIDENCE>CLOSED_NO_RESPONSE OPEN>WITHDRAWN PENDING_EVIDENCE>WITHDRAWN IN_REVIEW>WITHDRAWN REFERRED>WITHDRAWN "
             "DECIDED>UNDER_APPEAL?denied UNDER_APPEAL>DECIDED DECIDED>CLOSED?denied_or_zero CLOSED>REOPENED CLOSED_NO_RESPONSE>REOPENED REOPENED>IN_REVIEW")
-PL01_GUARD = {"UNDER_APPEAL": lambda o, amt: o == "DENY", "CLOSED": lambda o, amt: o == "DENY" or amt == 0, "PAYMENT_PENDING": lambda o, amt: bool(amt)}
+# D61: `left` is the amount less what the claim has been paid
+PL01_GUARD = {"UNDER_APPEAL": lambda o, amt, left: o == "DENY", "CLOSED": lambda o, amt, left: o == "DENY" or left <= 0, "PAYMENT_PENDING": lambda o, amt, left: left > 0}
 PL_KEY = {"PL-06": {"error": "CONTRACT_NOT_FOUND", "decision": None, "claimStatus": "REFERRED", "rulesRun": []}}
 # D40, typed from decisions.md. Per run: outcome, payable, the run whose decision is returned, the run that decision supersedes.
 PL_RUNS_KEY = {"PL-02": [("APPROVE", 25000, 0, None), ("APPROVE", 25000, 0, None)],
@@ -476,7 +477,7 @@ for fid, f in fx.items():
         chk(sorted(f["statuses"]) == sorted(re.findall(r"'([A-Z_]+)'", sql.split("claim_status CHECK")[1].split("))")[0])), f"{fid}: statuses differ from the claim_status CHECK")
         for c in f["guardCases"]:
             d = c["decision"]
-            legal = sorted(to for to, g in PL01_GUARD.items() if d and g(d["outcome"], d["payableCents"]))
+            legal = sorted(to for to, g in PL01_GUARD.items() if d and g(d["outcome"], d["payableCents"], (d["payableCents"] or 0) - d.get("paidCents", 0)))
             chk(legal == sorted(c["legal"]), f"{fid} '{c['name']}': {c['legal']} != {legal}")
     elif k == "document-transitions":
         got = {f"{m['from']}>{m['action']}>{m['to']}" for m in f["moves"]}

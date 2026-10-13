@@ -361,6 +361,10 @@ def build_phase2():
                      gcase("approved at 0", {"outcome": "APPROVE", "payableCents": 0}, ["CLOSED"]),
                      gcase("approved with an amount", {"outcome": "APPROVE", "payableCents": 25000}, ["PAYMENT_PENDING"]),
                      gcase("partial with an amount", {"outcome": "PARTIAL", "payableCents": 50000}, ["PAYMENT_PENDING"]),
+                     # D61: the guards read what the claim has been paid (absent = 0)
+                     gcase("supplemental above what was paid", {"outcome": "APPROVE", "payableCents": 170100, "paidCents": 85100}, ["PAYMENT_PENDING"]),
+                     gcase("supplemental equal to what was paid", {"outcome": "APPROVE", "payableCents": 85100, "paidCents": 85100}, ["CLOSED"]),
+                     gcase("supplemental below what was paid", {"outcome": "APPROVE", "payableCents": 50000, "paidCents": 85100}, ["CLOSED"]),
                      gcase("no current decision is not a pass", None, [])]})
 
     # PL-02 / PL-03 (D13, D40): one claim run more than once. `change` is what was entered on the claim before the run.

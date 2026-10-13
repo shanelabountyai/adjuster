@@ -1,4 +1,5 @@
 import type { Db } from '@/adjudication/decisions';
+import { paidCents } from '@/adjudication/payments';
 
 // Claim status (domain brief §7, D38). It is not the decision outcome and not the payment status; the legal moves are
 // this table and nothing else. `transitionClaim` is the one writer of `Claim.status`.
@@ -6,13 +7,16 @@ import type { Db } from '@/adjudication/decisions';
 export const CLAIM_STATUSES = ['OPEN', 'PENDING_EVIDENCE', 'IN_REVIEW', 'REFERRED', 'DECIDED', 'PAYMENT_PENDING', 'PAID', 'CLOSED',
   'CLOSED_NO_RESPONSE', 'WITHDRAWN', 'UNDER_APPEAL', 'REOPENED'] as const;
 export type ClaimStatus = (typeof CLAIM_STATUSES)[number];
-export type CurrentDecision = { outcome: string; payableCents: number | null };
+export type CurrentDecision = { outcome: string; payableCents: number | null; paidCents?: number };
 
 // What the claim's current decision must be for a move out of DECIDED. No decision fails every guard (unknown is not a pass).
+// The amount is the claim's total, so what counts is the part not yet paid (D61): a supplemental whose total is not
+// above what was paid has nothing left to pay and may close.
+const left = (d: CurrentDecision) => d.payableCents === null ? null : d.payableCents - (d.paidCents ?? 0);
 const GUARDS = {
   denied: (d: CurrentDecision) => d.outcome === 'DENY',
-  denied_or_zero: (d: CurrentDecision) => d.outcome === 'DENY' || d.payableCents === 0,
-  payable: (d: CurrentDecision) => d.payableCents !== null && d.payableCents > 0,
+  denied_or_zero: (d: CurrentDecision) => d.outcome === 'DENY' || (left(d) ?? 1) <= 0,
+  payable: (d: CurrentDecision) => (left(d) ?? 0) > 0,
 };
 
 const TRANSITIONS: Record<ClaimStatus, Partial<Record<ClaimStatus, true | keyof typeof GUARDS>>> = {
@@ -59,7 +63,7 @@ export async function transitionClaim(db: Db, claimId: string, to: ClaimStatus, 
   if (!rows.length) throw new Error(`Claim ${claimId} not found`);
   if (rows.length > 1) throw new Error(`Claim ${claimId} has ${rows.length} current decisions`);
   const { status: from, decisionId, outcome, payableCents } = rows[0]!;
-  assertTransition(from, to, decisionId ? { outcome, payableCents } : null);
+  assertTransition(from, to, decisionId ? { outcome, payableCents, paidCents: await paidCents(db, claimId) } : null);
   const moved = await db.query(
     `WITH moved AS (UPDATE "Claim" SET "status" = $3, "updatedAt" = now() WHERE "id" = $1 AND "status" = $2 RETURNING "id")
      INSERT INTO "AuditEvent" ("actorUserId", "action", "targetType", "targetId", "data")
