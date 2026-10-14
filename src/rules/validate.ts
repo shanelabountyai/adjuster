@@ -1,6 +1,6 @@
 import { sha256Hex } from './canonical';
 import { evalCell, type FactValue } from './evaluate';
-import { dictionarySchema, ruleSetSchema, type Cell, type Dictionary, type RuleSet } from './schema';
+import { dictionarySchema, OPERATORS, ruleSetSchema, type Cell, type Dictionary, type RuleSet } from './schema';
 
 // Publish-time checks: structure (zod) first, then every cross-reference against the fact dictionary.
 // Not an evaluator: it never reads a fact value, only declarations. Codes are the ones fixtures RE-11 and RE-12 assert.
@@ -13,6 +13,9 @@ type Fact = Dictionary['facts'][number];
 
 const ORDERED = new Set(['int', 'cents', 'bps', 'date']);
 const MONEYISH = new Set(['int', 'cents', 'bps']);
+const ORDER_OPS = new Set<string>(['lt', 'lte', 'gt', 'gte', 'between']);
+/** The operators a cell on a fact of this type may use: the editor's select (4.10). The ordering ones need an ordered type; a list takes none. */
+export const operatorsFor = (type: Fact['type']) => (type === 'list' ? [] : OPERATORS.filter((op) => ORDERED.has(type) || !ORDER_OPS.has(op)));
 const fmt = (p: ReadonlyArray<PropertyKey>) => p.map(String).join('.');
 const isDate = (v: unknown) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
 
