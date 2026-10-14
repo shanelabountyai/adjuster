@@ -1,0 +1,38 @@
+{
+  "id": "pop-020",
+  "type": "proofOfPurchase",
+  "kind": "clean",
+  "file": "docs/pop-020.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Cedar Digital",
+      "raw": "Cedar Digital"
+    },
+    "purchase_date": {
+      "value": "2024-06-04",
+      "raw": "4 June 2024"
+    },
+    "device_make": {
+      "value": "Halcyon",
+      "raw": "Halcyon"
+    },
+    "device_model": {
+      "value": "Tab S",
+      "raw": "Tab S"
+    },
+    "serial_or_imei": {
+      "value": "USQ48BS38BYR",
+      "raw": "USQ48BS38BYR"
+    },
+    "item_price": {
+      "value": 175500,
+      "raw": "$1,755.00"
+    },
+    "total_paid": {
+      "value": 187407,
+      "raw": "$1,874.07"
+    }
+  },
+  "signed": null
+}

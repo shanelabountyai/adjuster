@@ -1,0 +1,38 @@
+{
+  "id": "est-011",
+  "type": "repairEstimate",
+  "kind": "lowres",
+  "file": "docs/est-011.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "FixPoint Repair",
+      "raw": "FixPoint Repair"
+    },
+    "estimate_date": {
+      "value": "2026-02-20",
+      "raw": "2026-02-20"
+    },
+    "serial_or_imei": {
+      "value": "699584238133960",
+      "raw": "699584238133960"
+    },
+    "diagnosis_summary": {
+      "value": "Hinge fractured, display cable torn",
+      "raw": "Hinge fractured, display cable torn"
+    },
+    "parts_total": {
+      "value": 30500,
+      "raw": "$305.00"
+    },
+    "labor_total": {
+      "value": 27000,
+      "raw": "$270.00"
+    },
+    "estimate_total": {
+      "value": 57500,
+      "raw": "$575.00"
+    }
+  },
+  "signed": null
+}

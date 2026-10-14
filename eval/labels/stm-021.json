@@ -1,0 +1,33 @@
+{
+  "id": "stm-021",
+  "type": "incidentStatement",
+  "kind": "clean",
+  "file": "docs/stm-021.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Avery Calloway",
+      "raw": "Avery Calloway"
+    },
+    "statement_date": {
+      "value": "2026-04-09",
+      "raw": "Apr 9, 2026"
+    },
+    "incident_date": {
+      "value": "2026-03-28",
+      "raw": "03/28/2026"
+    },
+    "serial_or_imei": {
+      "value": "969434955194030",
+      "raw": "96 943495 519403 0"
+    },
+    "incident_description": {
+      "value": "That day the device would not power on the morning after a storm. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device would not power on the morning after a storm. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

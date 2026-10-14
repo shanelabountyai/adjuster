@@ -1,0 +1,38 @@
+{
+  "id": "est-017",
+  "type": "repairEstimate",
+  "kind": "clean",
+  "file": "docs/est-017.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "Glass & Board Co.",
+      "raw": "Glass & Board Co."
+    },
+    "estimate_date": {
+      "value": "2025-10-10",
+      "raw": "10/10/2025"
+    },
+    "serial_or_imei": {
+      "value": "5H4HA72UEYA0",
+      "raw": "5H4HA72UEYA0"
+    },
+    "diagnosis_summary": {
+      "value": "Hinge fractured, display cable torn",
+      "raw": "Hinge fractured, display cable torn"
+    },
+    "parts_total": {
+      "value": 13300,
+      "raw": "$133.00"
+    },
+    "labor_total": {
+      "value": 33000,
+      "raw": "$330.00"
+    },
+    "estimate_total": {
+      "value": 46300,
+      "raw": "$463.00"
+    }
+  },
+  "signed": null
+}

@@ -1,0 +1,35 @@
+{
+  "id": "pop-013",
+  "type": "proofOfPurchase",
+  "kind": "stain",
+  "file": "docs/pop-013.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Cedar Digital",
+      "raw": "Cedar Digital"
+    },
+    "purchase_date": {
+      "value": "2025-02-08",
+      "raw": "02/08/2025"
+    },
+    "device_make": {
+      "value": "Kestrel",
+      "raw": "Kestrel"
+    },
+    "device_model": {
+      "value": "Book 14",
+      "raw": "Book 14"
+    },
+    "serial_or_imei": "absent",
+    "item_price": {
+      "value": 38200,
+      "raw": "382.00"
+    },
+    "total_paid": {
+      "value": 40492,
+      "raw": "404.92"
+    }
+  },
+  "signed": null
+}

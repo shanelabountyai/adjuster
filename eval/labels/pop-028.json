@@ -1,0 +1,38 @@
+{
+  "id": "pop-028",
+  "type": "proofOfPurchase",
+  "kind": "clean",
+  "file": "docs/pop-028.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Volt Outlet",
+      "raw": "Volt Outlet"
+    },
+    "purchase_date": {
+      "value": "2025-04-02",
+      "raw": "Apr 2, 2025"
+    },
+    "device_make": {
+      "value": "Lumina",
+      "raw": "Lumina"
+    },
+    "device_model": {
+      "value": "X5 Mini",
+      "raw": "X5 Mini"
+    },
+    "serial_or_imei": {
+      "value": "296724320388398",
+      "raw": "296724320388398"
+    },
+    "item_price": {
+      "value": 157599,
+      "raw": "USD 1,575.99"
+    },
+    "total_paid": {
+      "value": 173089,
+      "raw": "USD 1,730.89"
+    }
+  },
+  "signed": null
+}

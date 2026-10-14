@@ -1,0 +1,38 @@
+{
+  "id": "est-015",
+  "type": "repairEstimate",
+  "kind": "stain",
+  "file": "docs/est-015.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "FixPoint Repair",
+      "raw": "FixPoint Repair"
+    },
+    "estimate_date": {
+      "value": "2025-03-18",
+      "raw": "Mar 18, 2025"
+    },
+    "serial_or_imei": {
+      "value": "861134732875161",
+      "raw": "861134732875161"
+    },
+    "diagnosis_summary": {
+      "value": "Hinge fractured, display cable torn",
+      "raw": "Hinge fractured, display cable torn"
+    },
+    "parts_total": {
+      "value": 43500,
+      "raw": "$435.00"
+    },
+    "labor_total": {
+      "value": 27000,
+      "raw": "$270.00"
+    },
+    "estimate_total": {
+      "value": 70500,
+      "raw": "$705.00"
+    }
+  },
+  "signed": null
+}

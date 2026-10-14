@@ -1,0 +1,38 @@
+{
+  "id": "est-020",
+  "type": "repairEstimate",
+  "kind": "clean",
+  "file": "docs/est-020.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "Second Wind Repair",
+      "raw": "Second Wind Repair"
+    },
+    "estimate_date": {
+      "value": "2026-05-07",
+      "raw": "2026-05-07"
+    },
+    "serial_or_imei": {
+      "value": "195166473036337",
+      "raw": "195166473036337"
+    },
+    "diagnosis_summary": {
+      "value": "No power; short on logic board near charge controller",
+      "raw": "No power; short on logic board near charge controller"
+    },
+    "parts_total": {
+      "value": 48500,
+      "raw": "USD 485.00"
+    },
+    "labor_total": {
+      "value": 38500,
+      "raw": "USD 385.00"
+    },
+    "estimate_total": {
+      "value": 87000,
+      "raw": "USD 870.00"
+    }
+  },
+  "signed": null
+}

@@ -1,0 +1,33 @@
+{
+  "id": "stm-003",
+  "type": "incidentStatement",
+  "kind": "real_photo",
+  "file": "photos/stm-003.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Emerson Calloway",
+      "raw": "Emerson Calloway"
+    },
+    "statement_date": {
+      "value": "2025-10-26",
+      "raw": "26 October 2025"
+    },
+    "incident_date": {
+      "value": "2025-10-26",
+      "raw": "10/26/2025"
+    },
+    "serial_or_imei": {
+      "value": "814987743149621",
+      "raw": "81 498774 314962 1"
+    },
+    "incident_description": {
+      "value": "That day the device was knocked off a desk by a door swinging open. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device was knocked off a desk by a door swinging open. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

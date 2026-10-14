@@ -1,0 +1,35 @@
+{
+  "id": "est-021",
+  "type": "repairEstimate",
+  "kind": "clean",
+  "file": "docs/est-021.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "Glass & Board Co.",
+      "raw": "Glass & Board Co."
+    },
+    "estimate_date": {
+      "value": "2026-05-10",
+      "raw": "2026-05-10"
+    },
+    "serial_or_imei": "absent",
+    "diagnosis_summary": {
+      "value": "Battery swelling, back panel lifted",
+      "raw": "Battery swelling, back panel lifted"
+    },
+    "parts_total": {
+      "value": 3000,
+      "raw": "USD 30.00"
+    },
+    "labor_total": {
+      "value": 22500,
+      "raw": "USD 225.00"
+    },
+    "estimate_total": {
+      "value": 25500,
+      "raw": "USD 255.00"
+    }
+  },
+  "signed": null
+}

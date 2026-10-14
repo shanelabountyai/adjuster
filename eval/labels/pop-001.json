@@ -1,0 +1,38 @@
+{
+  "id": "pop-001",
+  "type": "proofOfPurchase",
+  "kind": "real_photo",
+  "file": "photos/pop-001.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Pixel & Pine",
+      "raw": "Pixel & Pine"
+    },
+    "purchase_date": {
+      "value": "2025-12-19",
+      "raw": "2025-12-19"
+    },
+    "device_make": {
+      "value": "Arcway",
+      "raw": "Arcway"
+    },
+    "device_model": {
+      "value": "Fold 3",
+      "raw": "Fold 3"
+    },
+    "serial_or_imei": {
+      "value": "3PBA9CMJ5BUM",
+      "raw": "3PBA9CMJ5BUM"
+    },
+    "item_price": {
+      "value": 46100,
+      "raw": "461.00"
+    },
+    "total_paid": {
+      "value": 50480,
+      "raw": "504.80"
+    }
+  },
+  "signed": null
+}

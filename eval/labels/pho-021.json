@@ -1,0 +1,20 @@
+{
+  "id": "pho-021",
+  "type": "damagePhotos",
+  "kind": "clean",
+  "file": "docs/pho-021.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "device_visible": {
+      "value": true
+    },
+    "serial_visible": {
+      "value": true
+    },
+    "serial_text": {
+      "value": "WS35GK00A9QW",
+      "raw": "WS35GK00A9QW"
+    }
+  },
+  "signed": null
+}

@@ -1,0 +1,39 @@
+{
+  "id": "est-005",
+  "type": "repairEstimate",
+  "kind": "adversarial",
+  "note": "printed total 60700 is not parts + labor (50700)",
+  "file": "docs/est-005.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "Glass & Board Co.",
+      "raw": "Glass & Board Co."
+    },
+    "estimate_date": {
+      "value": "2025-12-21",
+      "raw": "21 December 2025"
+    },
+    "serial_or_imei": {
+      "value": "180805773470574",
+      "raw": "180805773470574"
+    },
+    "diagnosis_summary": {
+      "value": "Hinge fractured, display cable torn",
+      "raw": "Hinge fractured, display cable torn"
+    },
+    "parts_total": {
+      "value": 12200,
+      "raw": "$122.00"
+    },
+    "labor_total": {
+      "value": 38500,
+      "raw": "$385.00"
+    },
+    "estimate_total": {
+      "value": 60700,
+      "raw": "$607.00"
+    }
+  },
+  "signed": null
+}

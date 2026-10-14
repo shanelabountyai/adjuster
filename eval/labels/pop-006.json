@@ -1,0 +1,36 @@
+{
+  "id": "pop-006",
+  "type": "proofOfPurchase",
+  "kind": "adversarial",
+  "note": "total written by hand on a blank line",
+  "file": "docs/pop-006.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Northgate Electronics",
+      "raw": "Northgate Electronics"
+    },
+    "purchase_date": {
+      "value": "2025-06-15",
+      "raw": "2025-06-15"
+    },
+    "device_make": {
+      "value": "Lumina",
+      "raw": "Lumina"
+    },
+    "device_model": {
+      "value": "X5 Mini",
+      "raw": "X5 Mini"
+    },
+    "serial_or_imei": "absent",
+    "item_price": {
+      "value": 106049,
+      "raw": "$1,060.49"
+    },
+    "total_paid": {
+      "value": 115879,
+      "raw": "$1,158.79"
+    }
+  },
+  "signed": null
+}

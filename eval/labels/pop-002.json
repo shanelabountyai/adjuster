@@ -1,0 +1,38 @@
+{
+  "id": "pop-002",
+  "type": "proofOfPurchase",
+  "kind": "real_photo",
+  "file": "photos/pop-002.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Cedar Digital",
+      "raw": "Cedar Digital"
+    },
+    "purchase_date": {
+      "value": "2024-09-09",
+      "raw": "9 September 2024"
+    },
+    "device_make": {
+      "value": "Halcyon",
+      "raw": "Halcyon"
+    },
+    "device_model": {
+      "value": "Phone 12",
+      "raw": "Phone 12"
+    },
+    "serial_or_imei": {
+      "value": "741508197253913",
+      "raw": "741508197253913"
+    },
+    "item_price": {
+      "value": 156449,
+      "raw": "1564.49"
+    },
+    "total_paid": {
+      "value": 170074,
+      "raw": "1700.74"
+    }
+  },
+  "signed": null
+}

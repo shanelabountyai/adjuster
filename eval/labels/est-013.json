@@ -1,0 +1,38 @@
+{
+  "id": "est-013",
+  "type": "repairEstimate",
+  "kind": "stain",
+  "file": "docs/est-013.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "FixPoint Repair",
+      "raw": "FixPoint Repair"
+    },
+    "estimate_date": {
+      "value": "2025-07-31",
+      "raw": "2025-07-31"
+    },
+    "serial_or_imei": {
+      "value": "933471652375499",
+      "raw": "93 347165 237549 9"
+    },
+    "diagnosis_summary": {
+      "value": "No power; short on logic board near charge controller",
+      "raw": "No power; short on logic board near charge controller"
+    },
+    "parts_total": {
+      "value": 34800,
+      "raw": "USD 348.00"
+    },
+    "labor_total": {
+      "value": 31500,
+      "raw": "USD 315.00"
+    },
+    "estimate_total": {
+      "value": 66300,
+      "raw": "USD 663.00"
+    }
+  },
+  "signed": null
+}

@@ -1,0 +1,35 @@
+{
+  "id": "est-007",
+  "type": "repairEstimate",
+  "kind": "rotated",
+  "file": "docs/est-007.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "Glass & Board Co.",
+      "raw": "Glass & Board Co."
+    },
+    "estimate_date": {
+      "value": "2025-11-23",
+      "raw": "2025-11-23"
+    },
+    "serial_or_imei": "absent",
+    "diagnosis_summary": {
+      "value": "Liquid damage to charging port",
+      "raw": "Liquid damage to charging port"
+    },
+    "parts_total": {
+      "value": 37700,
+      "raw": "377.00"
+    },
+    "labor_total": {
+      "value": 52000,
+      "raw": "520.00"
+    },
+    "estimate_total": {
+      "value": 89700,
+      "raw": "897.00"
+    }
+  },
+  "signed": null
+}

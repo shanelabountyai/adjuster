@@ -1,0 +1,9 @@
+{
+  "id": "oth-002",
+  "type": "other",
+  "kind": "clean",
+  "file": "docs/oth-002.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {},
+  "signed": null
+}

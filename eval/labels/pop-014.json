@@ -1,0 +1,35 @@
+{
+  "id": "pop-014",
+  "type": "proofOfPurchase",
+  "kind": "stain",
+  "file": "docs/pop-014.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Volt Outlet",
+      "raw": "Volt Outlet"
+    },
+    "purchase_date": {
+      "value": "2025-12-02",
+      "raw": "2 December 2025"
+    },
+    "device_make": {
+      "value": "Halcyon",
+      "raw": "Halcyon"
+    },
+    "device_model": {
+      "value": "Air 2",
+      "raw": "Air 2"
+    },
+    "serial_or_imei": "absent",
+    "item_price": {
+      "value": 174800,
+      "raw": "$1,748.00"
+    },
+    "total_paid": {
+      "value": 186665,
+      "raw": "$1,866.65"
+    }
+  },
+  "signed": null
+}

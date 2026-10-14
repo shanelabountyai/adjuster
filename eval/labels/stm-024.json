@@ -1,0 +1,33 @@
+{
+  "id": "stm-024",
+  "type": "incidentStatement",
+  "kind": "clean",
+  "file": "docs/stm-024.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Morgan Brannigan",
+      "raw": "Morgan Brannigan"
+    },
+    "statement_date": {
+      "value": "2025-12-22",
+      "raw": "Dec 22, 2025"
+    },
+    "incident_date": {
+      "value": "2025-12-03",
+      "raw": "12/03/2025"
+    },
+    "serial_or_imei": {
+      "value": "QCK2E2UPCYTC",
+      "raw": "QCK2E2UPCYTC"
+    },
+    "incident_description": {
+      "value": "That day the device would not power on the morning after a storm. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device would not power on the morning after a storm. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

@@ -1,0 +1,30 @@
+{
+  "id": "stm-011",
+  "type": "incidentStatement",
+  "kind": "lowres",
+  "file": "docs/stm-011.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Riley Achterberg",
+      "raw": "Riley Achterberg"
+    },
+    "statement_date": {
+      "value": "2026-04-30",
+      "raw": "30 April 2026"
+    },
+    "incident_date": {
+      "value": "2026-04-22",
+      "raw": "Apr 22, 2026"
+    },
+    "serial_or_imei": "absent",
+    "incident_description": {
+      "value": "That day the device slipped from my hand onto a tiled floor and the screen cracked. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device slipped from my hand onto a tiled floor and the screen cracked. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

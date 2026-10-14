@@ -1,0 +1,35 @@
+{
+  "id": "pop-023",
+  "type": "proofOfPurchase",
+  "kind": "clean",
+  "file": "docs/pop-023.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Northgate Electronics",
+      "raw": "Northgate Electronics"
+    },
+    "purchase_date": {
+      "value": "2025-05-17",
+      "raw": "2025-05-17"
+    },
+    "device_make": {
+      "value": "Kestrel",
+      "raw": "Kestrel"
+    },
+    "device_model": {
+      "value": "Tab S",
+      "raw": "Tab S"
+    },
+    "serial_or_imei": "absent",
+    "item_price": {
+      "value": 119500,
+      "raw": "USD 1,195.00"
+    },
+    "total_paid": {
+      "value": 134228,
+      "raw": "USD 1,342.28"
+    }
+  },
+  "signed": null
+}

@@ -40,7 +40,9 @@
     "rules:lint": "tsx scripts/rules-lint.ts",
     "rules:lint:db": "dotenv -e .env.local -- tsx scripts/rules-lint.ts --db",
     "rules:export": "dotenv -e .env.local -- tsx scripts/rules-export.ts",
-    "rules:schemas": "tsx scripts/rules-schemas.ts"
+    "rules:schemas": "tsx scripts/rules-schemas.ts",
+    "eval:generate": "tsx eval/generate.ts",
+    "eval:signoff": "tsx eval/signoff.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
@@ -63,6 +65,7 @@
     "eslint": "^9",
     "eslint-config-next": "^16.3.6",
     "prisma": "^7.10.0",
+    "sharp": "0.35.4",
     "tsx": "^4.23.13",
     "typescript": "^5.6",
     "vitest": "^2.1"

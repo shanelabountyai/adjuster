@@ -1,0 +1,38 @@
+{
+  "id": "pop-022",
+  "type": "proofOfPurchase",
+  "kind": "clean",
+  "file": "docs/pop-022.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Harbor Street Gadgets",
+      "raw": "Harbor Street Gadgets"
+    },
+    "purchase_date": {
+      "value": "2024-12-09",
+      "raw": "12/09/2024"
+    },
+    "device_make": {
+      "value": "Lumina",
+      "raw": "Lumina"
+    },
+    "device_model": {
+      "value": "Book 14",
+      "raw": "Book 14"
+    },
+    "serial_or_imei": {
+      "value": "898994447738302",
+      "raw": "898994447738302"
+    },
+    "item_price": {
+      "value": 94500,
+      "raw": "$945.00"
+    },
+    "total_paid": {
+      "value": 105639,
+      "raw": "$1,056.39"
+    }
+  },
+  "signed": null
+}

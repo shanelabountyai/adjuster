@@ -1,0 +1,33 @@
+{
+  "id": "stm-025",
+  "type": "incidentStatement",
+  "kind": "clean",
+  "file": "docs/stm-025.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Harper Delacroix",
+      "raw": "Harper Delacroix"
+    },
+    "statement_date": {
+      "value": "2025-11-05",
+      "raw": "11/05/2025"
+    },
+    "incident_date": {
+      "value": "2025-11-03",
+      "raw": "3 November 2025"
+    },
+    "serial_or_imei": {
+      "value": "NKRHKRXKKA9R",
+      "raw": "NKRHKRXKKA9R"
+    },
+    "incident_description": {
+      "value": "That day the device stopped charging after a glass of water spilled beside it. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device stopped charging after a glass of water spilled beside it. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

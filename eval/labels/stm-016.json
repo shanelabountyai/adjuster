@@ -1,0 +1,33 @@
+{
+  "id": "stm-016",
+  "type": "incidentStatement",
+  "kind": "clean",
+  "file": "docs/stm-016.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Quinn Calloway",
+      "raw": "Quinn Calloway"
+    },
+    "statement_date": {
+      "value": "2025-04-04",
+      "raw": "Apr 4, 2025"
+    },
+    "incident_date": {
+      "value": "2025-03-28",
+      "raw": "Mar 28, 2025"
+    },
+    "serial_or_imei": {
+      "value": "M6K2R9L5J057",
+      "raw": "M6K2R9L5J057"
+    },
+    "incident_description": {
+      "value": "That day the device slipped from my hand onto a tiled floor and the screen cracked. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device slipped from my hand onto a tiled floor and the screen cracked. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

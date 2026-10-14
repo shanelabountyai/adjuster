@@ -1,0 +1,38 @@
+{
+  "id": "est-025",
+  "type": "repairEstimate",
+  "kind": "clean",
+  "file": "docs/est-025.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "FixPoint Repair",
+      "raw": "FixPoint Repair"
+    },
+    "estimate_date": {
+      "value": "2026-05-07",
+      "raw": "05/07/2026"
+    },
+    "serial_or_imei": {
+      "value": "097VR8V67M4F",
+      "raw": "097VR8V67M4F"
+    },
+    "diagnosis_summary": {
+      "value": "Cracked display, touch unresponsive in lower third",
+      "raw": "Cracked display, touch unresponsive in lower third"
+    },
+    "parts_total": {
+      "value": 31400,
+      "raw": "314.00"
+    },
+    "labor_total": {
+      "value": 32500,
+      "raw": "325.00"
+    },
+    "estimate_total": {
+      "value": 63900,
+      "raw": "639.00"
+    }
+  },
+  "signed": null
+}

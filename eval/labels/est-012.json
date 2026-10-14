@@ -1,0 +1,38 @@
+{
+  "id": "est-012",
+  "type": "repairEstimate",
+  "kind": "lowres",
+  "file": "docs/est-012.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "Glass & Board Co.",
+      "raw": "Glass & Board Co."
+    },
+    "estimate_date": {
+      "value": "2026-06-26",
+      "raw": "2026-06-26"
+    },
+    "serial_or_imei": {
+      "value": "GKKZPYDU7H43",
+      "raw": "GKKZPYDU7H43"
+    },
+    "diagnosis_summary": {
+      "value": "Liquid damage to charging port",
+      "raw": "Liquid damage to charging port"
+    },
+    "parts_total": {
+      "value": 21200,
+      "raw": "$212.00"
+    },
+    "labor_total": {
+      "value": 52000,
+      "raw": "$520.00"
+    },
+    "estimate_total": {
+      "value": 73200,
+      "raw": "$732.00"
+    }
+  },
+  "signed": null
+}

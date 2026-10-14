@@ -1,0 +1,20 @@
+{
+  "id": "pho-011",
+  "type": "damagePhotos",
+  "kind": "clean",
+  "file": "docs/pho-011.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "device_visible": {
+      "value": true
+    },
+    "serial_visible": {
+      "value": true
+    },
+    "serial_text": {
+      "value": "73M6LSB1DYKZ",
+      "raw": "73M6LSB1DYKZ"
+    }
+  },
+  "signed": null
+}

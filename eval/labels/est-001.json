@@ -1,0 +1,35 @@
+{
+  "id": "est-001",
+  "type": "repairEstimate",
+  "kind": "real_photo",
+  "file": "photos/est-001.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "Circuit Doctor",
+      "raw": "Circuit Doctor"
+    },
+    "estimate_date": {
+      "value": "2025-10-07",
+      "raw": "Oct 7, 2025"
+    },
+    "serial_or_imei": "absent",
+    "diagnosis_summary": {
+      "value": "Battery swelling, back panel lifted",
+      "raw": "Battery swelling, back panel lifted"
+    },
+    "parts_total": {
+      "value": 47200,
+      "raw": "$472.00"
+    },
+    "labor_total": {
+      "value": 38500,
+      "raw": "$385.00"
+    },
+    "estimate_total": {
+      "value": 85700,
+      "raw": "$857.00"
+    }
+  },
+  "signed": null
+}

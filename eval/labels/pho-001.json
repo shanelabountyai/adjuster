@@ -1,0 +1,20 @@
+{
+  "id": "pho-001",
+  "type": "damagePhotos",
+  "kind": "real_photo",
+  "file": "photos/pho-001.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "device_visible": {
+      "value": true
+    },
+    "serial_visible": {
+      "value": true
+    },
+    "serial_text": {
+      "value": "RQBJGL0AA6XK",
+      "raw": "RQBJGL0AA6XK"
+    }
+  },
+  "signed": null
+}

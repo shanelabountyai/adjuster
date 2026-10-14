@@ -1,0 +1,35 @@
+{
+  "id": "pop-021",
+  "type": "proofOfPurchase",
+  "kind": "clean",
+  "file": "docs/pop-021.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Brightline Tech Supply",
+      "raw": "Brightline Tech Supply"
+    },
+    "purchase_date": {
+      "value": "2024-12-22",
+      "raw": "12/22/2024"
+    },
+    "device_make": {
+      "value": "Lumina",
+      "raw": "Lumina"
+    },
+    "device_model": {
+      "value": "Phone 12",
+      "raw": "Phone 12"
+    },
+    "serial_or_imei": "absent",
+    "item_price": {
+      "value": 139000,
+      "raw": "1390.00"
+    },
+    "total_paid": {
+      "value": 143498,
+      "raw": "1434.98"
+    }
+  },
+  "signed": null
+}

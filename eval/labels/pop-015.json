@@ -1,0 +1,38 @@
+{
+  "id": "pop-015",
+  "type": "proofOfPurchase",
+  "kind": "stain",
+  "file": "docs/pop-015.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Northgate Electronics",
+      "raw": "Northgate Electronics"
+    },
+    "purchase_date": {
+      "value": "2026-01-14",
+      "raw": "01/14/2026"
+    },
+    "device_make": {
+      "value": "Arcway",
+      "raw": "Arcway"
+    },
+    "device_model": {
+      "value": "X5 Mini",
+      "raw": "X5 Mini"
+    },
+    "serial_or_imei": {
+      "value": "GB0FQ1L5ZYZF",
+      "raw": "GB0FQ1L5ZYZF"
+    },
+    "item_price": {
+      "value": 95800,
+      "raw": "$958.00"
+    },
+    "total_paid": {
+      "value": 102746,
+      "raw": "$1,027.46"
+    }
+  },
+  "signed": null
+}

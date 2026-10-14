@@ -1,0 +1,38 @@
+{
+  "id": "est-014",
+  "type": "repairEstimate",
+  "kind": "stain",
+  "file": "docs/est-014.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "Second Wind Repair",
+      "raw": "Second Wind Repair"
+    },
+    "estimate_date": {
+      "value": "2025-04-21",
+      "raw": "21 April 2025"
+    },
+    "serial_or_imei": {
+      "value": "NF5JN486X1TT",
+      "raw": "NF5JN486X1TT"
+    },
+    "diagnosis_summary": {
+      "value": "Liquid damage to charging port",
+      "raw": "Liquid damage to charging port"
+    },
+    "parts_total": {
+      "value": 6000,
+      "raw": "USD 60.00"
+    },
+    "labor_total": {
+      "value": 26000,
+      "raw": "USD 260.00"
+    },
+    "estimate_total": {
+      "value": 32000,
+      "raw": "USD 320.00"
+    }
+  },
+  "signed": null
+}

@@ -1,0 +1,38 @@
+{
+  "id": "est-024",
+  "type": "repairEstimate",
+  "kind": "clean",
+  "file": "docs/est-024.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "Circuit Doctor",
+      "raw": "Circuit Doctor"
+    },
+    "estimate_date": {
+      "value": "2025-03-24",
+      "raw": "03/24/2025"
+    },
+    "serial_or_imei": {
+      "value": "B9CKRSN42H2W",
+      "raw": "B9CKRSN42H2W"
+    },
+    "diagnosis_summary": {
+      "value": "Cracked display, touch unresponsive in lower third",
+      "raw": "Cracked display, touch unresponsive in lower third"
+    },
+    "parts_total": {
+      "value": 32200,
+      "raw": "$322.00"
+    },
+    "labor_total": {
+      "value": 36000,
+      "raw": "$360.00"
+    },
+    "estimate_total": {
+      "value": 68200,
+      "raw": "$682.00"
+    }
+  },
+  "signed": null
+}

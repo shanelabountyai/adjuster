@@ -1,0 +1,38 @@
+{
+  "id": "pop-008",
+  "type": "proofOfPurchase",
+  "kind": "rotated",
+  "file": "docs/pop-008.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Brightline Tech Supply",
+      "raw": "Brightline Tech Supply"
+    },
+    "purchase_date": {
+      "value": "2025-11-15",
+      "raw": "Nov 15, 2025"
+    },
+    "device_make": {
+      "value": "Novatek",
+      "raw": "Novatek"
+    },
+    "device_model": {
+      "value": "Tab S",
+      "raw": "Tab S"
+    },
+    "serial_or_imei": {
+      "value": "D7XJ0J8Q7NDF",
+      "raw": "D7XJ0J8Q7NDF"
+    },
+    "item_price": {
+      "value": 107300,
+      "raw": "1073.00"
+    },
+    "total_paid": {
+      "value": 107300,
+      "raw": "1073.00"
+    }
+  },
+  "signed": null
+}

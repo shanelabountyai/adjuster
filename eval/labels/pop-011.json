@@ -1,0 +1,38 @@
+{
+  "id": "pop-011",
+  "type": "proofOfPurchase",
+  "kind": "lowres",
+  "file": "docs/pop-011.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Pixel & Pine",
+      "raw": "Pixel & Pine"
+    },
+    "purchase_date": {
+      "value": "2025-08-10",
+      "raw": "Aug 10, 2025"
+    },
+    "device_make": {
+      "value": "Arcway",
+      "raw": "Arcway"
+    },
+    "device_model": {
+      "value": "Book 14",
+      "raw": "Book 14"
+    },
+    "serial_or_imei": {
+      "value": "LHUT3QEFSRNW",
+      "raw": "LHUT3QEFSRNW"
+    },
+    "item_price": {
+      "value": 127399,
+      "raw": "USD 1,273.99"
+    },
+    "total_paid": {
+      "value": 140397,
+      "raw": "USD 1,403.97"
+    }
+  },
+  "signed": null
+}

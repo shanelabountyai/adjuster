@@ -1,0 +1,38 @@
+{
+  "id": "est-028",
+  "type": "repairEstimate",
+  "kind": "clean",
+  "file": "docs/est-028.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "Circuit Doctor",
+      "raw": "Circuit Doctor"
+    },
+    "estimate_date": {
+      "value": "2025-07-26",
+      "raw": "2025-07-26"
+    },
+    "serial_or_imei": {
+      "value": "126210366014243",
+      "raw": "126210366014243"
+    },
+    "diagnosis_summary": {
+      "value": "Liquid damage to charging port",
+      "raw": "Liquid damage to charging port"
+    },
+    "parts_total": {
+      "value": 11300,
+      "raw": "113.00"
+    },
+    "labor_total": {
+      "value": 19500,
+      "raw": "195.00"
+    },
+    "estimate_total": {
+      "value": 30800,
+      "raw": "308.00"
+    }
+  },
+  "signed": null
+}

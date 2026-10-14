@@ -1,0 +1,38 @@
+{
+  "id": "pop-007",
+  "type": "proofOfPurchase",
+  "kind": "rotated",
+  "file": "docs/pop-007.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Brightline Tech Supply",
+      "raw": "Brightline Tech Supply"
+    },
+    "purchase_date": {
+      "value": "2025-05-30",
+      "raw": "30 May 2025"
+    },
+    "device_make": {
+      "value": "Novatek",
+      "raw": "Novatek"
+    },
+    "device_model": {
+      "value": "Air 2",
+      "raw": "Air 2"
+    },
+    "serial_or_imei": {
+      "value": "275127094976296",
+      "raw": "27 512709 497629 6"
+    },
+    "item_price": {
+      "value": 178099,
+      "raw": "$1,780.99"
+    },
+    "total_paid": {
+      "value": 191011,
+      "raw": "$1,910.11"
+    }
+  },
+  "signed": null
+}

@@ -1,0 +1,30 @@
+{
+  "id": "stm-018",
+  "type": "incidentStatement",
+  "kind": "clean",
+  "file": "docs/stm-018.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Emerson Delacroix",
+      "raw": "Emerson Delacroix"
+    },
+    "statement_date": {
+      "value": "2025-02-12",
+      "raw": "02/12/2025"
+    },
+    "incident_date": {
+      "value": "2025-01-27",
+      "raw": "01/27/2025"
+    },
+    "serial_or_imei": "absent",
+    "incident_description": {
+      "value": "That day the device would not power on the morning after a storm. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device would not power on the morning after a storm. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

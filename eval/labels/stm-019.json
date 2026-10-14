@@ -1,0 +1,33 @@
+{
+  "id": "stm-019",
+  "type": "incidentStatement",
+  "kind": "clean",
+  "file": "docs/stm-019.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Quinn Okafor",
+      "raw": "Quinn Okafor"
+    },
+    "statement_date": {
+      "value": "2025-03-03",
+      "raw": "2025-03-03"
+    },
+    "incident_date": {
+      "value": "2025-02-11",
+      "raw": "11 February 2025"
+    },
+    "serial_or_imei": {
+      "value": "X5WDX1BCEDQW",
+      "raw": "X5WDX1BCEDQW"
+    },
+    "incident_description": {
+      "value": "That day the device slipped from my hand onto a tiled floor and the screen cracked. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device slipped from my hand onto a tiled floor and the screen cracked. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": false
+    }
+  },
+  "signed": null
+}

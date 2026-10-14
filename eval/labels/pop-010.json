@@ -1,0 +1,38 @@
+{
+  "id": "pop-010",
+  "type": "proofOfPurchase",
+  "kind": "lowres",
+  "file": "docs/pop-010.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Northgate Electronics",
+      "raw": "Northgate Electronics"
+    },
+    "purchase_date": {
+      "value": "2025-01-16",
+      "raw": "Jan 16, 2025"
+    },
+    "device_make": {
+      "value": "Halcyon",
+      "raw": "Halcyon"
+    },
+    "device_model": {
+      "value": "Book 14",
+      "raw": "Book 14"
+    },
+    "serial_or_imei": {
+      "value": "BGTC6C1ZJDE1",
+      "raw": "BGTC6C1ZJDE1"
+    },
+    "item_price": {
+      "value": 127800,
+      "raw": "$1,278.00"
+    },
+    "total_paid": {
+      "value": 141139,
+      "raw": "$1,411.39"
+    }
+  },
+  "signed": null
+}

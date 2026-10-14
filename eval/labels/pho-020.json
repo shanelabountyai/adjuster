@@ -1,0 +1,20 @@
+{
+  "id": "pho-020",
+  "type": "damagePhotos",
+  "kind": "clean",
+  "file": "docs/pho-020.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "device_visible": {
+      "value": true
+    },
+    "serial_visible": {
+      "value": true
+    },
+    "serial_text": {
+      "value": "H1WT6L6QGHPP",
+      "raw": "H1WT6L6QGHPP"
+    }
+  },
+  "signed": null
+}

@@ -1,0 +1,33 @@
+{
+  "id": "stm-012",
+  "type": "incidentStatement",
+  "kind": "lowres",
+  "file": "docs/stm-012.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Rowan Pruett",
+      "raw": "Rowan Pruett"
+    },
+    "statement_date": {
+      "value": "2025-08-04",
+      "raw": "4 August 2025"
+    },
+    "incident_date": {
+      "value": "2025-07-30",
+      "raw": "07/30/2025"
+    },
+    "serial_or_imei": {
+      "value": "BH6LELP69K60",
+      "raw": "BH6LELP69K60"
+    },
+    "incident_description": {
+      "value": "That day the device stopped charging after a glass of water spilled beside it. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device stopped charging after a glass of water spilled beside it. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

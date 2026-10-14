@@ -1,0 +1,30 @@
+{
+  "id": "stm-020",
+  "type": "incidentStatement",
+  "kind": "clean",
+  "file": "docs/stm-020.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Rowan Brannigan",
+      "raw": "Rowan Brannigan"
+    },
+    "statement_date": {
+      "value": "2025-02-14",
+      "raw": "02/14/2025"
+    },
+    "incident_date": {
+      "value": "2025-02-09",
+      "raw": "02/09/2025"
+    },
+    "serial_or_imei": "absent",
+    "incident_description": {
+      "value": "That day the device stopped charging after a glass of water spilled beside it. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device stopped charging after a glass of water spilled beside it. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

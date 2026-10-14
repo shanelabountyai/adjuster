@@ -1,0 +1,20 @@
+{
+  "id": "pho-008",
+  "type": "damagePhotos",
+  "kind": "lowres",
+  "file": "docs/pho-008.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "device_visible": {
+      "value": true
+    },
+    "serial_visible": {
+      "value": true
+    },
+    "serial_text": {
+      "value": "511517829176556",
+      "raw": "51 151782 917655 6"
+    }
+  },
+  "signed": null
+}

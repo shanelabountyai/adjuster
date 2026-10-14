@@ -1,0 +1,38 @@
+{
+  "id": "est-002",
+  "type": "repairEstimate",
+  "kind": "real_photo",
+  "file": "photos/est-002.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "Glass & Board Co.",
+      "raw": "Glass & Board Co."
+    },
+    "estimate_date": {
+      "value": "2025-08-18",
+      "raw": "08/18/2025"
+    },
+    "serial_or_imei": {
+      "value": "YAKCUYDAJALU",
+      "raw": "YAKCUYDAJALU"
+    },
+    "diagnosis_summary": {
+      "value": "No power; short on logic board near charge controller",
+      "raw": "No power; short on logic board near charge controller"
+    },
+    "parts_total": {
+      "value": 39000,
+      "raw": "390.00"
+    },
+    "labor_total": {
+      "value": 36000,
+      "raw": "360.00"
+    },
+    "estimate_total": {
+      "value": 75000,
+      "raw": "750.00"
+    }
+  },
+  "signed": null
+}

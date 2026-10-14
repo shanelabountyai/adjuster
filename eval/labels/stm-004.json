@@ -1,0 +1,30 @@
+{
+  "id": "stm-004",
+  "type": "incidentStatement",
+  "kind": "real_photo",
+  "file": "photos/stm-004.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Rowan Okafor",
+      "raw": "Rowan Okafor"
+    },
+    "statement_date": {
+      "value": "2025-06-12",
+      "raw": "12 June 2025"
+    },
+    "incident_date": {
+      "value": "2025-06-10",
+      "raw": "06/10/2025"
+    },
+    "serial_or_imei": "absent",
+    "incident_description": {
+      "value": "That day the device was dropped down a flight of stairs at the train station. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device was dropped down a flight of stairs at the train station. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

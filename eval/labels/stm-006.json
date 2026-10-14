@@ -1,0 +1,34 @@
+{
+  "id": "stm-006",
+  "type": "incidentStatement",
+  "kind": "adversarial",
+  "note": "two serials: the claimed device is B6DSA0KY819D; 3RL5TPKZGN2M is a returned unit",
+  "file": "docs/stm-006.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Rowan Brannigan",
+      "raw": "Rowan Brannigan"
+    },
+    "statement_date": {
+      "value": "2025-05-16",
+      "raw": "May 16, 2025"
+    },
+    "incident_date": {
+      "value": "2025-05-11",
+      "raw": "May 11, 2025"
+    },
+    "serial_or_imei": {
+      "value": "B6DSA0KY819D",
+      "raw": "B6DSA0KY819D"
+    },
+    "incident_description": {
+      "value": "That day the device slipped from my hand onto a tiled floor and the screen cracked. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device slipped from my hand onto a tiled floor and the screen cracked. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

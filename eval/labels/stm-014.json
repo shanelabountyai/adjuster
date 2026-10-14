@@ -1,0 +1,33 @@
+{
+  "id": "stm-014",
+  "type": "incidentStatement",
+  "kind": "stain",
+  "file": "docs/stm-014.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Morgan Holloway",
+      "raw": "Morgan Holloway"
+    },
+    "statement_date": {
+      "value": "2025-09-05",
+      "raw": "2025-09-05"
+    },
+    "incident_date": {
+      "value": "2025-08-21",
+      "raw": "Aug 21, 2025"
+    },
+    "serial_or_imei": {
+      "value": "608960571512780",
+      "raw": "60 896057 151278 0"
+    },
+    "incident_description": {
+      "value": "That day the device slipped from my hand onto a tiled floor and the screen cracked. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device slipped from my hand onto a tiled floor and the screen cracked. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

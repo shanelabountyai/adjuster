@@ -1,0 +1,35 @@
+{
+  "id": "pop-016",
+  "type": "proofOfPurchase",
+  "kind": "clean",
+  "file": "docs/pop-016.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Northgate Electronics",
+      "raw": "Northgate Electronics"
+    },
+    "purchase_date": {
+      "value": "2024-11-20",
+      "raw": "11/20/2024"
+    },
+    "device_make": {
+      "value": "Lumina",
+      "raw": "Lumina"
+    },
+    "device_model": {
+      "value": "Fold 3",
+      "raw": "Fold 3"
+    },
+    "serial_or_imei": "absent",
+    "item_price": {
+      "value": 119000,
+      "raw": "USD 1,190.00"
+    },
+    "total_paid": {
+      "value": 131438,
+      "raw": "USD 1,314.38"
+    }
+  },
+  "signed": null
+}

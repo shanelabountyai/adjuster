@@ -1,0 +1,38 @@
+{
+  "id": "est-003",
+  "type": "repairEstimate",
+  "kind": "real_photo",
+  "file": "photos/est-003.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "FixPoint Repair",
+      "raw": "FixPoint Repair"
+    },
+    "estimate_date": {
+      "value": "2025-02-18",
+      "raw": "2025-02-18"
+    },
+    "serial_or_imei": {
+      "value": "SEUZNQVDS314",
+      "raw": "SEUZNQVDS314"
+    },
+    "diagnosis_summary": {
+      "value": "No power; short on logic board near charge controller",
+      "raw": "No power; short on logic board near charge controller"
+    },
+    "parts_total": {
+      "value": 31900,
+      "raw": "$319.00"
+    },
+    "labor_total": {
+      "value": 39000,
+      "raw": "$390.00"
+    },
+    "estimate_total": {
+      "value": 70900,
+      "raw": "$709.00"
+    }
+  },
+  "signed": null
+}

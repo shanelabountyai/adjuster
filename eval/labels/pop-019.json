@@ -1,0 +1,38 @@
+{
+  "id": "pop-019",
+  "type": "proofOfPurchase",
+  "kind": "clean",
+  "file": "docs/pop-019.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Brightline Tech Supply",
+      "raw": "Brightline Tech Supply"
+    },
+    "purchase_date": {
+      "value": "2025-02-26",
+      "raw": "26 February 2025"
+    },
+    "device_make": {
+      "value": "Halcyon",
+      "raw": "Halcyon"
+    },
+    "device_model": {
+      "value": "Phone 12",
+      "raw": "Phone 12"
+    },
+    "serial_or_imei": {
+      "value": "513041605462542",
+      "raw": "513041605462542"
+    },
+    "item_price": {
+      "value": 70700,
+      "raw": "$707.00"
+    },
+    "total_paid": {
+      "value": 70700,
+      "raw": "$707.00"
+    }
+  },
+  "signed": null
+}

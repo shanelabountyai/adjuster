@@ -1,0 +1,30 @@
+{
+  "id": "stm-010",
+  "type": "incidentStatement",
+  "kind": "lowres",
+  "file": "docs/stm-010.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Casey Brannigan",
+      "raw": "Casey Brannigan"
+    },
+    "statement_date": {
+      "value": "2025-08-08",
+      "raw": "8 August 2025"
+    },
+    "incident_date": {
+      "value": "2025-07-26",
+      "raw": "2025-07-26"
+    },
+    "serial_or_imei": "absent",
+    "incident_description": {
+      "value": "That day the device stopped charging after a glass of water spilled beside it. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device stopped charging after a glass of water spilled beside it. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

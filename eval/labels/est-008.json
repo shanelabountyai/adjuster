@@ -1,0 +1,38 @@
+{
+  "id": "est-008",
+  "type": "repairEstimate",
+  "kind": "rotated",
+  "file": "docs/est-008.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "FixPoint Repair",
+      "raw": "FixPoint Repair"
+    },
+    "estimate_date": {
+      "value": "2025-12-11",
+      "raw": "2025-12-11"
+    },
+    "serial_or_imei": {
+      "value": "696065395373287",
+      "raw": "69 606539 537328 7"
+    },
+    "diagnosis_summary": {
+      "value": "Cracked display, touch unresponsive in lower third",
+      "raw": "Cracked display, touch unresponsive in lower third"
+    },
+    "parts_total": {
+      "value": 29500,
+      "raw": "USD 295.00"
+    },
+    "labor_total": {
+      "value": 22500,
+      "raw": "USD 225.00"
+    },
+    "estimate_total": {
+      "value": 52000,
+      "raw": "USD 520.00"
+    }
+  },
+  "signed": null
+}

@@ -1,0 +1,33 @@
+{
+  "id": "stm-023",
+  "type": "incidentStatement",
+  "kind": "clean",
+  "file": "docs/stm-023.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Sage Holloway",
+      "raw": "Sage Holloway"
+    },
+    "statement_date": {
+      "value": "2026-07-02",
+      "raw": "07/02/2026"
+    },
+    "incident_date": {
+      "value": "2026-07-02",
+      "raw": "2 July 2026"
+    },
+    "serial_or_imei": {
+      "value": "578941149534148",
+      "raw": "57 894114 953414 8"
+    },
+    "incident_description": {
+      "value": "That day the device stopped charging after a glass of water spilled beside it. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device stopped charging after a glass of water spilled beside it. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": false
+    }
+  },
+  "signed": null
+}

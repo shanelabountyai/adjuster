@@ -1,0 +1,38 @@
+{
+  "id": "pop-026",
+  "type": "proofOfPurchase",
+  "kind": "clean",
+  "file": "docs/pop-026.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Cedar Digital",
+      "raw": "Cedar Digital"
+    },
+    "purchase_date": {
+      "value": "2025-04-05",
+      "raw": "Apr 5, 2025"
+    },
+    "device_make": {
+      "value": "Arcway",
+      "raw": "Arcway"
+    },
+    "device_model": {
+      "value": "Air 2",
+      "raw": "Air 2"
+    },
+    "serial_or_imei": {
+      "value": "030007077056033",
+      "raw": "03 000707 705603 3"
+    },
+    "item_price": {
+      "value": 27499,
+      "raw": "USD 274.99"
+    },
+    "total_paid": {
+      "value": 27499,
+      "raw": "USD 274.99"
+    }
+  },
+  "signed": null
+}

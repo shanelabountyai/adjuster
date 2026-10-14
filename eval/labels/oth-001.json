@@ -1,0 +1,9 @@
+{
+  "id": "oth-001",
+  "type": "other",
+  "kind": "rotated",
+  "file": "docs/oth-001.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {},
+  "signed": null
+}

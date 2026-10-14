@@ -1,0 +1,38 @@
+{
+  "id": "pop-004",
+  "type": "proofOfPurchase",
+  "kind": "real_photo",
+  "file": "photos/pop-004.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Cedar Digital",
+      "raw": "Cedar Digital"
+    },
+    "purchase_date": {
+      "value": "2024-11-22",
+      "raw": "22 November 2024"
+    },
+    "device_make": {
+      "value": "Arcway",
+      "raw": "Arcway"
+    },
+    "device_model": {
+      "value": "Book 14",
+      "raw": "Book 14"
+    },
+    "serial_or_imei": {
+      "value": "325885622090613",
+      "raw": "32 588562 209061 3"
+    },
+    "item_price": {
+      "value": 105299,
+      "raw": "USD 1,052.99"
+    },
+    "total_paid": {
+      "value": 111617,
+      "raw": "USD 1,116.17"
+    }
+  },
+  "signed": null
+}

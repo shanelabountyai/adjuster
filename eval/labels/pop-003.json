@@ -1,0 +1,38 @@
+{
+  "id": "pop-003",
+  "type": "proofOfPurchase",
+  "kind": "real_photo",
+  "file": "photos/pop-003.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Northgate Electronics",
+      "raw": "Northgate Electronics"
+    },
+    "purchase_date": {
+      "value": "2025-07-09",
+      "raw": "07/09/2025"
+    },
+    "device_make": {
+      "value": "Kestrel",
+      "raw": "Kestrel"
+    },
+    "device_model": {
+      "value": "Book 14",
+      "raw": "Book 14"
+    },
+    "serial_or_imei": {
+      "value": "9SLBVBYKB79Q",
+      "raw": "9SLBVBYKB79Q"
+    },
+    "item_price": {
+      "value": 81000,
+      "raw": "810.00"
+    },
+    "total_paid": {
+      "value": 90117,
+      "raw": "901.17"
+    }
+  },
+  "signed": null
+}

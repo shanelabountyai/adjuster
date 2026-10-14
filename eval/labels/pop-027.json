@@ -1,0 +1,38 @@
+{
+  "id": "pop-027",
+  "type": "proofOfPurchase",
+  "kind": "clean",
+  "file": "docs/pop-027.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Brightline Tech Supply",
+      "raw": "Brightline Tech Supply"
+    },
+    "purchase_date": {
+      "value": "2025-04-22",
+      "raw": "2025-04-22"
+    },
+    "device_make": {
+      "value": "Lumina",
+      "raw": "Lumina"
+    },
+    "device_model": {
+      "value": "Book 14",
+      "raw": "Book 14"
+    },
+    "serial_or_imei": {
+      "value": "771750045650782",
+      "raw": "77 175004 565078 2"
+    },
+    "item_price": {
+      "value": 157099,
+      "raw": "$1,570.99"
+    },
+    "total_paid": {
+      "value": 171293,
+      "raw": "$1,712.93"
+    }
+  },
+  "signed": null
+}

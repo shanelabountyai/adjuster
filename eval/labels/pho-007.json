@@ -1,0 +1,20 @@
+{
+  "id": "pho-007",
+  "type": "damagePhotos",
+  "kind": "rotated",
+  "file": "docs/pho-007.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "device_visible": {
+      "value": true
+    },
+    "serial_visible": {
+      "value": true
+    },
+    "serial_text": {
+      "value": "KF5SAWK5DNJJ",
+      "raw": "KF5SAWK5DNJJ"
+    }
+  },
+  "signed": null
+}

@@ -1,0 +1,30 @@
+{
+  "id": "stm-013",
+  "type": "incidentStatement",
+  "kind": "stain",
+  "file": "docs/stm-013.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Jordan Pruett",
+      "raw": "Jordan Pruett"
+    },
+    "statement_date": {
+      "value": "2025-11-11",
+      "raw": "11/11/2025"
+    },
+    "incident_date": {
+      "value": "2025-11-05",
+      "raw": "5 November 2025"
+    },
+    "serial_or_imei": "absent",
+    "incident_description": {
+      "value": "That day the device slipped from my hand onto a tiled floor and the screen cracked. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device slipped from my hand onto a tiled floor and the screen cracked. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

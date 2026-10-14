@@ -1,0 +1,33 @@
+{
+  "id": "stm-002",
+  "type": "incidentStatement",
+  "kind": "real_photo",
+  "file": "photos/stm-002.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Casey Holloway",
+      "raw": "Casey Holloway"
+    },
+    "statement_date": {
+      "value": "2025-12-08",
+      "raw": "12/08/2025"
+    },
+    "incident_date": {
+      "value": "2025-12-01",
+      "raw": "1 December 2025"
+    },
+    "serial_or_imei": {
+      "value": "X83LZ670KRUP",
+      "raw": "X83LZ670KRUP"
+    },
+    "incident_description": {
+      "value": "That day the device was dropped down a flight of stairs at the train station. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device was dropped down a flight of stairs at the train station. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": false
+    }
+  },
+  "signed": null
+}

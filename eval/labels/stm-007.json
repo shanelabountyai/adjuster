@@ -1,0 +1,33 @@
+{
+  "id": "stm-007",
+  "type": "incidentStatement",
+  "kind": "rotated",
+  "file": "docs/stm-007.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "claimant_name": {
+      "value": "Quinn Lindqvist",
+      "raw": "Quinn Lindqvist"
+    },
+    "statement_date": {
+      "value": "2025-12-25",
+      "raw": "12/25/2025"
+    },
+    "incident_date": {
+      "value": "2025-12-25",
+      "raw": "12/25/2025"
+    },
+    "serial_or_imei": {
+      "value": "332600948567181",
+      "raw": "33 260094 856718 1"
+    },
+    "incident_description": {
+      "value": "That day the device was dropped down a flight of stairs at the train station. I have not attempted any repair myself and the device has not been used for business.",
+      "raw": "That day the device was dropped down a flight of stairs at the train station. I have not attempted any repair myself and the device has not been used for business."
+    },
+    "signature_present": {
+      "value": true
+    }
+  },
+  "signed": null
+}

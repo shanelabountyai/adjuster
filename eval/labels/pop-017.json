@@ -1,0 +1,35 @@
+{
+  "id": "pop-017",
+  "type": "proofOfPurchase",
+  "kind": "clean",
+  "file": "docs/pop-017.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Brightline Tech Supply",
+      "raw": "Brightline Tech Supply"
+    },
+    "purchase_date": {
+      "value": "2025-01-25",
+      "raw": "25 January 2025"
+    },
+    "device_make": {
+      "value": "Arcway",
+      "raw": "Arcway"
+    },
+    "device_model": {
+      "value": "X5 Mini",
+      "raw": "X5 Mini"
+    },
+    "serial_or_imei": "absent",
+    "item_price": {
+      "value": 172200,
+      "raw": "1722.00"
+    },
+    "total_paid": {
+      "value": 172200,
+      "raw": "1722.00"
+    }
+  },
+  "signed": null
+}

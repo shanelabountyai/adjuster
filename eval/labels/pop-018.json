@@ -1,0 +1,38 @@
+{
+  "id": "pop-018",
+  "type": "proofOfPurchase",
+  "kind": "clean",
+  "file": "docs/pop-018.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Volt Outlet",
+      "raw": "Volt Outlet"
+    },
+    "purchase_date": {
+      "value": "2025-11-16",
+      "raw": "16 November 2025"
+    },
+    "device_make": {
+      "value": "Halcyon",
+      "raw": "Halcyon"
+    },
+    "device_model": {
+      "value": "Fold 3",
+      "raw": "Fold 3"
+    },
+    "serial_or_imei": {
+      "value": "5Q0FYX6JQM2U",
+      "raw": "5Q0FYX6JQM2U"
+    },
+    "item_price": {
+      "value": 95900,
+      "raw": "$959.00"
+    },
+    "total_paid": {
+      "value": 108293,
+      "raw": "$1,082.93"
+    }
+  },
+  "signed": null
+}

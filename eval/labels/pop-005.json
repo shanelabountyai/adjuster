@@ -1,0 +1,39 @@
+{
+  "id": "pop-005",
+  "type": "proofOfPurchase",
+  "kind": "adversarial",
+  "note": "two serials: the device's is 879443883305344; EDA92KDVGU00 belongs to the bundled earbuds",
+  "file": "docs/pop-005.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Volt Outlet",
+      "raw": "Volt Outlet"
+    },
+    "purchase_date": {
+      "value": "2026-01-11",
+      "raw": "01/11/2026"
+    },
+    "device_make": {
+      "value": "Lumina",
+      "raw": "Lumina"
+    },
+    "device_model": {
+      "value": "Air 2",
+      "raw": "Air 2"
+    },
+    "serial_or_imei": {
+      "value": "879443883305344",
+      "raw": "879443883305344"
+    },
+    "item_price": {
+      "value": 80599,
+      "raw": "805.99"
+    },
+    "total_paid": {
+      "value": 86442,
+      "raw": "864.42"
+    }
+  },
+  "signed": null
+}

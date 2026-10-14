@@ -1,0 +1,38 @@
+{
+  "id": "pop-012",
+  "type": "proofOfPurchase",
+  "kind": "lowres",
+  "file": "docs/pop-012.jpg",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Northgate Electronics",
+      "raw": "Northgate Electronics"
+    },
+    "purchase_date": {
+      "value": "2024-10-30",
+      "raw": "10/30/2024"
+    },
+    "device_make": {
+      "value": "Lumina",
+      "raw": "Lumina"
+    },
+    "device_model": {
+      "value": "Phone 12",
+      "raw": "Phone 12"
+    },
+    "serial_or_imei": {
+      "value": "442228150559402",
+      "raw": "442228150559402"
+    },
+    "item_price": {
+      "value": 86199,
+      "raw": "$861.99"
+    },
+    "total_paid": {
+      "value": 88198,
+      "raw": "$881.98"
+    }
+  },
+  "signed": null
+}

@@ -1,0 +1,38 @@
+{
+  "id": "est-023",
+  "type": "repairEstimate",
+  "kind": "clean",
+  "file": "docs/est-023.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "shop_name": {
+      "value": "FixPoint Repair",
+      "raw": "FixPoint Repair"
+    },
+    "estimate_date": {
+      "value": "2025-09-13",
+      "raw": "2025-09-13"
+    },
+    "serial_or_imei": {
+      "value": "TKGGG5SR4XZQ",
+      "raw": "TKGGG5SR4XZQ"
+    },
+    "diagnosis_summary": {
+      "value": "Liquid damage to charging port",
+      "raw": "Liquid damage to charging port"
+    },
+    "parts_total": {
+      "value": 27100,
+      "raw": "USD 271.00"
+    },
+    "labor_total": {
+      "value": 16500,
+      "raw": "USD 165.00"
+    },
+    "estimate_total": {
+      "value": 43600,
+      "raw": "USD 436.00"
+    }
+  },
+  "signed": null
+}

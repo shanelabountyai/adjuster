@@ -1,0 +1,38 @@
+{
+  "id": "pop-024",
+  "type": "proofOfPurchase",
+  "kind": "clean",
+  "file": "docs/pop-024.pdf",
+  "schema": "electronics-intake-v1",
+  "fields": {
+    "retailer_name": {
+      "value": "Volt Outlet",
+      "raw": "Volt Outlet"
+    },
+    "purchase_date": {
+      "value": "2025-12-26",
+      "raw": "26 December 2025"
+    },
+    "device_make": {
+      "value": "Kestrel",
+      "raw": "Kestrel"
+    },
+    "device_model": {
+      "value": "X5 Mini",
+      "raw": "X5 Mini"
+    },
+    "serial_or_imei": {
+      "value": "BAQHN2X6MAU6",
+      "raw": "BAQHN2X6MAU6"
+    },
+    "item_price": {
+      "value": 114399,
+      "raw": "$1,143.99"
+    },
+    "total_paid": {
+      "value": 125479,
+      "raw": "$1,254.79"
+    }
+  },
+  "signed": null
+}
