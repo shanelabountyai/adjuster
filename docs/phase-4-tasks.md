@@ -47,7 +47,7 @@ Services first, then the product, then the screens: the product is where the voc
 - [x] **4.10 The editor.** The form of item 7 over a draft: selects built from the dictionary and the closed operator set, native inputs typed by the fact, issues shown beside the cell they name. Saving calls `saveDraft`; the page never validates by itself.
 - [x] **4.11 Diff and publish screens.** The deltas of 4.4 as a table (claim, before, after, reasons added and removed, cents), the coverage list, and a publish button the author cannot use. One Playwright spec: one user changes the deductible and sees GC-01 move, a second publishes, the version list shows both names. Runs against the production build.
 - [x] **4.12 Claim page.** (`/o/[org]/claims/[id]`, `tests/integration/claim-page.test.ts`; letters and notes render from each decision's stored trace; reached by URL only, no list page or nav link.) The read-only page of item 6: GC-15 read top to bottom on it, and an appealed claim.
-- [ ] **4.13 Seed and gate.** Both products and the appeals seeded through the services; `decisions:verify:test` OK in CI; TM-01..09 and the Phase 3 tamper cases still each fail with exactly their code; `rules:lint` finds no identifier of either product under `src/`.
+- [x] **4.13 Seed and gate.** (D89; three furniture tamper cases beside TM-01..09; a planted furniture identifier fails `rules:lint`; the three items below that wanted an answer before the gate, answered by Shane: referral letter neutral only, rejection wording in a frozen reference column, a reseed empties its own audit events.) Both products and the appeals seeded through the services; `decisions:verify:test` OK in CI; TM-01..09 and the Phase 3 tamper cases still each fail with exactly their code; `rules:lint` finds no identifier of either product under `src/`.
 - [ ] **4.14 Closure.** The global definition of done: `docs/DEMO.md` with every command run once, the exec brief, the LinkedIn drafts in the Ledger, the cost review (the cron at `0 6 * * *`, CI minutes; nothing is deployed), every artifact URL in `docs/RELEASE_NOTES.md`.
 
 **Exit criteria:** AU, ID and the appeal fixtures pass. No one decides an appeal of a claim they overrode. A draft with an unknown fact, a type mismatch, an overlapping `unique` row or a missing template cannot be published. The author of a draft cannot publish it, at the database. A rule is edited, diffed and published from the browser with no file change and no restart, and a claim decided afterwards selects it. CP-01: the diff of `src/` and `prisma/` between the two tags is empty and CI checks it. `decisions:verify` is OK across two products, their plan versions and ops versions. GC-15 can be read from one page. The four closure deliverables exist and are linked from the repo.
@@ -58,11 +58,11 @@ Each is open in `decisions.md` under the heading named. Defaults are in force; n
 
 **Phase 4 makes these reachable or visible, so they want an answer before the gate:**
 
-- A referral letter prints a visible rule's claimant text under the neutral sentence (GC-10, against D42). On a page, someone will read it. (*3.11*)
-- A pend letter cannot say a sent document was rejected; the reasons have no claimant wording, and the wording belongs in rule data. (*3.11*)
+- ~~A referral letter prints a visible rule's claimant text under the neutral sentence (GC-10, against D42). On a page, someone will read it. (*3.11*)~~ Settled in 4.13 (D89).
+- ~~A pend letter cannot say a sent document was rejected; the reasons have no claimant wording, and the wording belongs in rule data. (*3.11*)~~ Settled in 4.13 (D89).
 - The rejection reasons are one list for every product. Owned by 4.7. (*3.3*) *Done, D85.*
 - ~~A same-day ops version; whether a new decision may select a retired ops version.~~ Settled in 4.3 (D77 a, b).
-- A reseed leaves the earlier seed's audit events, so a claim page in a database seeded twice shows two lives under one claim id. (*3.12*)
+- ~~A reseed leaves the earlier seed's audit events, so a claim page in a database seeded twice shows two lives under one claim id. (*3.12*)~~ Settled in 4.13 (D89).
 
 **Shane's, on the claim lifecycle:**
 
