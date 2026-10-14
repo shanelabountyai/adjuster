@@ -90,6 +90,14 @@ describe('rule-set pages', () => {
     expect(html).not.toContain('role="alert"');
   });
 
+  it('4.11 the draft page prints the impact diff and a publish button its author cannot press', async () => {
+    const html = await page(draftId);
+    expect(html).toContain('claim(s) move');
+    expect(html).toContain('Rows no stored decision hit');
+    expect(html).toMatch(/<button disabled=""[^>]*>Publish this draft/); // adaId authored the draft
+    expect(html).toContain('someone else has to publish');
+  });
+
   it('saves the form through saveDraft and shows its issues beside the cell they name', async () => {
     await actAs(adaId, 'acme');
     const to = await landing(saveRuleDraft('acme', form({ id: draftId, 'lookups.0.rows.0.value': '12500', 'rules.2.rows.1.when.1.value': 'soon', _do: 'save' })));

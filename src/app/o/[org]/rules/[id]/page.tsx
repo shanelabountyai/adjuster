@@ -10,6 +10,7 @@ import { type Issue, validateDictionary } from '@/rules/validate';
 import { namesOf } from '../people';
 import { startDraft } from './actions';
 import { Editor } from './editor';
+import { diffOf, Impact } from './impact';
 
 export const metadata = { title: 'Rule set' };
 
@@ -62,6 +63,7 @@ export default async function RuleSet({ params, searchParams }: { params: Promis
       {!rs && <><p>This draft does not parse as a rule set yet.</p><pre>{JSON.stringify(v.body, null, 2)}</pre></>}
 
       {rs && v.status === 'draft' && <Editor slug={ctx.slug} id={v.id} rs={rs} dict={validateDictionary(dictFile(rs)).dict!} issues={savedIssues(q.issues)} />}
+      {rs && v.status === 'draft' && <Impact slug={ctx.slug} id={v.id} isAuthor={v.authoredBy === ctx.userId} diff={await diffOf(v.id)} />}
 
       {v.status !== 'draft' && rs?.rules.map((r) => (
         <section key={r.id}>

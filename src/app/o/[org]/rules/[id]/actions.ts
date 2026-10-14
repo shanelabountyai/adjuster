@@ -6,7 +6,7 @@ import type { OrgCtx } from '@/core/authz/guards';
 import { db } from '@/core/db';
 import { dictFile } from '@/adjudication/decisions';
 import { OutOfAuthorityError } from '@/adjudication/documents';
-import { createDraft, DraftError, saveDraft } from '@/adjudication/drafts';
+import { createDraft, DraftError, publishDraft, saveDraft } from '@/adjudication/drafts';
 import { pool } from '@/adjudication/pool';
 import { ruleSetSchema } from '@/rules/schema';
 import { validateDictionary } from '@/rules/validate';
@@ -46,4 +46,16 @@ export const startDraft = orgAction(null, z.object({ id: notRef(z.uuid()) }), as
     throw e;
   }
   redirect(page(ctx, draft));
+});
+
+// Task 4.11. The hash comes from the diff the publisher was shown (D70); the service refuses a stale one, the
+// author and anyone without `publish_rules`, and the database refuses the author again (D66).
+export const publishRuleDraft = orgAction(null, z.object({ id: notRef(z.uuid()), diffHash: z.string().min(1) }), async (ctx, { id, diffHash }) => {
+  try {
+    await publishDraft(pool, { id, userId: ctx.userId, diffHash, asOf: today() });
+  } catch (e) {
+    if (refused(e)) return { error: (e as Error).message };
+    throw e;
+  }
+  redirect(page(ctx, id));
 });
