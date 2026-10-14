@@ -1,0 +1,37 @@
+{
+  "id": "electronics-intake-v1",
+  "factDictionary": "facts-v1",
+  "types": {
+    "proofOfPurchase": [
+      { "name": "retailer_name", "kind": "text" },
+      { "name": "purchase_date", "kind": "date" },
+      { "name": "device_make", "kind": "text" },
+      { "name": "device_model", "kind": "text" },
+      { "name": "serial_or_imei", "kind": "serial" },
+      { "name": "item_price", "kind": "cents" },
+      { "name": "total_paid", "kind": "cents" }
+    ],
+    "repairEstimate": [
+      { "name": "shop_name", "kind": "text" },
+      { "name": "estimate_date", "kind": "date" },
+      { "name": "serial_or_imei", "kind": "serial" },
+      { "name": "diagnosis_summary", "kind": "text" },
+      { "name": "parts_total", "kind": "cents" },
+      { "name": "labor_total", "kind": "cents" },
+      { "name": "estimate_total", "kind": "cents" }
+    ],
+    "damagePhotos": [
+      { "name": "device_visible", "kind": "bool" },
+      { "name": "serial_visible", "kind": "bool" },
+      { "name": "serial_text", "kind": "serial" }
+    ],
+    "incidentStatement": [
+      { "name": "claimant_name", "kind": "text" },
+      { "name": "statement_date", "kind": "date" },
+      { "name": "incident_date", "kind": "date" },
+      { "name": "serial_or_imei", "kind": "serial" },
+      { "name": "incident_description", "kind": "text" },
+      { "name": "signature_present", "kind": "bool" }
+    ]
+  }
+}

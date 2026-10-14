@@ -1,7 +1,8 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import pg from 'pg';
 import { exportRules } from '@/adjudication/drafts';
+import { intakeSchemaFile } from '@/intake/schema';
 import { checkDictionaryHash, validateDictionary, validateRuleSet, type Issue } from '@/rules/validate';
 
 // `npm run rules:lint` (CLAUDE.md): schema-validate rules/, then grep src/ for plan identifiers and escape hatches.
@@ -31,6 +32,17 @@ for (const dir of readdirSync('rules')) {
     const d = dicts.get(doc.factDictionary);
     if (!d) fail(`rules/${dir}/${f}`, `fact dictionary ${doc.factDictionary} not found`);
     else report(`rules/${dir}/${f}`, [...validateRuleSet(doc, d.dict), ...checkDictionaryHash(doc, d.raw)]);
+  }
+  // D90 H: Intake's extraction schemas are data too; each type must be a document this product's dictionary declares.
+  const intakeDir = join('intake', dir);
+  for (const f of existsSync(intakeDir) ? readdirSync(intakeDir).filter((n) => n.startsWith('schemas-')) : []) {
+    const where = `${intakeDir}/${f}`;
+    const parsed = intakeSchemaFile.safeParse(json(join(intakeDir, f)));
+    if (!parsed.success) { parsed.error.issues.forEach((i) => fail(`${where} ${i.path.join('.')}`, i.message)); continue; }
+    const d = dicts.get(parsed.data.factDictionary);
+    if (!d) { fail(where, `fact dictionary ${parsed.data.factDictionary} not found`); continue; }
+    const docs = new Set(d.dict.facts.map((x) => x.id).filter((id) => id.startsWith('docs.')));
+    for (const t of Object.keys(parsed.data.types)) if (!docs.has(`docs.${t}`)) fail(`${where} types.${t}`, `no docs.${t} in ${d.dict.id}`);
   }
 }
 
