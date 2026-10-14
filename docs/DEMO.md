@@ -27,7 +27,7 @@ Credentials: owners and admins use TOTP. The secret is a fixed public demo value
 | 4 | `/o/acme/rules/<id>` (click a version) | Edit a draft, diff it against the published version, publish | The author of a draft cannot publish it, enforced at the database. A draft with an unknown fact, a type mismatch or an overlapping row cannot be published. A claim decided afterwards selects the new version, no restart. |
 | 5 | `/o/acme/claims/GC-01` | Claim status, decision, rules table, letter, payment | The letter renders from the **stored trace**, never from current rules. Claim status, decision outcome and payment status are three separate fields. |
 | 6 | `/o/acme/claims/GC-05` | A referral, signed off | A rule gap or a flag is a referral, never an approval. Unknown is never false. |
-| 7 | `/o/acme/claims/AP-01` | An appeal life (AP-01 is closed after its appeal; AP-02..06 play the other appeal paths) | No one decides an appeal of a claim they overrode. |
+| 7 | `/o/acme/claims/AP-01` | An appeal life (AP-01..06 are the six appeal fixtures) | No one decides an appeal of a claim they overrode. |
 | 8 | `/o/acme/claims/GC-15` | The whole life on one page: events, documents, waivers, audit | Evidence, authority, override, mock payment and reopen are all replayable. |
 
 Claim pages are not linked from the nav (there is no claims list); type the URL. Claim ids are the fixture ids: `GC-01..15`, `AP-01..06`, `FG-01..12`.
