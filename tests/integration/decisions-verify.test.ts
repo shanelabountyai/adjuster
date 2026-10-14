@@ -8,7 +8,7 @@ import { sha256Hex } from '@/rules/canonical';
 import { seedDecisions } from '../../scripts/seed-decisions';
 import { staffAt } from '../helpers/tiers';
 
-// Task 1.11, reseeded by 2.11 and 3.12. The clean seed (19 claims through the pipeline, four versions) verifies; each tamper TM-01..TM-08, written below the service with
+// Task 1.11, reseeded by 2.11, 3.12 and 4.8. The clean seed (both products through the pipeline) verifies; each tamper TM-01..TM-08, written below the service with
 // raw SQL and the immutability triggers switched off, fails with exactly its one code. TM-09 is task 2.8's (D41), OVERRIDE_UNAUTHORIZED is 3.8's (D48),
 // APPEAL_UNAUTHORIZED is 4.5's (D75).
 
@@ -19,11 +19,13 @@ afterAll(() => client.end());
 let ids: Record<string, string> = {};
 let opsId = '';
 let versions: Record<string, string> = {};
+let furniture: Record<string, string> = {};
 beforeEach(async () => {
   await connected;
   const seeded = await seedDecisions(client);
   ids = seeded.decisions;
   versions = seeded.versions.electronics!;
+  furniture = seeded.versions.furniture!;
   opsId = versions['ops-v1']!;
 });
 
@@ -35,6 +37,12 @@ const tamper = async (sql: string, params: unknown[] = []) => {
   }
 };
 const codes = async () => [...new Set((await verifyDecisions(client)).failures.map((f) => f.code))];
+/** Rewrites a denial as an approval whose trace and output hash agree with it, so only a replay can tell. */
+const forgeApproval = async (id: string) => {
+  const { rows } = await client.query('SELECT "explanation" FROM "Decision" WHERE "id" = $1', [id]);
+  const forged = { ...rows[0].explanation, decision: { ...rows[0].explanation.decision, outcome: 'APPROVE', reasons: [], payableCents: 1000 } };
+  await tamper(`UPDATE "Decision" SET "outcome" = 'APPROVE', "payableCents" = 1000, "explanation" = $2, "outputHash" = $3 WHERE "id" = $1`, [id, forged, sha256Hex(forged)]);
+};
 const copyOf = (id: string, set: string) => tamper(
   `INSERT INTO "Decision" SELECT (jsonb_populate_record(NULL::"Decision", to_jsonb(d) || jsonb_build_object('id', gen_random_uuid(), 'createdAt', now()) || $2::jsonb)).*
    FROM "Decision" d WHERE "id" = $1`, [id, set]);
@@ -121,10 +129,7 @@ describe('decisions:verify', () => {
   });
 
   it('TM-03 a denial rewritten as a self-consistent approval → REPLAY_DIVERGED', async () => {
-    const { rows } = await client.query('SELECT "explanation" FROM "Decision" WHERE "id" = $1', [ids['GC-02']]);
-    const forged = { ...rows[0].explanation, decision: { ...rows[0].explanation.decision, outcome: 'APPROVE', reasons: [], payableCents: 1000 } };
-    await tamper(`UPDATE "Decision" SET "outcome" = 'APPROVE', "payableCents" = 1000, "explanation" = $2, "outputHash" = $3 WHERE "id" = $1`,
-      [ids['GC-02'], forged, sha256Hex(forged)]);
+    await forgeApproval(ids['GC-02']!);
     expect(await codes()).toEqual(['REPLAY_DIVERGED']);
   });
 
@@ -170,5 +175,21 @@ describe('decisions:verify', () => {
   it('TM-09 a contract re-pinned to another plan version under its decision → VERSION_NOT_EFFECTIVE', async () => {
     await tamper(`UPDATE "Contract" SET "planVersionId" = $1 WHERE "id" = 'CT-GC-04'`, [versions['plan-v2']]); // GC-04's asOf is after plan-v2's date
     expect(await codes()).toEqual(['VERSION_NOT_EFFECTIVE']);
+  });
+
+  // Task 4.13: the second product's rows are checked by the same code, not just counted.
+  it('furniture: its plan body edited → RULESET_HASH_MISMATCH', async () => {
+    await tamper(`UPDATE "RuleSetVersion" SET "body" = jsonb_set("body", '{rules,0,name}', '"tampered"') WHERE "id" = $1`, [furniture['plan-v1']]);
+    expect(await codes()).toEqual(['RULESET_HASH_MISMATCH']);
+  });
+
+  it('furniture: FG-02\'s denial forged as an approval → REPLAY_DIVERGED', async () => {
+    await forgeApproval(ids['FG-02']!);
+    expect(await codes()).toEqual(['REPLAY_DIVERGED']);
+  });
+
+  it('furniture: FG-05\'s sign-off rewritten to a tier that does not hold its amount → OVERRIDE_UNAUTHORIZED', async () => {
+    await tamper(`UPDATE "Decision" SET "overrideTier" = 'system' WHERE "id" = $1`, [ids['FG-05-signoff']]);
+    expect(await codes()).toEqual(['OVERRIDE_UNAUTHORIZED']);
   });
 });
