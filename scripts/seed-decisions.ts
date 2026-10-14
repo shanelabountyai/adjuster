@@ -87,6 +87,11 @@ export const seedOverrideReasons = (db: Db) => db.query(readFileSync('prisma/mig
 
 export async function seedDecisions(db: Db, store: DocumentStore = new LocalDiskDocumentStore('uploads/documents')) {
   await db.query('TRUNCATE "TierAssignment", "Payment", "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
+  // D89 c: the audit events of the rows just emptied go too, so a reseeded claim shows one life. AuditEvent refuses DELETE (INV-19), so the
+  // template's own events are kept aside, the table truncated and they are put back; one simple query is one transaction.
+  await db.query(`CREATE TEMP TABLE kept ON COMMIT DROP AS SELECT * FROM "AuditEvent"
+      WHERE "targetType" IS DISTINCT FROM 'Claim' AND "targetType" IS DISTINCT FROM 'RuleSetVersion' AND "action" <> 'authority.tier_assigned';
+    TRUNCATE "AuditEvent"; INSERT INTO "AuditEvent" SELECT * FROM kept`);
   await seedOverrideReasons(db);
   // Every directory under rules/ is a product, and every plan and ops file in it is published, oldest version first.
   const versions: Record<string, Record<string, string>> = {};

@@ -86,6 +86,15 @@ describe('decisions:verify', () => {
     expect(events.at(-1)!.data).toMatchObject({ from: 'PAID', to: 'CLOSED', decisionId: rows[8].id });
   });
 
+  it('D89 c a second seed leaves one life per claim, and keeps audit events that are not the seed\'s', async () => {
+    const lifeOf = async () => (await client.query(`SELECT count(*)::int AS n FROM "AuditEvent" WHERE "targetType" = 'Claim' AND "targetId" = 'GC-15'`)).rows[0].n;
+    const once = await lifeOf();
+    await client.query(`INSERT INTO "AuditEvent" ("action", "targetType", "targetId", "data") VALUES ('project.created', 'project', 'p-kept', '{}')`);
+    await seedDecisions(client);
+    expect(await lifeOf()).toBe(once);
+    expect((await client.query(`SELECT 1 FROM "AuditEvent" WHERE "targetId" = 'p-kept'`)).rowCount).toBe(1);
+  });
+
   it('D44 publish refuses an ops version a stored decision would select on replay, and takes a later one', async () => {
     const ops = JSON.parse(readFileSync('rules/electronics/ops-v2.json', 'utf8'));
     await expect(publishRuleSet(client, { ...ops, version: 4, effectiveFrom: '2026-03-31' })).rejects.toThrow('OPS_BACKDATED'); // OPS-v1-last-day
