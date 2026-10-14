@@ -8,7 +8,7 @@ Gate on closure: 51 test files pass, `decisions:verify` OK (67 decisions), `fixt
 |---|---|
 | Demo script | `docs/DEMO.md` |
 | Exec brief artifact | `Adjuster in Brief`, https://claude.ai/artifact/89TAjvDNHHfaae8MetYQHJ (private; no screenshots yet, there is no capture spec under `e2e/`) |
-| LinkedIn drafts (Lab Intelligence Ledger, `https://claude.ai/artifact/Ai5xKScgT2sWtqXRQ1ZA8i`) | *pending: draft titles go here* |
+| LinkedIn drafts (Lab Intelligence Ledger, `https://claude.ai/artifact/Ai5xKScgT2sWtqXRQ1ZA8i`) | Post 123, Scale: "A claim has three dates. Most systems read everything from one of them." Post 124, Impact: "I reworded every reason and every payout line in my rules. Last year's letters came back identical, character for character." Both under project `adjuster`, queued after 122, sourced to the brief |
 | Cost review | below |
 
 ## Cost review (2026-10-14)
