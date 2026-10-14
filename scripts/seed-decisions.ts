@@ -17,7 +17,8 @@ import { acceptEvidence, adjudicateClaim, decideAppeal, fileAppeal, openClaim, o
 // that document carries are entered with the acceptance. The bytes are a placeholder line under uploads/ (gitignored).
 // Task 3.12: GC-11 and GC-15 are played event by event through the services (no response, waiver, override, payment,
 // reopen), and GC-05's referral is signed off. The two lives go first: the no-response job reads every open claim.
-// Task 4.7: every product under rules/ is published (D85); the claims are still the first product's.
+// Task 4.7: every product under rules/ is published (D85).
+// Task 4.8 (CP-01): the second product's golden claims FG-01..12 are filed and decided too, one contract per piece (D82), and FG-05 is signed off.
 // Task 4.5: the six appeal lives AP-01..06 are played too, refused actions skipped, so verify reads real appeal rows.
 const read = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
 const onContract = ([k]: [string, unknown]) => k.startsWith('contract.') || k.startsWith('product.');
@@ -110,8 +111,10 @@ export async function seedDecisions(db: Db, store: DocumentStore = new LocalDisk
   const [soldBefore, soldAfter] = read('fixtures/rv/RV-01.json').cases;
   const opsV2From: string = read(`rules/${productOf(golden[0])}/ops-v2.json`).effectiveFrom;
   const dayBefore = new Date(Date.parse(opsV2From) - 86_400_000).toISOString().slice(0, 10);
-  const claims: { id: string; product?: string; plan: string; facts: Record<string, unknown>; asOf: string }[] = [
-    ...golden,
+  const second = readdirSync('fixtures/gc').filter((f) => f.startsWith('FG-')).sort().map((f) => read(`fixtures/gc/${f}`));
+  type SignOff = { by: string; reasonCode: string; reasonText: string; asOf: string };
+  const claims: { id: string; product?: string; plan: string; facts: Record<string, unknown>; asOf: string; signoff?: SignOff }[] = [
+    ...golden, ...second,
     { ...soldBefore, id: 'RV-01-v1' }, { ...soldAfter, id: 'RV-01-v2' },
     { ...golden[0], id: 'OPS-v1-last-day', asOf: dayBefore }, { ...golden[0], id: 'OPS-v2-first-day', asOf: opsV2From },
   ];
@@ -123,8 +126,8 @@ export async function seedDecisions(db: Db, store: DocumentStore = new LocalDisk
     if ('error' in r) throw new Error(`seed:decisions: ${c.id} was not decided (${r.error}: ${r.detail})`);
     decisions[c.id] = r.decisionId;
   }
-  const so = golden[4].signoff;
-  decisions['GC-05-signoff'] = (await overrideDecision(db, { claimId: 'GC-05', userId: await staff(so.by), reasonCode: so.reasonCode, reasonText: so.reasonText, asOf: so.asOf })).decisionId;
+  for (const { id, signoff: so } of [golden[4], ...second]) // GC-05's referral, and FG-05's
+    if (so) decisions[`${id}-signoff`] = (await overrideDecision(db, { claimId: id, userId: await staff(so.by), reasonCode: so.reasonCode, reasonText: so.reasonText, asOf: so.asOf })).decisionId;
   return { versions, decisions };
 }
 

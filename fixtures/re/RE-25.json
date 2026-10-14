@@ -1,0 +1,49 @@
+{
+  "id": "RE-25",
+  "kind": "derived",
+  "product": "furniture",
+  "title": "No service cost when the piece cannot be repaired: the path is replace, not unknown; a repairable piece with no cost is unknown",
+  "source": "V8 / D26",
+  "dictionary": "rules/furniture/facts-v1.json",
+  "plan": "plan-v1",
+  "fact": "lookup.path",
+  "cases": [
+    {
+      "facts": {
+        "claim.repairable": false,
+        "claim.replacementValueCents": 100000
+      },
+      "expected": "replace"
+    },
+    {
+      "facts": {
+        "claim.repairable": true,
+        "claim.coveredServiceCents": 60000,
+        "claim.replacementValueCents": 100000
+      },
+      "expected": "repair"
+    },
+    {
+      "facts": {
+        "claim.repairable": true,
+        "claim.coveredServiceCents": 60001,
+        "claim.replacementValueCents": 100000
+      },
+      "expected": "replace"
+    },
+    {
+      "facts": {
+        "claim.repairable": true,
+        "claim.replacementValueCents": 100000
+      },
+      "expected": null
+    },
+    {
+      "facts": {
+        "claim.coveredServiceCents": 60001,
+        "claim.replacementValueCents": 100000
+      },
+      "expected": null
+    }
+  ]
+}

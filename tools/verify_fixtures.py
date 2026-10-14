@@ -33,6 +33,20 @@ GC_KEY = {  # outcome, payable (None = not stated in the brief), reasons
     "GC-12": ("REFER", None, ["F1", "F3"]), "GC-13": ("PARTIAL", 50000, []), "GC-14": ("DENY", None, ["E10", "E11"]),
 }
 DENY_ONLY_PAYABLE_NULL = {"GC-02", "GC-03", "GC-04", "GC-09", "GC-14"}
+# CP-01 (D80-D86), typed from domain brief s12.4 and s12.8. A payout: cents, whether the contract is fulfilled. A golden claim as above.
+FP_KEY = {"FP-A": (18000, False), "FP-B": (25000, False), "FP-C": (145000, True), "FP-D": (40000, True), "FP-E": (0, False), "FP-F": (30000, True),
+          "FP-G1": (60000, False), "FP-G2": (100000, True), "FP-I": (50000, True), "FP-H": (None, None)}  # FP-I pays the whole price: nothing is left
+FG_KEY = {
+    "FG-01": ("APPROVE", 18000, []), "FG-02": ("DENY", None, ["E106"]), "FG-03": ("DENY", None, ["E103"]), "FG-04": ("DENY", None, ["E104", "E108"]),
+    "FG-05": ("REFER", 145000, ["E123"]), "FG-06": ("APPROVE", 0, []), "FG-07": ("PARTIAL", 30000, []), "FG-08": ("APPROVE", 40000, []),
+    "FG-09": ("DENY", None, ["E118"]), "FG-10": ("PEND", None, ["E122.incidentStatement"]), "FG-11": ("REFER", 22000, ["F101", "F103"]), "FG-12": ("DENY", None, ["E107", "E108"]),
+}
+FG_FULFILLED = {"FG-05", "FG-07", "FG-08"}  # a store credit, or the limit used up
+PAY_KEY.update({k: v[0] for k, v in FP_KEY.items()})
+DECISION_KEY = {**GC_KEY, **FG_KEY}
+NO_AMOUNT = DENY_ONLY_PAYABLE_NULL | {k for k, (o, _, _) in FG_KEY.items() if o in ("DENY", "PEND")}  # a denial or a pend carries a null amount
+# RE-24 (D81) and RE-25 (V8), by hand: paid 0, price - 1, price, price + 1, no price; then not repairable, at 60%, one cent over, no cost, repairable not entered
+DERIVED_KEY = {"RE-24": [True, True, False, False, None], "RE-25": ["replace", "repair", "replace", None, None]}
 # D35, typed from decisions.md: GC-01's claim, 30000 less the deductible each contract bought (5000 / 10000)
 RV_KEY = [("plan-v1", "APPROVE", 25000), ("plan-v2", "APPROVE", 20000)]
 VP_KEY = {
@@ -387,6 +401,37 @@ chk(ops["reminders"] == {"firstDay": 10, "secondDay": 20, "closeDay": 30}, "remi
 chk(plan["roundingMode"] == "half_up" and ops["outcomePolicy"]["autoDenyEnabled"] is True and ops["factDictionary"] == dic["id"], "envelope defaults (half_up, auto_deny_enabled, dictionary id)")
 chk(all(s["op"] in ("start_from", "subtract", "apply_bps", "cap_at", "floor_at", "min_of") for s in plan["payout"]["steps"]), "calc step vocabulary")
 
+# CP-01: furniture's rule data against domain brief s12.1, s12.3, s12.6 and s12.7, typed here independently
+use("furniture")
+chk(sorted(RS) == ["ops-v1", "plan-v1"], f"furniture rule set files: {sorted(RS)}")
+FL = {l["id"]: {r["id"]: r["value"] for r in l["rows"]} for l in plan["lookups"]}
+fr, fo = {r["id"]: r for r in plan["rules"]}, {r["id"]: r for r in ops["rules"]}
+rows_of = lambda r, prefix: [x for x in r["rows"] if x["id"].startswith(prefix)]
+lits = lambda r, prefix, i: [x["when"][i]["value"] for x in rows_of(r, prefix)]
+chk(FL["serviceFeeCents"] == {"fee.spotless": 0, "fee.everyday.stain": 0, "fee.everyday.accidental": 5000, "fee.heirloom": 0}, "service fees differ from the brief")
+chk(FL["path"] == {"path.unrepairable": "replace", "path.replace": "replace", "path.repair": "repair"}, "the path table differs from the brief")
+chk(byid["d.serviceExceedsReplaceBps"]["args"]["bps"] == 6000 and byid["d.priceExceedsPaid"]["args"] == {"num": "product.purchasePriceCents", "den": "d.sumPriorPaid", "bps": 10000},
+    "replace threshold is not 60%, or E119 does not compare the price with what was paid (D81)")
+chk(byid["contract.planCode"]["values"] == ["spotless", "everyday", "heirloom"], "plan codes differ from the brief")
+chk(lits(fr["E106"], "E106.pass", 1) == [["stain"], ["stain", "accidental_damage"], ["stain", "accidental_damage", "structural"]], "covered perils differ from the brief")
+chk(lits(fr["E107"], "E107.pass", 2) == [["fabric", "protected_leather"], ["fabric", "protected_leather", "hard_surface"], ["fabric", "protected_leather", "hard_surface", "natural_leather"]],
+    "covered stain materials differ from the brief")
+chk(lits(fr["E103"], "E103.pass", 1) == [365] and lits(fr["E104"], "E104.pass", 0) == [30] and fr["E104"]["rows"][1]["then"]["outcome"] == "DENY", "structural year or reporting window differs from the brief")
+chk({x["id"]: x["then"]["params"]["N"] for x in rows_of(fr["E118"], "E118.fail")} == {"E118.fail.spotless": 2, "E118.fail.everyday": 3}, "stain claim limits differ from the brief")
+chk(fr["E120"]["rows"][1]["then"]["outcome"] == "DENY" and fr["E120"]["stage"] in STAGES[:5], "a non-holder is denied, in a stage that can deny")
+chk([s_["id"] for s_ in plan["payout"]["steps"] if s_["op"] == "apply_bps"] == [], "furniture has no depreciation step")
+chk([(t["code"], t["approveUpToCents"]) for t in ops["authority"]] == [("system", 50000), ("adjuster", 150000), ("senior", 300000), ("manager", None)], "furniture authority tiers differ from the brief")
+chk([t["powers"] for t in ops["authority"]] == [t["powers"] for t in PRODUCTS["electronics"]["ops-v3"]["authority"]], "furniture's tiers do not hold the powers electronics' newest ops gives them (D83)")
+chk(lits(fo["E123"], "E123", 0) == [50000, 50000], "E123 literal must equal the system tier limit")
+chk(lits(fo["F101"], "F101.hit", 0) == [[0, 30]] and lits(fo["F103"], "F103.hit", 0) == [[28, 30]] and lits(fo["F104"], "F104.hit", 1) == [[5500, 6000]]
+    and lits(fo["F105"], "F105.hit", 0) == [4] and lits(fo["F107"], "F107.hit", 0) == [[0, 30]], "flag thresholds differ from the brief")
+chk(sorted(fr) == sorted(f"E{n}" for n in [101, 102, 103, 104, *range(106, 121)]) and
+    sorted(fo) == sorted(["E105", "E121", "E123", *(f"F{n}" for n in range(101, 109)), *(f"E122.{x['id'][5:]}" for x in dic["facts"] if x["id"].startswith("docs."))]),
+    f"furniture's rule ids are not E101-E123 and F101-F108 (D86): {sorted(fr)} {sorted(fo)}")
+chk(ops["reminders"] == {"firstDay": 10, "secondDay": 20, "closeDay": 30} and plan["roundingMode"] == "half_up" and ops["outcomePolicy"]["autoDenyEnabled"] is True, "furniture envelope defaults")
+chk(not {r["id"] for rs_ in PRODUCTS["electronics"].values() for r in rs_["rules"]} & (set(fr) | set(fo)), "a rule id means two things across products")
+use("electronics")
+
 # ------------------------------------------------------------------ Phase 3: authority and claim lives, replayed from the actions alone
 
 def authority(ops_name, tier, power, paid, amount):
@@ -572,10 +617,18 @@ def check_lives():
     au = authority(pick_ops(so["asOf"], FILE_VERSIONS), so["by"], "clear_flags" if any(r.startswith("F") for r in g5["reasons"]) else None, so["paidCents"], so["amountCents"])
     chk(so["asOf"] > fx["GC-05"]["asOf"] and so["expected"] == {"kind": "override", "ops": pick_ops(so["asOf"], FILE_VERSIONS), "outcome": "APPROVE", "payableCents": 77500, "claimStatus": "DECIDED", "authority": au}
         and au["allowed"] and so["amountCents"] == g5["payableCents"] == 77500 and so["reasonCode"] and so["reasonText"], f"GC-05 sign-off: {so['expected']} / {au}")
+    # FG-05's sign-off: 145000 is inside the furniture adjuster's 150000, and one cent over 150000 is not
+    use("furniture")
+    so, g5 = fx["FG-05"]["signoff"], fx["FG-05"]["expected"]
+    au = authority("ops-v1", so["by"], "clear_flags" if any(r.startswith("F") for r in g5["reasons"]) else None, so["paidCents"], so["amountCents"])
+    chk(so["asOf"] > fx["FG-05"]["asOf"] and so["expected"] == {"kind": "override", "ops": "ops-v1", "outcome": "APPROVE", "payableCents": 145000, "claimStatus": "DECIDED", "authority": au}
+        and au["allowed"] and so["by"] == "adjuster" and so["amountCents"] == g5["payableCents"] == 145000 and so["reasonCode"] and so["reasonText"]
+        and not authority("ops-v1", "adjuster", None, 0, 150001)["allowed"] and not authority("ops-v1", "system", None, 0, 145000)["allowed"], f"FG-05 sign-off: {so['expected']} / {au}")
+    use("electronics")
 
 
 fx = {os.path.basename(p)[:-5]: load(p) for p in sorted(glob.glob(f"{FIX}/*/*.json"))}
-want = [f"RE-{i:02d}" for i in range(1, 24)] + sorted(PAY_KEY) + sorted(GC_KEY) + ["RV-01"] + sorted(VP_KEY) + sorted(PL_KEY) + sorted(PL_RUNS_KEY) + ["PL-01"] + sorted(OV_KEY) + sorted(LIFE_KEY) + ["EV-06"] + \
+want = [f"RE-{i:02d}" for i in range(1, 26)] + sorted(PAY_KEY) + sorted(DECISION_KEY) + ["RV-01"] + sorted(VP_KEY) + sorted(PL_KEY) + sorted(PL_RUNS_KEY) + ["PL-01"] + sorted(OV_KEY) + sorted(LIFE_KEY) + ["EV-06"] + \
        sorted(AU_KEY) + ["AU-05"] + sorted(ID_KEY)
 chk(sorted(fx) == sorted(want), f"fixture set differs: missing {sorted(set(want) - set(fx))}, extra {sorted(set(fx) - set(want))}")
 
@@ -595,15 +648,17 @@ for fid, f in fx.items():
         if k == "decision":
             chk(f["ops"] == pick_ops(f["asOf"], FILE_VERSIONS), f"{fid}: names {f['ops']}, but {pick_ops(f['asOf'], FILE_VERSIONS)} is in force on {f['asOf']}")
             chk(got == e, f"{fid}: interpreter disagrees with the oracle: " + "; ".join(x for x in e if got.get(x) != e[x]))
-            o, p, rs = GC_KEY[fid]
+            o, p, rs = DECISION_KEY[fid]
             chk(e["outcome"] == o and e["reasons"] == rs, f"{fid}: outcome/reasons differ from the brief ({e['outcome']} {e['reasons']})")
             chk(p is None or e["payableCents"] == p, f"{fid}: payable {e['payableCents']} != brief {p}")
-            chk((e["payableCents"] is None) == (fid in DENY_ONLY_PAYABLE_NULL), f"{fid}: denied claims carry a null amount, others a number")
+            chk((e["payableCents"] is None) == (fid in NO_AMOUNT), f"{fid}: denied and pended claims carry a null amount, others a number")
+            chk(fid not in FG_KEY or (f["product"] == "furniture" and (e["contractFulfilled"] is True) == (fid in FG_FULFILLED)), f"{fid}: product or contractFulfilled {e['contractFulfilled']}")
             chk(not any(r["result"] == "GAP" for r in e["rules"]), f"{fid}: a rule had no matching row")
         else:
             chk(got["payableCents"] == e["payableCents"] == PAY_KEY[fid], f"{fid}: payable {got['payableCents']} / {e['payableCents']} != brief {PAY_KEY[fid]}")
             chk(got["valuation"] == {"path": e["path"], "steps": e["steps"]}, f"{fid}: calc trace disagrees")
             chk(got["contractFulfilled"] == e["contractFulfilled"], f"{fid}: contractFulfilled")
+            chk(fid not in FP_KEY or (f["product"] == "furniture" and e["contractFulfilled"] is FP_KEY[fid][1]), f"{fid}: product or contractFulfilled {e['contractFulfilled']} != brief")
     elif k == "rule-version":
         chk([c["plan"] for c in f["cases"]] == [p for p, _, _ in RV_KEY] and len({c["asOf"] for c in f["cases"]}) == 1, f"{fid}: one claim, one asOf, a v1 and a v2 contract")
         claim = [{x: v for x, v in c["facts"].items() if x.startswith("claim.")} for c in f["cases"]]  # the loss; product dates follow each sale
@@ -694,6 +749,11 @@ for fid, f in fx.items():
     elif k == "ref":
         t = fx[f["ref"]]["expected"]
         chk(t["payableCents"] is None and t["valuation"] is None and f["expected"]["payableCents"] is None and PAY_KEY[fid] is None, f"{fid}: a denial carries a null amount and no valuation")
+    elif k == "derived":
+        chk(f["dictionary"] == f"rules/{f['product']}/{dic['id']}.json" and len(f["cases"]) == len(DERIVED_KEY[fid]), f"{fid}: dictionary or case count")
+        for c, key in zip(f["cases"], DERIVED_KEY[fid]):
+            got = Ctx(dict(c["facts"]), dic, RS[f["plan"]]).get(f["fact"])
+            chk(got is c["expected"] is key or got == c["expected"] == key and type(got) is type(key), f"{fid}: {c['facts']} -> {got}, the fixture says {c['expected']}, the key {key}")
     elif k == "condition":
         for c in f["cases"]:
             chk(tv(cell(c.get("cell", f["cell"]), lambda x, ff=c["facts"]: ff.get(x))) == c["expected"], f"{fid}: {c}")
@@ -715,6 +775,7 @@ for fid, f in fx.items():
     else:
         chk(False, f"{fid}: unknown fixture kind {k}")
 
+use("electronics")
 check_lives()
 
 if fails:
@@ -722,5 +783,5 @@ if fails:
     for m in fails: print(" -", m)
     sys.exit(1)
 print(f"OK ({len(fx)} fixtures: {sum(1 for f in fx.values() if f['id'].startswith('RE'))} RE, {sum(1 for f in fx.values() if f['id'].startswith('PAY'))} PAY, "
-      f"{sum(1 for f in fx.values() if f['id'].startswith('GC'))} GC, {sum(1 for f in fx.values() if f['id'][:2] in ('RV', 'VP', 'PL', 'EV', 'OV', 'AU', 'ID', 'AP'))} RV/VP/PL/EV/OV/AU/ID/AP; "
+      f"{sum(1 for f in fx.values() if f['id'].startswith('GC'))} GC, {sum(1 for f in fx.values() if f['id'][:2] in ('FP', 'FG'))} FP/FG, {sum(1 for f in fx.values() if f['id'][:2] in ('RV', 'VP', 'PL', 'EV', 'OV', 'AU', 'ID', 'AP'))} RV/VP/PL/EV/OV/AU/ID/AP; "
       "payables match the brief to the cent)")

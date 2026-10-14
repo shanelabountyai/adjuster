@@ -38,8 +38,10 @@ describe('the impact diff of a stored draft', () => {
       const body = (await client.query('SELECT "body" FROM "RuleSetVersion" WHERE "id" = $1', [id])).rows[0].body;
       expect(diff.diffHash).toBe(sha256Hex(body));
       expect(diff.changed.filter((c) => fx.claims.includes(c.claim))).toEqual(fx.expected.changed);
-      // one current engine decision per claim: superseded rows and GC-05's sign-off are not cases
-      expect(diff.changed.length + diff.unchanged).toBe(await count('Claim'));
+      // one current engine decision per claim of the draft's product (D71): superseded rows, GC-05's sign-off and the other product's claims are not cases
+      const mine = await client.query(`SELECT 1 FROM "Claim" c JOIN "Contract" k ON k."id" = c."contractId" JOIN "RuleSetVersion" v ON v."id" = k."planVersionId" WHERE v."product" = $1`, [base.product]);
+      expect(diff.changed.length + diff.unchanged).toBe(mine.rowCount);
+      expect(mine.rowCount).toBeLessThan(await count('Claim'));
       expect([await count('Decision'), await count('AuditEvent'), await count('RuleSetVersion')]).toEqual(written);
 
       // The coverage report against the stored rows themselves: a listed row is in no stored trace, an unlisted one is in some.

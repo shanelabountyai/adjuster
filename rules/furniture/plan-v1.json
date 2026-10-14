@@ -1,0 +1,1719 @@
+{
+  "schema": "adjuster.ruleset/1",
+  "kind": "plan",
+  "product": "furniture",
+  "version": 1,
+  "effectiveFrom": "2025-01-01",
+  "factDictionary": "facts-v1",
+  "factDictionaryHash": "e1503162c42424d8d3b4a61872e15b9a50ddd734c83a7d062198c43bb88ac6b5",
+  "roundingMode": "half_up",
+  "lookups": [
+    {
+      "id": "serviceFeeCents",
+      "hitPolicy": "unique",
+      "rows": [
+        {
+          "id": "fee.spotless",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "spotless"
+            }
+          ],
+          "value": 0
+        },
+        {
+          "id": "fee.everyday.stain",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "everyday"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            }
+          ],
+          "value": 0
+        },
+        {
+          "id": "fee.everyday.accidental",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "everyday"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "accidental_damage"
+            }
+          ],
+          "value": 5000
+        },
+        {
+          "id": "fee.heirloom",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "heirloom"
+            }
+          ],
+          "value": 0
+        }
+      ],
+      "note": "A teaching parameter: most real furniture plans charge no fee. No row for a peril the plan does not cover; E106 denies it first."
+    },
+    {
+      "id": "path",
+      "hitPolicy": "unique",
+      "rows": [
+        {
+          "id": "path.unrepairable",
+          "when": [
+            {
+              "fact": "claim.repairable",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "value": "replace"
+        },
+        {
+          "id": "path.replace",
+          "when": [
+            {
+              "fact": "claim.repairable",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "fact": "d.serviceExceedsReplaceBps",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "value": "replace"
+        },
+        {
+          "id": "path.repair",
+          "when": [
+            {
+              "fact": "claim.repairable",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "fact": "d.serviceExceedsReplaceBps",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "value": "repair"
+        }
+      ],
+      "note": "Replace when the piece cannot be repaired, or C > 60% of R by cross-multiplication (D26). The rows that read the ratio also test repairable = true, so with no service cost they are FALSE, not UNKNOWN (V8)."
+    }
+  ],
+  "rules": [
+    {
+      "id": "E120",
+      "name": "Claimant is the contract holder",
+      "class": "C",
+      "stage": "contract_verification",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E120.pass",
+          "when": [
+            {
+              "fact": "claim.claimantIsHolder",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E120.fail",
+          "when": [
+            {
+              "fact": "claim.claimantIsHolder",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "NOT_HOLDER",
+            "clause": "\u00a79.1",
+            "claimantText": "This plan cannot be transferred, and you are not the holder on record.",
+            "noteText": "Claimant is not the holder; the plan is not transferable."
+          }
+        }
+      ],
+      "note": "Contractual, and a denial, so it sits in an early stage: only stages one to five can deny."
+    },
+    {
+      "id": "E101",
+      "name": "Contract active on date of loss",
+      "class": "C",
+      "stage": "coverage_period",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E101.pass",
+          "when": [
+            {
+              "fact": "contract.status",
+              "op": "eq",
+              "value": "active"
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E101.fail",
+          "when": [
+            {
+              "fact": "contract.status",
+              "op": "neq",
+              "value": "active"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "CONTRACT_NOT_ACTIVE",
+            "clause": "\u00a72.1",
+            "claimantText": "Your plan was not active on the date of loss.",
+            "noteText": "Contract status is {status}.",
+            "bind": {
+              "status": "contract.status"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E102",
+      "name": "Date of loss within term",
+      "class": "C",
+      "stage": "coverage_period",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E102.pass",
+          "when": [
+            {
+              "fact": "d.daysSinceStart",
+              "op": "gte",
+              "value": 0
+            },
+            {
+              "fact": "d.daysToTermEnd",
+              "op": "gte",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E102.before",
+          "when": [
+            {
+              "fact": "d.daysSinceStart",
+              "op": "lt",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "OUTSIDE_TERM",
+            "clause": "\u00a72.1",
+            "claimantText": "The loss occurred outside your coverage term ({start}\u2013{end}).",
+            "noteText": "Loss {dol} outside {start}-{end}.",
+            "bind": {
+              "start": "contract.termStart",
+              "end": "contract.termEnd",
+              "dol": "claim.dateOfLoss"
+            }
+          }
+        },
+        {
+          "id": "E102.after",
+          "when": [
+            {
+              "fact": "d.daysToTermEnd",
+              "op": "lt",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "OUTSIDE_TERM",
+            "clause": "\u00a72.1",
+            "claimantText": "The loss occurred outside your coverage term ({start}\u2013{end}).",
+            "noteText": "Loss {dol} outside {start}-{end}.",
+            "bind": {
+              "start": "contract.termStart",
+              "end": "contract.termEnd",
+              "dol": "claim.dateOfLoss"
+            }
+          }
+        }
+      ],
+      "note": "The term starts on delivery, so a loss dated before delivery is denied here: the objective half of E110."
+    },
+    {
+      "id": "E103",
+      "name": "Structural cover starts after the manufacturer's warranty year",
+      "class": "C",
+      "stage": "coverage_period",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E103.na",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "neq",
+              "value": "structural"
+            }
+          ],
+          "then": {
+            "outcome": "PASS",
+            "noteText": "Applies to structural claims only."
+          }
+        },
+        {
+          "id": "E103.pass",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "structural"
+            },
+            {
+              "fact": "d.daysSinceStart",
+              "op": "gte",
+              "value": 365
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E103.before",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "structural"
+            },
+            {
+              "fact": "d.daysSinceStart",
+              "op": "lt",
+              "value": 0
+            }
+          ],
+          "then": {
+            "outcome": "PASS",
+            "noteText": "Before delivery: E102 decides."
+          }
+        },
+        {
+          "id": "E103.fail",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "structural"
+            },
+            {
+              "fact": "d.daysSinceStart",
+              "op": "between",
+              "value": [
+                0,
+                364
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "MFR_WARRANTY_YEAR",
+            "clause": "\u00a72.2",
+            "params": {
+              "N": 365
+            },
+            "claimantText": "During the first year, structural defects are covered by the manufacturer's warranty; please contact your retailer.",
+            "noteText": "Structural loss {days} days after delivery; cover starts on day {N}.",
+            "bind": {
+              "days": "d.daysSinceStart"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E104",
+      "name": "Reported within 30 days of loss",
+      "class": "C",
+      "stage": "coverage_period",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E104.pass",
+          "when": [
+            {
+              "fact": "d.daysReportLag",
+              "op": "lte",
+              "value": 30
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E104.fail",
+          "when": [
+            {
+              "fact": "d.daysReportLag",
+              "op": "gt",
+              "value": 30
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "LATE_REPORT",
+            "clause": "\u00a72.3",
+            "params": {
+              "N": 30
+            },
+            "claimantText": "Your claim was reported more than {N} days after the damage occurred.",
+            "noteText": "Reported {lag} days after loss.",
+            "bind": {
+              "lag": "d.daysReportLag"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E106",
+      "name": "Peril is covered",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E106.pass.spotless",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "spotless"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "in",
+              "value": [
+                "stain"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E106.pass.everyday",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "everyday"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "in",
+              "value": [
+                "stain",
+                "accidental_damage"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E106.pass.heirloom",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "heirloom"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "in",
+              "value": [
+                "stain",
+                "accidental_damage",
+                "structural"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E106.fail.spotless.accidental_damage",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "spotless"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "accidental_damage"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PERIL_NOT_COVERED",
+            "clause": "\u00a73.1",
+            "params": {
+              "peril": "accidental damage"
+            },
+            "claimantText": "Your plan does not cover {peril}.",
+            "noteText": "Peril {p} not in plan perils.",
+            "bind": {
+              "p": "claim.peril"
+            }
+          }
+        },
+        {
+          "id": "E106.fail.spotless.structural",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "spotless"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "structural"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PERIL_NOT_COVERED",
+            "clause": "\u00a73.1",
+            "params": {
+              "peril": "structural defects"
+            },
+            "claimantText": "Your plan does not cover {peril}.",
+            "noteText": "Peril {p} not in plan perils.",
+            "bind": {
+              "p": "claim.peril"
+            }
+          }
+        },
+        {
+          "id": "E106.fail.spotless.other",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "spotless"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "other"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PERIL_NOT_COVERED",
+            "clause": "\u00a73.1",
+            "params": {
+              "peril": "this type of damage"
+            },
+            "claimantText": "Your plan does not cover {peril}.",
+            "noteText": "Peril {p} not in plan perils.",
+            "bind": {
+              "p": "claim.peril"
+            }
+          }
+        },
+        {
+          "id": "E106.fail.everyday.structural",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "everyday"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "structural"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PERIL_NOT_COVERED",
+            "clause": "\u00a73.1",
+            "params": {
+              "peril": "structural defects"
+            },
+            "claimantText": "Your plan does not cover {peril}.",
+            "noteText": "Peril {p} not in plan perils.",
+            "bind": {
+              "p": "claim.peril"
+            }
+          }
+        },
+        {
+          "id": "E106.fail.everyday.other",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "everyday"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "other"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PERIL_NOT_COVERED",
+            "clause": "\u00a73.1",
+            "params": {
+              "peril": "this type of damage"
+            },
+            "claimantText": "Your plan does not cover {peril}.",
+            "noteText": "Peril {p} not in plan perils.",
+            "bind": {
+              "p": "claim.peril"
+            }
+          }
+        },
+        {
+          "id": "E106.fail.heirloom.other",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "heirloom"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "other"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PERIL_NOT_COVERED",
+            "clause": "\u00a73.1",
+            "params": {
+              "peril": "this type of damage"
+            },
+            "claimantText": "Your plan does not cover {peril}.",
+            "noteText": "Peril {p} not in plan perils.",
+            "bind": {
+              "p": "claim.peril"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E107",
+      "name": "Stain: the material is one the plan covers",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E107.na",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "neq",
+              "value": "stain"
+            }
+          ],
+          "then": {
+            "outcome": "PASS",
+            "noteText": "Applies to stain claims only."
+          }
+        },
+        {
+          "id": "E107.pass.spotless",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "spotless"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            },
+            {
+              "fact": "product.material",
+              "op": "in",
+              "value": [
+                "fabric",
+                "protected_leather"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E107.pass.everyday",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "everyday"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            },
+            {
+              "fact": "product.material",
+              "op": "in",
+              "value": [
+                "fabric",
+                "protected_leather",
+                "hard_surface"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E107.pass.heirloom",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "heirloom"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            },
+            {
+              "fact": "product.material",
+              "op": "in",
+              "value": [
+                "fabric",
+                "protected_leather",
+                "hard_surface",
+                "natural_leather"
+              ]
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E107.fail.spotless.hard_surface",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "spotless"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            },
+            {
+              "fact": "product.material",
+              "op": "eq",
+              "value": "hard_surface"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "MATERIAL_NOT_COVERED",
+            "clause": "\u00a73.2",
+            "params": {
+              "material": "hard surfaces"
+            },
+            "claimantText": "Your plan does not cover stains on {material}.",
+            "noteText": "Stain on {m}; not a material this plan covers.",
+            "bind": {
+              "m": "product.material"
+            }
+          }
+        },
+        {
+          "id": "E107.fail.spotless.natural_leather",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "spotless"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            },
+            {
+              "fact": "product.material",
+              "op": "eq",
+              "value": "natural_leather"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "MATERIAL_NOT_COVERED",
+            "clause": "\u00a73.2",
+            "params": {
+              "material": "natural leather"
+            },
+            "claimantText": "Your plan does not cover stains on {material}.",
+            "noteText": "Stain on {m}; not a material this plan covers.",
+            "bind": {
+              "m": "product.material"
+            }
+          }
+        },
+        {
+          "id": "E107.fail.everyday.natural_leather",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "everyday"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            },
+            {
+              "fact": "product.material",
+              "op": "eq",
+              "value": "natural_leather"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "MATERIAL_NOT_COVERED",
+            "clause": "\u00a73.2",
+            "params": {
+              "material": "natural leather"
+            },
+            "claimantText": "Your plan does not cover stains on {material}.",
+            "noteText": "Stain on {m}; not a material this plan covers.",
+            "bind": {
+              "m": "product.material"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "E108",
+      "name": "Stain: one identified incident",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E108.na",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "neq",
+              "value": "stain"
+            }
+          ],
+          "then": {
+            "outcome": "PASS",
+            "noteText": "Applies to stain claims only."
+          }
+        },
+        {
+          "id": "E108.pass",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            },
+            {
+              "fact": "claim.stainOrigin",
+              "op": "eq",
+              "value": "single_incident"
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E108.fail.accumulation",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            },
+            {
+              "fact": "claim.stainOrigin",
+              "op": "eq",
+              "value": "accumulation"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "ACCUMULATED_SOILING",
+            "clause": "\u00a74.1",
+            "claimantText": "Soiling that builds up over time is excluded.",
+            "noteText": "Accumulated soiling, not one incident."
+          }
+        },
+        {
+          "id": "E108.fail.unknown",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            },
+            {
+              "fact": "claim.stainOrigin",
+              "op": "eq",
+              "value": "unknown_origin"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "STAIN_UNKNOWN_ORIGIN",
+            "clause": "\u00a74.1",
+            "claimantText": "Stains of unknown origin are excluded.",
+            "noteText": "The holder cannot say what caused the stain."
+          }
+        }
+      ],
+      "note": "unknown_origin is an entered answer and denies. A stain claim with no answer at all pends (V7)."
+    },
+    {
+      "id": "E109",
+      "name": "Normal wear, fading, odor or a natural characteristic",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E109.pass",
+          "when": [
+            {
+              "fact": "claim.normalWear",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E109.fail",
+          "when": [
+            {
+              "fact": "claim.normalWear",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "NORMAL_WEAR",
+            "clause": "\u00a74.2",
+            "claimantText": "Normal wear, fading and natural characteristics are excluded.",
+            "noteText": "Normal wear, fading, odor or a natural characteristic."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E110",
+      "name": "Pre-existing or delivery damage",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E110.pass",
+          "when": [
+            {
+              "fact": "claim.preExisting",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E110.fail",
+          "when": [
+            {
+              "fact": "claim.preExisting",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "PRE_EXISTING",
+            "clause": "\u00a74.3",
+            "claimantText": "The damage existed before coverage began.",
+            "claimantVisible": false,
+            "noteText": "Pre-existing or delivery damage: refer, recommend deny."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E111",
+      "name": "Pet damage other than a stain",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E111.pass.none",
+          "when": [
+            {
+              "fact": "claim.petDamage",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E111.pass.stain",
+          "when": [
+            {
+              "fact": "claim.petDamage",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            }
+          ],
+          "then": {
+            "outcome": "PASS",
+            "noteText": "A pet stain is a stain."
+          }
+        },
+        {
+          "id": "E111.pass.heirloom",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "heirloom"
+            },
+            {
+              "fact": "claim.petDamage",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "fact": "claim.peril",
+              "op": "neq",
+              "value": "stain"
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E111.fail",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "in",
+              "value": [
+                "spotless",
+                "everyday"
+              ]
+            },
+            {
+              "fact": "claim.petDamage",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "fact": "claim.peril",
+              "op": "neq",
+              "value": "stain"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PET_DAMAGE",
+            "clause": "\u00a74.4",
+            "claimantText": "Damage from pets, other than stains, is excluded.",
+            "noteText": "Pet damage other than a stain."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E112",
+      "name": "Damage from the holder's own cleaning or repair attempt",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E112.pass",
+          "when": [
+            {
+              "fact": "claim.selfRepair",
+              "op": "eq",
+              "value": "none"
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E112.declared",
+          "when": [
+            {
+              "fact": "claim.selfRepair",
+              "op": "eq",
+              "value": "declared"
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "SELF_REPAIR",
+            "clause": "\u00a74.5",
+            "claimantText": "Damage caused by cleaning or repair not arranged through us is excluded.",
+            "noteText": "Declared own cleaning or repair attempt."
+          }
+        },
+        {
+          "id": "E112.suspected",
+          "when": [
+            {
+              "fact": "claim.selfRepair",
+              "op": "eq",
+              "value": "suspected"
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "SELF_REPAIR_SUSPECTED",
+            "clause": "\u00a74.5",
+            "claimantText": "Damage caused by cleaning or repair not arranged through us is excluded.",
+            "claimantVisible": false,
+            "noteText": "Suspected own cleaning or repair attempt: refer."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E113",
+      "name": "Commercial, rental or outdoor use",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E113.pass",
+          "when": [
+            {
+              "fact": "claim.commercialOrOutdoorUse",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E113.fail",
+          "when": [
+            {
+              "fact": "claim.commercialOrOutdoorUse",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "COMMERCIAL_USE",
+            "clause": "\u00a74.6",
+            "claimantText": "Furniture used commercially, rented out or kept outdoors is excluded.",
+            "noteText": "Commercial, rental or outdoor use."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E114",
+      "name": "Intentional damage, abuse, misuse",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E114.pass",
+          "when": [
+            {
+              "fact": "claim.intentionalOrAbuse",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E114.fail",
+          "when": [
+            {
+              "fact": "claim.intentionalOrAbuse",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "REFER",
+            "reasonCode": "ABUSE",
+            "clause": "\u00a74.7",
+            "claimantText": "Damage from abuse or intentional acts is excluded.",
+            "claimantVisible": false,
+            "noteText": "Abuse or intentional damage alleged: refer."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E115",
+      "name": "Damaged in a move or in storage",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E115.pass",
+          "when": [
+            {
+              "fact": "claim.moveOrStorage",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E115.fail",
+          "when": [
+            {
+              "fact": "claim.moveOrStorage",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "MOVE_OR_STORAGE",
+            "clause": "\u00a74.8",
+            "claimantText": "Damage during a move or in storage is excluded.",
+            "noteText": "Damaged in a move or in storage."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E116",
+      "name": "Piece unavailable for inspection",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E116.pass",
+          "when": [
+            {
+              "fact": "claim.pieceUnavailable",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E116.fail",
+          "when": [
+            {
+              "fact": "claim.pieceUnavailable",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "PIECE_UNAVAILABLE",
+            "clause": "\u00a74.9",
+            "claimantText": "We cannot cover a piece that is not available for inspection.",
+            "noteText": "Piece not available for inspection."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E117",
+      "name": "External cause",
+      "class": "C",
+      "stage": "peril_exclusions",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E117.pass",
+          "when": [
+            {
+              "fact": "claim.externalCause",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E117.fail",
+          "when": [
+            {
+              "fact": "claim.externalCause",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "EXTERNAL_CAUSE",
+            "clause": "\u00a74.10",
+            "claimantText": "Damage from external events is excluded.",
+            "noteText": "External cause (fire, flood, infestation)."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E118",
+      "name": "Stain claim frequency",
+      "class": "C",
+      "stage": "frequency_limits",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E118.na",
+          "when": [
+            {
+              "fact": "claim.peril",
+              "op": "neq",
+              "value": "stain"
+            }
+          ],
+          "then": {
+            "outcome": "PASS",
+            "noteText": "The limit counts stain claims only."
+          }
+        },
+        {
+          "id": "E118.na.heirloom",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "heirloom"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            }
+          ],
+          "then": {
+            "outcome": "PASS",
+            "noteText": "No stain claim limit on this plan."
+          }
+        },
+        {
+          "id": "E118.pass.spotless",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "spotless"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            },
+            {
+              "fact": "d.stainClaims12m",
+              "op": "lt",
+              "value": 2
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E118.fail.spotless",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "spotless"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            },
+            {
+              "fact": "d.stainClaims12m",
+              "op": "gte",
+              "value": 2
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "FREQUENCY_LIMIT",
+            "clause": "\u00a77.1",
+            "params": {
+              "N": 2
+            },
+            "claimantText": "You have reached the limit of {N} stain claims in 12 months.",
+            "noteText": "{count} prior stain claims in 12 months; limit {N}.",
+            "bind": {
+              "count": "d.stainClaims12m"
+            }
+          }
+        },
+        {
+          "id": "E118.pass.everyday",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "everyday"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            },
+            {
+              "fact": "d.stainClaims12m",
+              "op": "lt",
+              "value": 3
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E118.fail.everyday",
+          "when": [
+            {
+              "fact": "contract.planCode",
+              "op": "eq",
+              "value": "everyday"
+            },
+            {
+              "fact": "claim.peril",
+              "op": "eq",
+              "value": "stain"
+            },
+            {
+              "fact": "d.stainClaims12m",
+              "op": "gte",
+              "value": 3
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "FREQUENCY_LIMIT",
+            "clause": "\u00a77.1",
+            "params": {
+              "N": 3
+            },
+            "claimantText": "You have reached the limit of {N} stain claims in 12 months.",
+            "noteText": "{count} prior stain claims in 12 months; limit {N}.",
+            "bind": {
+              "count": "d.stainClaims12m"
+            }
+          }
+        }
+      ],
+      "note": "Counts prior APPROVE/PARTIAL stain claims within 365 days of the date of loss, as E15 does on electronics."
+    },
+    {
+      "id": "E119",
+      "name": "Total paid is below the purchase price",
+      "class": "C",
+      "stage": "frequency_limits",
+      "kind": "eligibility",
+      "rows": [
+        {
+          "id": "E119.pass",
+          "when": [
+            {
+              "fact": "d.priceExceedsPaid",
+              "op": "eq",
+              "value": true
+            }
+          ],
+          "then": {
+            "outcome": "PASS"
+          }
+        },
+        {
+          "id": "E119.fail",
+          "when": [
+            {
+              "fact": "d.priceExceedsPaid",
+              "op": "eq",
+              "value": false
+            }
+          ],
+          "then": {
+            "outcome": "DENY",
+            "reasonCode": "LIMIT_EXHAUSTED",
+            "clause": "\u00a76.1",
+            "claimantText": "Your plan's total limit, the price you paid, has been reached.",
+            "noteText": "Paid {paid} of the purchase price {price}.",
+            "bind": {
+              "paid": "d.sumPriorPaid",
+              "price": "product.purchasePriceCents"
+            }
+          }
+        }
+      ],
+      "note": "The limit is a fact, so this reads a derived comparison (D81) where E16 on electronics reads a constant per plan."
+    }
+  ],
+  "payout": {
+    "steps": [
+      {
+        "id": "c1",
+        "op": "start_from",
+        "operand": {
+          "fact": "claim.coveredServiceCents"
+        },
+        "reg": "L",
+        "when": [
+          {
+            "fact": "lookup.path",
+            "op": "eq",
+            "value": "repair"
+          }
+        ],
+        "label": "Covered cleaning or repair cost"
+      },
+      {
+        "id": "c2",
+        "op": "start_from",
+        "operand": {
+          "fact": "claim.replacementValueCents"
+        },
+        "reg": "L",
+        "when": [
+          {
+            "fact": "lookup.path",
+            "op": "eq",
+            "value": "replace"
+          }
+        ],
+        "label": "Replacement value of your piece, paid as a store credit at your retailer"
+      },
+      {
+        "id": "c3",
+        "op": "cap_at",
+        "operand": {
+          "fact": "product.purchasePriceCents"
+        },
+        "reg": "L",
+        "label": "Limited to the price you paid"
+      },
+      {
+        "id": "c4",
+        "op": "subtract",
+        "operand": {
+          "fact": "lookup.serviceFeeCents"
+        },
+        "reg": "L",
+        "label": "Less your service fee"
+      },
+      {
+        "id": "c5",
+        "op": "floor_at",
+        "operand": {
+          "const": 0
+        },
+        "reg": "L",
+        "label": "A payment is never less than zero"
+      },
+      {
+        "id": "c6",
+        "op": "start_from",
+        "operand": {
+          "reg": "L"
+        },
+        "reg": "DED"
+      },
+      {
+        "id": "c7",
+        "op": "start_from",
+        "operand": {
+          "fact": "product.purchasePriceCents"
+        },
+        "reg": "REM",
+        "label": "Your plan's total limit, the price you paid"
+      },
+      {
+        "id": "c8",
+        "op": "subtract",
+        "operand": {
+          "fact": "d.sumPriorPaid"
+        },
+        "reg": "REM",
+        "label": "Less what your plan has already paid"
+      },
+      {
+        "id": "c9",
+        "op": "floor_at",
+        "operand": {
+          "const": 0
+        },
+        "reg": "REM"
+      },
+      {
+        "id": "c10",
+        "op": "cap_at",
+        "operand": {
+          "reg": "REM"
+        },
+        "reg": "L",
+        "label": "Limited to what is left on your plan"
+      },
+      {
+        "id": "c11",
+        "op": "start_from",
+        "operand": {
+          "reg": "REM"
+        },
+        "reg": "AFTER"
+      },
+      {
+        "id": "c12",
+        "op": "subtract",
+        "operand": {
+          "reg": "L"
+        },
+        "reg": "AFTER",
+        "label": "Left on your plan after this payment"
+      }
+    ],
+    "outputs": {
+      "payableCents": "L",
+      "afterDeductibleCents": "DED",
+      "remainingAfterCents": "AFTER"
+    }
+  },
+  "fulfillment": [
+    {
+      "id": "ful.replacement",
+      "when": [
+        {
+          "fact": "lookup.path",
+          "op": "eq",
+          "value": "replace"
+        }
+      ]
+    },
+    {
+      "id": "ful.limit",
+      "when": [
+        {
+          "fact": "calc.remainingAfterCents",
+          "op": "lte",
+          "value": 0
+        }
+      ]
+    }
+  ]
+}

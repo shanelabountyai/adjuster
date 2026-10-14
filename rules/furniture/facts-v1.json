@@ -1,0 +1,440 @@
+{
+  "schema": "adjuster.facts/1",
+  "id": "facts-v1",
+  "product": "furniture",
+  "facts": [
+    {
+      "id": "contract.planCode",
+      "type": "enum",
+      "source": "input",
+      "description": "Which plan the contract bought; selects rows in plan tables. Data, never a code branch.",
+      "values": [
+        "spotless",
+        "everyday",
+        "heirloom"
+      ],
+      "planIdentifier": true
+    },
+    {
+      "id": "contract.status",
+      "type": "enum",
+      "source": "input",
+      "description": "Stored contract status (E101). Term dates are E102's business.",
+      "values": [
+        "active",
+        "cancelled",
+        "lapsed"
+      ]
+    },
+    {
+      "id": "contract.termStart",
+      "type": "date",
+      "source": "input",
+      "description": "The delivery date: the term starts on delivery, not on purchase."
+    },
+    {
+      "id": "contract.termEnd",
+      "type": "date",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "product.purchasePriceCents",
+      "type": "cents",
+      "source": "input",
+      "description": "Price of the one piece this contract covers (D82). It is also the plan's limit, per claim and in total."
+    },
+    {
+      "id": "product.material",
+      "type": "enum",
+      "source": "input",
+      "description": "E107: what the covered piece is made of; hard_surface is wood, glass or stone, natural_leather is aniline, suede or nubuck.",
+      "values": [
+        "fabric",
+        "protected_leather",
+        "hard_surface",
+        "natural_leather"
+      ]
+    },
+    {
+      "id": "claim.peril",
+      "type": "enum",
+      "source": "input",
+      "description": "",
+      "values": [
+        "stain",
+        "accidental_damage",
+        "structural",
+        "other"
+      ]
+    },
+    {
+      "id": "claim.dateOfLoss",
+      "type": "date",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "claim.dateReported",
+      "type": "date",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "claim.pieceMatchesContract",
+      "type": "bool",
+      "source": "input",
+      "description": "E105: human-entered; the vocabulary has no fact-to-fact comparison"
+    },
+    {
+      "id": "claim.claimantIsHolder",
+      "type": "bool",
+      "source": "input",
+      "description": "E120: human-entered, same reason"
+    },
+    {
+      "id": "claim.stainOrigin",
+      "type": "enum",
+      "source": "input",
+      "description": "E108, stain claims only. unknown_origin is an answer a person enters and denies; a missing fact still pends (V7).",
+      "values": [
+        "single_incident",
+        "accumulation",
+        "unknown_origin"
+      ]
+    },
+    {
+      "id": "claim.normalWear",
+      "type": "bool",
+      "source": "input",
+      "description": "E109: normal wear, fading, odor or a natural characteristic of leather or wood"
+    },
+    {
+      "id": "claim.preExisting",
+      "type": "bool",
+      "source": "input",
+      "description": "E110: pre-existing or delivery damage"
+    },
+    {
+      "id": "claim.petDamage",
+      "type": "bool",
+      "source": "input",
+      "description": "E111: caused by a pet. A pet stain is a stain and is covered as one."
+    },
+    {
+      "id": "claim.selfRepair",
+      "type": "enum",
+      "source": "input",
+      "description": "E112: the holder's own cleaning or repair attempt",
+      "values": [
+        "none",
+        "declared",
+        "suspected"
+      ]
+    },
+    {
+      "id": "claim.commercialOrOutdoorUse",
+      "type": "bool",
+      "source": "input",
+      "description": "E113: commercial, rental or outdoor use"
+    },
+    {
+      "id": "claim.intentionalOrAbuse",
+      "type": "bool",
+      "source": "input",
+      "description": "E114"
+    },
+    {
+      "id": "claim.moveOrStorage",
+      "type": "bool",
+      "source": "input",
+      "description": "E115: damaged in a move or in storage"
+    },
+    {
+      "id": "claim.pieceUnavailable",
+      "type": "bool",
+      "source": "input",
+      "description": "E116: no longer available for inspection"
+    },
+    {
+      "id": "claim.externalCause",
+      "type": "bool",
+      "source": "input",
+      "description": "E117: fire, flood, infestation"
+    },
+    {
+      "id": "claim.accountChanged",
+      "type": "bool",
+      "source": "input",
+      "description": "F108"
+    },
+    {
+      "id": "claim.repairable",
+      "type": "bool",
+      "source": "input",
+      "description": "From the technician's report: false when the piece cannot be repaired, and then there is no service cost (V8)."
+    },
+    {
+      "id": "claim.coveredServiceCents",
+      "type": "cents",
+      "source": "input",
+      "description": "C: the technician's quote for cleaning, repair or a part, minus non-covered lines. Absent when the piece cannot be repaired."
+    },
+    {
+      "id": "claim.replacementValueCents",
+      "type": "cents",
+      "source": "input",
+      "description": "R: current retail price of the same or a comparable piece at the selling retailer"
+    },
+    {
+      "id": "history.priorClaims",
+      "type": "list",
+      "source": "input",
+      "description": "This contract's earlier claims. Part of the frozen fact snapshot.",
+      "itemFields": {
+        "claimId": "string",
+        "dateOfLoss": "date",
+        "peril": "enum",
+        "outcome": "enum",
+        "paidCents": "cents"
+      }
+    },
+    {
+      "id": "history.duplicateClaimId",
+      "type": "string",
+      "source": "input",
+      "description": "E121 text placeholder only"
+    },
+    {
+      "id": "history.claimantContractsWithClaims",
+      "type": "int",
+      "source": "input",
+      "description": "F105: supplied by intake; no derived fact counts across contracts"
+    },
+    {
+      "id": "evidence.photoMetaDateBeforeLoss",
+      "type": "bool",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "evidence.documentHashOnOtherClaim",
+      "type": "bool",
+      "source": "input",
+      "description": ""
+    },
+    {
+      "id": "docs.proofOfPurchase",
+      "type": "enum",
+      "source": "input",
+      "description": "",
+      "values": [
+        "requested",
+        "received",
+        "accepted",
+        "rejected",
+        "superseded",
+        "waived"
+      ]
+    },
+    {
+      "id": "docs.photos",
+      "type": "enum",
+      "source": "input",
+      "description": "",
+      "values": [
+        "requested",
+        "received",
+        "accepted",
+        "rejected",
+        "superseded",
+        "waived"
+      ]
+    },
+    {
+      "id": "docs.incidentStatement",
+      "type": "enum",
+      "source": "input",
+      "description": "",
+      "values": [
+        "requested",
+        "received",
+        "accepted",
+        "rejected",
+        "superseded",
+        "waived"
+      ]
+    },
+    {
+      "id": "docs.technicianReport",
+      "type": "enum",
+      "source": "input",
+      "description": "",
+      "values": [
+        "requested",
+        "received",
+        "accepted",
+        "rejected",
+        "superseded",
+        "waived"
+      ]
+    },
+    {
+      "id": "d.daysSinceStart",
+      "type": "int",
+      "source": "derived",
+      "description": "Days since delivery.",
+      "fn": "days_between",
+      "args": {
+        "from": "contract.termStart",
+        "to": "claim.dateOfLoss"
+      }
+    },
+    {
+      "id": "d.daysToTermEnd",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "days_between",
+      "args": {
+        "from": "claim.dateOfLoss",
+        "to": "contract.termEnd"
+      }
+    },
+    {
+      "id": "d.daysReportLag",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "days_between",
+      "args": {
+        "from": "claim.dateOfLoss",
+        "to": "claim.dateReported"
+      }
+    },
+    {
+      "id": "d.serviceRatioBps",
+      "type": "bps",
+      "source": "derived",
+      "description": "",
+      "fn": "ratio_bps",
+      "args": {
+        "num": "claim.coveredServiceCents",
+        "den": "claim.replacementValueCents"
+      }
+    },
+    {
+      "id": "d.serviceExceedsReplaceBps",
+      "type": "bool",
+      "source": "derived",
+      "description": "True when the covered service cost is strictly more than 60% of replacement value, by integer cross-multiplication (D26): num*10000 > bps*den. No rounding.",
+      "fn": "ratio_exceeds_bps",
+      "args": {
+        "num": "claim.coveredServiceCents",
+        "den": "claim.replacementValueCents",
+        "bps": 6000
+      }
+    },
+    {
+      "id": "d.priceExceedsPaid",
+      "type": "bool",
+      "source": "derived",
+      "description": "E119. A comparison, written as a ratio because the vocabulary has no fact-to-fact operator (D81): true while the purchase price is strictly above what the plan has paid. Exact: price*10000 > 10000*paid.",
+      "fn": "ratio_exceeds_bps",
+      "args": {
+        "num": "product.purchasePriceCents",
+        "den": "d.sumPriorPaid",
+        "bps": 10000
+      }
+    },
+    {
+      "id": "d.stainClaims12m",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "count_claims_in_window",
+      "args": {
+        "list": "history.priorClaims",
+        "anchor": "claim.dateOfLoss",
+        "windowDays": 365,
+        "peril": [
+          "stain"
+        ],
+        "counts": [
+          "APPROVE",
+          "PARTIAL"
+        ]
+      }
+    },
+    {
+      "id": "d.claims60d",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "count_claims_in_window",
+      "args": {
+        "list": "history.priorClaims",
+        "anchor": "claim.dateOfLoss",
+        "windowDays": 60,
+        "peril": "any"
+      }
+    },
+    {
+      "id": "d.dupWithin7",
+      "type": "int",
+      "source": "derived",
+      "description": "",
+      "fn": "count_claims_in_window",
+      "args": {
+        "list": "history.priorClaims",
+        "anchor": "claim.dateOfLoss",
+        "windowDays": 7,
+        "peril": "same"
+      }
+    },
+    {
+      "id": "d.sumPriorPaid",
+      "type": "cents",
+      "source": "derived",
+      "description": "",
+      "fn": "sum_prior_paid",
+      "args": {
+        "list": "history.priorClaims"
+      }
+    },
+    {
+      "id": "lookup.serviceFeeCents",
+      "type": "cents",
+      "source": "lookup",
+      "description": ""
+    },
+    {
+      "id": "lookup.path",
+      "type": "enum",
+      "source": "lookup",
+      "description": "",
+      "values": [
+        "repair",
+        "replace"
+      ]
+    },
+    {
+      "id": "calc.payableCents",
+      "type": "cents",
+      "source": "calc",
+      "description": ""
+    },
+    {
+      "id": "calc.afterDeductibleCents",
+      "type": "cents",
+      "source": "calc",
+      "description": "After the service fee, before the remaining limit: the amount PARTIAL is measured against."
+    },
+    {
+      "id": "calc.remainingAfterCents",
+      "type": "cents",
+      "source": "calc",
+      "description": ""
+    }
+  ]
+}

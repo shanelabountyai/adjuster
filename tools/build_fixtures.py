@@ -968,6 +968,196 @@ def build_re():
     for r in res: write("re", r)
 
 
+# ------------------------------------------------------------------ Phase 4: CP-01, the second product (furniture)  D80-D86
+# Domain brief s12, typed here on its own: plan terms (12.1), rules E101-E123 and flags F101-F108 (12.3, 12.7), payout (12.4),
+# authority (12.6). Like everything above it never reads rules/. One piece per contract (D82); the term starts on delivery.
+
+FURN = {
+    "spotless": dict(months=36, perils=["stain"], stains=["fabric", "protected_leather"], fee={}, stain_limit=2, pets=False),
+    "everyday": dict(months=60, perils=["stain", "accidental_damage"], stains=["fabric", "protected_leather", "hard_surface"], fee={"accidental_damage": 5000}, stain_limit=3, pets=False),
+    "heirloom": dict(months=60, perils=["stain", "accidental_damage", "structural"], stains=["fabric", "protected_leather", "hard_surface", "natural_leather"], fee={}, stain_limit=None, pets=True),
+}
+FURN_AUTH = [("system", 50000, []), ("adjuster", 150000, ["clear_flags", "waive_documents"]), ("senior", 300000, ["decide_appeals", "author_rules"]), ("manager", None, ["ex_gratia", "publish_rules"])]
+FURN_DOCS = ["proofOfPurchase", "photos", "incidentStatement", "technicianReport"]
+
+
+def adjudicate_furniture(f):
+    t = FURN[f["contract.planCode"]]
+    start, end, dol, rep = D(f["contract.termStart"]), D(f["contract.termEnd"]), D(f["claim.dateOfLoss"]), D(f["claim.dateReported"])
+    peril, price, prior = f["claim.peril"], f["product.purchasePriceCents"], f["history.priorClaims"]
+    since, to_end, lag = (dol - start).days, (end - dol).days, (rep - dol).days
+    is_stain = peril == "stain"
+    within = lambda p, days: 0 <= (dol - D(p["dateOfLoss"])).days <= days
+    paid = sum(p["paidCents"] for p in prior)
+    stains_12m = sum(1 for p in prior if within(p, 365) and p["peril"] == "stain" and p["outcome"] in ("APPROVE", "PARTIAL"))
+    R_, C_, fixable = f["claim.replacementValueCents"], f.get("claim.coveredServiceCents"), f["claim.repairable"]
+    docs_ok = lambda k: f[f"docs.{k}"] in DOC_OK
+    out = []
+    add = lambda stage, rid, result: out.append((stage, rid, result, []))
+    no = lambda fact, outcome="DENY": outcome if f[fact] else "PASS"
+
+    # ---- plan rules (class C), file order
+    add("contract_verification", "E120", "PASS" if f["claim.claimantIsHolder"] else "DENY")  # not transferable
+    add("coverage_period", "E101", "PASS" if f["contract.status"] == "active" else "DENY")
+    add("coverage_period", "E102", "PASS" if since >= 0 and to_end >= 0 else "DENY")
+    add("coverage_period", "E103", "DENY" if peril == "structural" and 0 <= since < 365 else "PASS")  # the manufacturer's warranty year
+    add("coverage_period", "E104", "DENY" if lag > 30 else "PASS")  # late report denies on this product
+    add("peril_exclusions", "E106", "PASS" if peril in t["perils"] else "DENY")
+    add("peril_exclusions", "E107", "DENY" if is_stain and f["product.material"] not in t["stains"] else "PASS")
+    add("peril_exclusions", "E108", "DENY" if is_stain and f["claim.stainOrigin"] != "single_incident" else "PASS")  # unknown_origin is an answer, and denies (V7)
+    add("peril_exclusions", "E109", no("claim.normalWear"))
+    add("peril_exclusions", "E110", no("claim.preExisting", "REFER"))
+    add("peril_exclusions", "E111", "DENY" if f["claim.petDamage"] and not is_stain and not t["pets"] else "PASS")
+    add("peril_exclusions", "E112", {"none": "PASS", "declared": "DENY", "suspected": "REFER"}[f["claim.selfRepair"]])
+    add("peril_exclusions", "E113", no("claim.commercialOrOutdoorUse"))
+    add("peril_exclusions", "E114", no("claim.intentionalOrAbuse", "REFER"))
+    add("peril_exclusions", "E115", no("claim.moveOrStorage"))
+    add("peril_exclusions", "E116", no("claim.pieceUnavailable"))
+    add("peril_exclusions", "E117", no("claim.externalCause"))
+    add("frequency_limits", "E118", "DENY" if is_stain and t["stain_limit"] is not None and stains_12m >= t["stain_limit"] else "PASS")
+    add("frequency_limits", "E119", "DENY" if paid >= price else "PASS")  # the limit is the price of the piece
+    # ---- ops rules (class O), file order
+    add("intake", "E121", "REFER" if any(within(p, 7) and p["peril"] == peril for p in prior) else "PASS")
+    add("contract_verification", "E105", "PASS" if f["claim.pieceMatchesContract"] else "REFER")
+    for d in FURN_DOCS:
+        add("evidence", f"E122.{d}", "PASS" if docs_ok(d) or (d == "incidentStatement" and peril == "structural") else "PEND")
+    ratio = rhu(Fraction(C_ * 10000, R_)) if fixable else None
+    for rid, hit in [("F101", 0 <= since <= 30), ("F102", any(within(p, 60) for p in prior)), ("F103", 28 <= lag <= 30),
+                     ("F104", fixable and 5500 <= ratio <= 6000), ("F105", f["history.claimantContractsWithClaims"] >= 4),
+                     ("F106", f["evidence.photoMetaDateBeforeLoss"] or f["evidence.documentHashOnOtherClaim"]), ("F107", 0 <= to_end <= 30), ("F108", f["claim.accountChanged"])]:
+        add("red_flags", rid, "REFER" if hit else "PASS")
+
+    deny = any(x[2] == "DENY" for x in out)
+    skipped = list(SKIPPED_ON_DENY) if deny else []
+    out = [x for x in out if x[0] not in skipped]
+    pend = any(x[2] == "PEND" for x in out)
+    valuation = payable = fulfilled = after_fee = None
+    if not deny and not pend:
+        valuation, payable, after_fee, left = valuate_furniture(f, t, C_, R_, fixable, price, paid)
+        fulfilled = valuation["path"] == "replace" or left <= 0  # a replacement fulfills on every plan; so does an exhausted limit
+        add("authority", "E123", "REFER" if payable > FURN_AUTH[0][1] else "PASS")
+    out.sort(key=lambda x: STAGES.index(x[0]))
+    outcome = "DENY" if deny else "PEND" if pend else "REFER" if any(x[2] == "REFER" for x in out) else "PARTIAL" if payable < after_fee else "APPROVE"
+    key = outcome if outcome in ("DENY", "PEND", "REFER") else None
+    return {"outcome": outcome, "reasons": [rid for _, rid, r, _ in out if r == key] if key else [], "payableCents": payable, "contractFulfilled": fulfilled,
+            "skippedStages": skipped, "rules": [{"ruleId": rid, "result": r, "missing": m} for _, rid, r, m in out], "valuation": valuation}
+
+
+def valuate_furniture(f, t, C, R, fixable, price, paid):
+    """Domain brief s12.4, steps 1-8. No depreciation; the limit, per claim and in total, is the price of the piece."""
+    path = "replace" if not fixable or C * 10000 > 6000 * R else "repair"  # C > 60% of R, exact (D26)
+    regs, steps = {}, []
+
+    def step(sid, op, reg, applied, operand, fn):
+        if not applied:
+            steps.append(dict(id=sid, op=op, reg=reg, applied=False, operand=None, inputCents=None, outputCents=None)); return
+        before, (kind, name, value) = regs.get(reg), operand
+        regs[reg] = fn(before, value)
+        steps.append(dict(id=sid, op=op, reg=reg, applied=True, operand=dict(kind=kind, name=name, value=value), inputCents=before, outputCents=regs[reg]))
+
+    fact, zero, take = (lambda n, v: ("fact", n, v)), ("const", None, 0), (lambda b, v: v)
+    step("c1", "start_from", "L", path == "repair", fact("claim.coveredServiceCents", C), take)
+    step("c2", "start_from", "L", path == "replace", fact("claim.replacementValueCents", R), take)
+    step("c3", "cap_at", "L", True, fact("product.purchasePriceCents", price), min)
+    step("c4", "subtract", "L", True, fact("lookup.serviceFeeCents", t["fee"].get(f["claim.peril"], 0)), lambda b, v: b - v)
+    step("c5", "floor_at", "L", True, zero, max)
+    step("c6", "start_from", "DED", True, ("reg", "L", regs["L"]), take)
+    step("c7", "start_from", "REM", True, fact("product.purchasePriceCents", price), take)
+    step("c8", "subtract", "REM", True, fact("d.sumPriorPaid", paid), lambda b, v: b - v)
+    step("c9", "floor_at", "REM", True, zero, max)
+    step("c10", "cap_at", "L", True, ("reg", "REM", regs["REM"]), min)
+    step("c11", "start_from", "AFTER", True, ("reg", "REM", regs["REM"]), take)
+    step("c12", "subtract", "AFTER", True, ("reg", "L", regs["L"]), lambda b, v: b - v)
+    return {"path": path, "steps": steps}, regs["L"], regs["DED"], regs["AFTER"]
+
+
+def furniture_facts(tier, *, price, R, C, peril="stain", material="fabric", dol=None, lag=3, prior=(), start=dt.date(2025, 1, 15), **over):
+    """C=None: the technician reports the piece cannot be repaired, and there is no service cost (V8)."""
+    dol = dol or add_months(start, 5)
+    f = {
+        "contract.planCode": tier, "contract.status": "active", "contract.termStart": iso(start), "contract.termEnd": iso(add_months(start, FURN[tier]["months"]) - dt.timedelta(days=1)),
+        "product.purchasePriceCents": price, "product.material": material,
+        "claim.peril": peril, "claim.dateOfLoss": iso(dol), "claim.dateReported": iso(dol + dt.timedelta(days=lag)),
+        "claim.pieceMatchesContract": True, "claim.claimantIsHolder": True,
+        **({"claim.stainOrigin": "single_incident"} if peril == "stain" else {}),
+        "claim.normalWear": False, "claim.preExisting": False, "claim.petDamage": False, "claim.selfRepair": "none", "claim.commercialOrOutdoorUse": False,
+        "claim.intentionalOrAbuse": False, "claim.moveOrStorage": False, "claim.pieceUnavailable": False, "claim.externalCause": False, "claim.accountChanged": False,
+        "claim.repairable": C is not None, **({} if C is None else {"claim.coveredServiceCents": C}), "claim.replacementValueCents": R,
+        "history.priorClaims": list(prior), "history.claimantContractsWithClaims": 1,
+        "evidence.photoMetaDateBeforeLoss": False, "evidence.documentHashOnOtherClaim": False,
+        **{f"docs.{d}": "accepted" for d in FURN_DOCS},
+    }
+    f.update(over)
+    return f
+
+
+FURN_PAY = [  # domain brief s12.4
+    ("FP-A", "spotless", "clean", dict(price=120000, R=130000, C=18000)),
+    ("FP-B", "everyday", "repair with the service fee", dict(price=90000, R=95000, C=30000, peril="accidental_damage")),
+    ("FP-C", "everyday", "replace: 100000 is above 60% of 160000", dict(price=150000, R=160000, C=100000, peril="accidental_damage", material="hard_surface")),
+    ("FP-D", "heirloom", "not repairable: no service cost, replace", dict(price=45000, R=40000, C=None, peril="structural", dol=dt.date(2025, 1, 15) + dt.timedelta(days=500))),
+    ("FP-E", "everyday", "below the service fee", dict(price=60000, R=60000, C=4000, peril="accidental_damage")),
+    ("FP-F", "heirloom", "remaining limit", dict(price=120000, R=125000, C=40000)),
+    ("FP-G1", "spotless", "at the threshold: 60000 of 100000 is not above 60%, repair (D26)", dict(price=100000, R=100000, C=60000)),
+    ("FP-G2", "spotless", "one cent over the threshold: replace", dict(price=100000, R=100000, C=60001)),
+    ("FP-I", "spotless", "the price caps a repair; approved, not partial", dict(price=50000, R=100000, C=55000)),
+]
+
+
+def build_furniture():
+    s, src = dt.date(2025, 1, 15), "domain brief s12.8"
+    d = add_months(s, 5)
+    two_before = lambda paid: [prior(f"P{i}", d - dt.timedelta(days=100 * i), "stain", paid) for i in (1, 2)]  # both more than 60 days back
+    for pid, tier, what, kw in FURN_PAY:
+        f = furniture_facts(tier, **{**kw, **({"prior": two_before(45000)} if pid == "FP-F" else {})})
+        e = adjudicate_furniture(f)
+        write("pay", {"id": pid, "kind": "valuation", "product": "furniture", "title": f"{tier.capitalize()} {what}", "source": "domain brief s12.4",
+                      "note": "Valuation-level: furniture's plan-v1 payout against these facts. Facts the brief does not state are filled in so eligibility is clean.",
+                      "facts": f, "expected": {"path": e["valuation"]["path"], "steps": e["valuation"]["steps"], "payableCents": e["payableCents"], "contractFulfilled": e["contractFulfilled"]}})
+    write("pay", {"id": "FP-H", "kind": "ref", "product": "furniture", "title": "Spotless denial: valuation does not run, amount is null (not 0)", "source": "domain brief s12.4",
+                  "ref": "FG-02", "expected": {"payableCents": None, "valuation": None, "outcome": "DENY"}})
+
+    pay = {pid: kw for pid, _, _, kw in FURN_PAY}
+    goldens = [
+        ("FG-01", "Spotless fabric sofa, wine spill in month 5, reported 3 days later; FP-A; documents complete", furniture_facts("spotless", **pay["FP-A"])),
+        ("FG-02", "Spotless torn seat cushion (accidental damage on a stain-only plan)", furniture_facts("spotless", price=60000, R=60000, C=15000, peril="accidental_damage")),
+        ("FG-03", "Heirloom power recliner, mechanism fails on day 200 (the manufacturer's warranty year)",
+         furniture_facts("heirloom", price=90000, R=90000, C=30000, peril="structural", dol=s + dt.timedelta(days=200))),
+        ("FG-04", "Everyday fabric armchair, soiling built up over months, reported 45 days after it was noticed",
+         furniture_facts("everyday", price=70000, R=70000, C=12000, lag=45, **{"claim.stainOrigin": "accumulation"})),
+        ("FG-05", "Everyday dining table, burn; FP-C: replace threshold, above the auto-approve limit", furniture_facts("everyday", **pay["FP-C"])),
+        ("FG-06", "Everyday dining chair, small tear; FP-E: below the service fee, approved at 0", furniture_facts("everyday", **pay["FP-E"])),
+        ("FG-07", "Heirloom fabric sectional, two earlier claims paid 45000 each; FP-F: the remaining 30000 caps the payment", furniture_facts("heirloom", **pay["FP-F"], prior=two_before(45000))),
+        ("FG-08", "Heirloom accent chair, frame cracks on day 500, cannot be repaired; FP-D", furniture_facts("heirloom", **pay["FP-D"])),
+        ("FG-09", "Spotless third stain claim in 12 months, two approved before", furniture_facts("spotless", price=80000, R=80000, C=10000, prior=two_before(5000))),
+        ("FG-10", "Everyday protected-leather chair, ink stain; no incident statement",
+         furniture_facts("everyday", price=80000, R=80000, C=15000, material="protected_leather", **{"docs.incidentStatement": "requested"})),
+        ("FG-11", "Heirloom fabric loveseat, rip on day 12 after delivery, reported 29 days later",
+         furniture_facts("heirloom", price=110000, R=115000, C=22000, peril="accidental_damage", dol=s + dt.timedelta(days=12), lag=29)),
+        ("FG-12", "Spotless suede ottoman, a stain the holder cannot explain",
+         furniture_facts("spotless", price=40000, R=40000, C=9000, material="natural_leather", **{"claim.stainOrigin": "unknown_origin"})),
+    ]
+    for fid, title, f in goldens:
+        asof = D(f["claim.dateReported"]) + dt.timedelta(days=1)
+        doc = {"id": fid, "kind": "decision", "product": "furniture", "title": title, "source": src, "asOf": iso(asof), "plan": "plan-v1", "ops": "ops-v1", "facts": f, "expected": adjudicate_furniture(f)}
+        if fid == "FG-05":  # the adjuster's sign-off of the referral, as GC-05 carries one; furniture's adjuster approves up to 150000
+            amt, day = doc["expected"]["payableCents"], iso(asof + dt.timedelta(days=1))
+            doc["signoff"] = {"asOf": day, "by": "adjuster", "outcome": "APPROVE", "amountCents": amt, "reasonCode": "SIGN_OFF", "reasonText": "Replacement value checked against the retailer's current price",
+                              "paidCents": 0, "expected": {"kind": "override", "ops": "ops-v1", "outcome": "APPROVE", "payableCents": amt, "claimStatus": "DECIDED",
+                                                           "authority": {"totalIncurredCents": amt, "allowed": amt <= FURN_AUTH[1][1], "lacks": []}}}
+        write("gc", doc)
+
+    # RE-24, RE-25: a derived or lookup fact resolved from input facts under furniture's dictionary and plan. Expected values are written by hand.
+    paid = lambda n: {"product.purchasePriceCents": 120000, "history.priorClaims": [prior("P1", d - dt.timedelta(days=100), "stain", n)] if n else []}
+    derived = lambda fid, title, source, fact, cases: {"id": fid, "kind": "derived", "product": "furniture", "title": title, "source": source, "dictionary": "rules/furniture/facts-v1.json",
+                                                       "plan": "plan-v1", "fact": fact, "cases": [{"facts": c[0], "expected": c[1]} for c in cases]}
+    write("re", derived("RE-24", "A limit that is a fact: the price is above what was paid, by ratio_exceeds_bps at 10000 (E119)", "D81", "d.priceExceedsPaid",
+                        [(paid(0), True), (paid(119999), True), (paid(120000), False), (paid(120001), False), ({"history.priorClaims": []}, None)]))
+    fix = lambda ok, C=None, R=100000: {**({} if ok is None else {"claim.repairable": ok}), **({} if C is None else {"claim.coveredServiceCents": C}), "claim.replacementValueCents": R}
+    write("re", derived("RE-25", "No service cost when the piece cannot be repaired: the path is replace, not unknown; a repairable piece with no cost is unknown", "V8 / D26", "lookup.path",
+                        [(fix(False), "replace"), (fix(True, 60000), "repair"), (fix(True, 60001), "replace"), (fix(True), None), (fix(None, 60001), None)]))
+
+
 if __name__ == "__main__":
-    build_re(); build_pay(); build_gc(); build_phase2(); build_phase3(); build_phase4()
+    build_re(); build_pay(); build_gc(); build_phase2(); build_phase3(); build_phase4(); build_furniture()
     print("fixtures written to", os.path.normpath(ROOT))

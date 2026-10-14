@@ -41,8 +41,12 @@ const copyOf = (id: string, set: string) => tamper(
 
 describe('decisions:verify', () => {
   it('reports OK on the clean seed', async () => {
-    expect(await verifyDecisions(client)).toEqual({ checked: 54, failures: [] }); // 17 engine rows, GC-05's sign-off, GC-11's five, GC-15's nine and the 22 of AP-01..06
-    expect((await verifyDecisions(client, '2025-07-18')).checked).toBe(3); // --as-of: GC-03, GC-08 and GC-12
+    // 17 engine rows, GC-05's sign-off, GC-11's five, GC-15's nine and the 22 of AP-01..06: 54. Task 4.8 adds furniture's twelve and FG-05's sign-off.
+    expect(await verifyDecisions(client)).toEqual({ checked: 67, failures: [] });
+    // --as-of: GC-03, GC-08 and GC-12, then furniture's nine decided by then (all but FG-03, FG-04 and FG-08) and FG-05's sign-off
+    expect((await verifyDecisions(client, '2025-07-18')).checked).toBe(13);
+    const byProduct = await client.query(`SELECT v."product", count(*)::int AS n FROM "Decision" d JOIN "RuleSetVersion" v ON v."id" = d."planVersionId" GROUP BY 1 ORDER BY 1`);
+    expect(byProduct.rows).toEqual([{ product: 'electronics', n: 54 }, { product: 'furniture', n: 13 }]);
   });
 
   it('the seed covers both plan versions and both sides of the ops-v2 date', async () => {

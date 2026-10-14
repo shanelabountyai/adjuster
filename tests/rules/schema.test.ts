@@ -75,7 +75,7 @@ describe('closed vocabulary and publish rules', () => {
 });
 
 describe('fixtures carry calc traces in the trace schema', () => {
-  for (const f of readdirSync('fixtures/pay').filter((n) => n !== 'PAY-H.json'))
+  for (const f of readdirSync('fixtures/pay').filter((n) => json(`fixtures/pay/${n}`).kind === 'valuation')) // PAY-H and FP-H point at a denial: no steps
     it(f, () => { for (const s of json(`fixtures/pay/${f}`).expected.steps) expect(calcStepTraceSchema.safeParse(s).success).toBe(true); });
 });
 

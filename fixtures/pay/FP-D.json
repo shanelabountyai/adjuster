@@ -1,0 +1,200 @@
+{
+  "id": "FP-D",
+  "kind": "valuation",
+  "product": "furniture",
+  "title": "Heirloom not repairable: no service cost, replace",
+  "source": "domain brief s12.4",
+  "note": "Valuation-level: furniture's plan-v1 payout against these facts. Facts the brief does not state are filled in so eligibility is clean.",
+  "facts": {
+    "contract.planCode": "heirloom",
+    "contract.status": "active",
+    "contract.termStart": "2025-01-15",
+    "contract.termEnd": "2030-01-14",
+    "product.purchasePriceCents": 45000,
+    "product.material": "fabric",
+    "claim.peril": "structural",
+    "claim.dateOfLoss": "2026-05-30",
+    "claim.dateReported": "2026-06-02",
+    "claim.pieceMatchesContract": true,
+    "claim.claimantIsHolder": true,
+    "claim.normalWear": false,
+    "claim.preExisting": false,
+    "claim.petDamage": false,
+    "claim.selfRepair": "none",
+    "claim.commercialOrOutdoorUse": false,
+    "claim.intentionalOrAbuse": false,
+    "claim.moveOrStorage": false,
+    "claim.pieceUnavailable": false,
+    "claim.externalCause": false,
+    "claim.accountChanged": false,
+    "claim.repairable": false,
+    "claim.replacementValueCents": 40000,
+    "history.priorClaims": [],
+    "history.claimantContractsWithClaims": 1,
+    "evidence.photoMetaDateBeforeLoss": false,
+    "evidence.documentHashOnOtherClaim": false,
+    "docs.proofOfPurchase": "accepted",
+    "docs.photos": "accepted",
+    "docs.incidentStatement": "accepted",
+    "docs.technicianReport": "accepted"
+  },
+  "expected": {
+    "path": "replace",
+    "steps": [
+      {
+        "id": "c1",
+        "op": "start_from",
+        "reg": "L",
+        "applied": false,
+        "operand": null,
+        "inputCents": null,
+        "outputCents": null
+      },
+      {
+        "id": "c2",
+        "op": "start_from",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "claim.replacementValueCents",
+          "value": 40000
+        },
+        "inputCents": null,
+        "outputCents": 40000
+      },
+      {
+        "id": "c3",
+        "op": "cap_at",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "product.purchasePriceCents",
+          "value": 45000
+        },
+        "inputCents": 40000,
+        "outputCents": 40000
+      },
+      {
+        "id": "c4",
+        "op": "subtract",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "lookup.serviceFeeCents",
+          "value": 0
+        },
+        "inputCents": 40000,
+        "outputCents": 40000
+      },
+      {
+        "id": "c5",
+        "op": "floor_at",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "const",
+          "name": null,
+          "value": 0
+        },
+        "inputCents": 40000,
+        "outputCents": 40000
+      },
+      {
+        "id": "c6",
+        "op": "start_from",
+        "reg": "DED",
+        "applied": true,
+        "operand": {
+          "kind": "reg",
+          "name": "L",
+          "value": 40000
+        },
+        "inputCents": null,
+        "outputCents": 40000
+      },
+      {
+        "id": "c7",
+        "op": "start_from",
+        "reg": "REM",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "product.purchasePriceCents",
+          "value": 45000
+        },
+        "inputCents": null,
+        "outputCents": 45000
+      },
+      {
+        "id": "c8",
+        "op": "subtract",
+        "reg": "REM",
+        "applied": true,
+        "operand": {
+          "kind": "fact",
+          "name": "d.sumPriorPaid",
+          "value": 0
+        },
+        "inputCents": 45000,
+        "outputCents": 45000
+      },
+      {
+        "id": "c9",
+        "op": "floor_at",
+        "reg": "REM",
+        "applied": true,
+        "operand": {
+          "kind": "const",
+          "name": null,
+          "value": 0
+        },
+        "inputCents": 45000,
+        "outputCents": 45000
+      },
+      {
+        "id": "c10",
+        "op": "cap_at",
+        "reg": "L",
+        "applied": true,
+        "operand": {
+          "kind": "reg",
+          "name": "REM",
+          "value": 45000
+        },
+        "inputCents": 40000,
+        "outputCents": 40000
+      },
+      {
+        "id": "c11",
+        "op": "start_from",
+        "reg": "AFTER",
+        "applied": true,
+        "operand": {
+          "kind": "reg",
+          "name": "REM",
+          "value": 45000
+        },
+        "inputCents": null,
+        "outputCents": 45000
+      },
+      {
+        "id": "c12",
+        "op": "subtract",
+        "reg": "AFTER",
+        "applied": true,
+        "operand": {
+          "kind": "reg",
+          "name": "L",
+          "value": 40000
+        },
+        "inputCents": 45000,
+        "outputCents": 5000
+      }
+    ],
+    "payableCents": 40000,
+    "contractFulfilled": true
+  }
+}

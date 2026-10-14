@@ -261,37 +261,37 @@ A plan is sold with a piece of furniture on the same invoice and covers that one
 
 ### 12.3 Eligibility rules
 
-Class and stage as in section 3. Rule ids are the product's own (H for home), so a reason code never means two things across products.
+Class and stage as in section 3. Rule ids are the product's own: E101 to E123 and flags F101 to F108, so a reason code never means two things across products. The validator accepts only `E` or `F` and a number; the brief first wrote these as H1 to H23 and HF1 to HF8, and the number is that one plus 100 (D86).
 
 | ID | Class | Rule (parameters) | Outcome | Claimant reason text |
 |---|---|---|---|---|
-| H1 | C | Contract active on date of loss | Deny | "Your plan was not active on the date of loss." |
-| H2 | C | Date of loss within term | Deny | "The loss occurred outside your coverage term ({start}–{end})." |
-| H3 | C | Structural: date of loss on or after day N=365 from delivery | Deny | "During the first year, structural defects are covered by the manufacturer's warranty; please contact your retailer." |
-| H4 | C | Reported within N=30 days of date of loss | Deny | "Your claim was reported more than {N} days after the damage occurred." |
-| H5 | O | Claimed piece is the piece on the contract | Refer | "The piece identified does not match the covered piece." |
-| H6 | C | Peril is in the plan's covered perils | Deny | "Your plan does not cover {peril}." |
-| H7 | C | Stain: the material is one the plan covers | Deny | "Your plan does not cover stains on {material}." |
-| H8 | C | Stain: one identified incident (not accumulation, not unknown origin) | Deny | "Soiling that builds up over time is excluded." / "Stains of unknown origin are excluded." |
-| H9 | C | Normal wear, fading, odor or a natural characteristic | Deny | "Normal wear, fading and natural characteristics are excluded." |
-| H10 | C | Pre-existing or delivery damage | Refer (recommend deny) | "The damage existed before coverage began." |
-| H11 | C | Pet damage other than a stain (Heirloom: covered) | Deny | "Damage from pets, other than stains, is excluded." |
-| H12 | C | Damage from the holder's own cleaning or repair attempt (declared → deny; suspected → refer) | Deny / refer | "Damage caused by cleaning or repair not arranged through us is excluded." |
-| H13 | C | Commercial, rental or outdoor use | Deny | "Furniture used commercially, rented out or kept outdoors is excluded." |
-| H14 | C | Intentional damage, abuse, misuse | Refer | "Damage from abuse or intentional acts is excluded." |
-| H15 | C | Damaged in a move or in storage | Deny | "Damage during a move or in storage is excluded." |
-| H16 | C | Piece unavailable for inspection | Deny | "We cannot cover a piece that is not available for inspection." |
-| H17 | C | External cause (fire, flood, infestation) | Deny | "Damage from external events is excluded." |
-| H18 | C | Stain: at most N stain claims per rolling 12 months (2 / 3 / no limit) | Deny | "You have reached the limit of {N} stain claims in 12 months." |
-| H19 | C | Total paid on the contract is below the purchase price | Deny | "Your plan's total limit, the price you paid, has been reached." |
-| H20 | C | Claimant is the contract holder | Deny | "This plan cannot be transferred, and you are not the holder on record." |
-| H21 | O | Duplicate: same contract and peril, date of loss within N=7 days | Refer | "This appears to duplicate claim {id}." |
-| H22 | O | Required documents accepted for the peril | Pend | "We need: {list}." |
-| H23 | O | Payable above the auto-approve limit (50000) | Refer | Internal only |
+| E101 | C | Contract active on date of loss | Deny | "Your plan was not active on the date of loss." |
+| E102 | C | Date of loss within term | Deny | "The loss occurred outside your coverage term ({start}–{end})." |
+| E103 | C | Structural: date of loss on or after day N=365 from delivery | Deny | "During the first year, structural defects are covered by the manufacturer's warranty; please contact your retailer." |
+| E104 | C | Reported within N=30 days of date of loss | Deny | "Your claim was reported more than {N} days after the damage occurred." |
+| E105 | O | Claimed piece is the piece on the contract | Refer | "The piece identified does not match the covered piece." |
+| E106 | C | Peril is in the plan's covered perils | Deny | "Your plan does not cover {peril}." |
+| E107 | C | Stain: the material is one the plan covers | Deny | "Your plan does not cover stains on {material}." |
+| E108 | C | Stain: one identified incident (not accumulation, not unknown origin) | Deny | "Soiling that builds up over time is excluded." / "Stains of unknown origin are excluded." |
+| E109 | C | Normal wear, fading, odor or a natural characteristic | Deny | "Normal wear, fading and natural characteristics are excluded." |
+| E110 | C | Pre-existing or delivery damage | Refer (recommend deny) | "The damage existed before coverage began." |
+| E111 | C | Pet damage other than a stain (Heirloom: covered) | Deny | "Damage from pets, other than stains, is excluded." |
+| E112 | C | Damage from the holder's own cleaning or repair attempt (declared → deny; suspected → refer) | Deny / refer | "Damage caused by cleaning or repair not arranged through us is excluded." |
+| E113 | C | Commercial, rental or outdoor use | Deny | "Furniture used commercially, rented out or kept outdoors is excluded." |
+| E114 | C | Intentional damage, abuse, misuse | Refer | "Damage from abuse or intentional acts is excluded." |
+| E115 | C | Damaged in a move or in storage | Deny | "Damage during a move or in storage is excluded." |
+| E116 | C | Piece unavailable for inspection | Deny | "We cannot cover a piece that is not available for inspection." |
+| E117 | C | External cause (fire, flood, infestation) | Deny | "Damage from external events is excluded." |
+| E118 | C | Stain: at most N stain claims per rolling 12 months (2 / 3 / no limit) | Deny | "You have reached the limit of {N} stain claims in 12 months." |
+| E119 | C | Total paid on the contract is below the purchase price | Deny | "Your plan's total limit, the price you paid, has been reached." |
+| E120 | C | Claimant is the contract holder | Deny | "This plan cannot be transferred, and you are not the holder on record." |
+| E121 | O | Duplicate: same contract and peril, date of loss within N=7 days | Refer | "This appears to duplicate claim {id}." |
+| E122 | O | Required documents accepted for the peril | Pend | "We need: {list}." |
+| E123 | O | Payable above the auto-approve limit (50000) | Refer | Internal only |
 
-- H8's "unknown origin" is an answer a person enters, not a missing fact. Missing still pends (non-negotiable 6); `unknown_origin` is a value of the enum and denies (V7).
-- H10, H12 (suspected) and H14 are judgment exclusions: stored with `claimantVisible: false`, neutral wording in the letter (D24).
-- H2 already denies a loss dated before delivery, which is the objective half of H10.
+- E108's "unknown origin" is an answer a person enters, not a missing fact. Missing still pends (non-negotiable 6); `unknown_origin` is a value of the enum and denies (V7).
+- E110, E112 (suspected) and E114 are judgment exclusions: stored with `claimantVisible: false`, neutral wording in the letter (D24).
+- E102 already denies a loss dated before delivery, which is the objective half of E110.
 
 ### 12.4 Payout order of operations
 
@@ -349,32 +349,32 @@ Tier names and powers are electronics' (V6); the limits are this product's own o
 
 | ID | Indicator |
 |---|---|
-| HF1 | Date of loss within 30 days after delivery |
-| HF2 | Two or more claims on the contract within 60 days |
-| HF3 | Reported on day 28 to 30 after the loss, the last days of the window |
-| HF4 | Service quote at 55% to 60% of R, just under the replace threshold |
-| HF5 | Same claimant with claims on four or more contracts |
-| HF6 | Photo metadata date before date of loss, or the same document hash on another claim |
-| HF7 | Date of loss within the last 30 days of the term |
-| HF8 | Claimant's account of the cause changed between FNOL and statement |
+| F101 | Date of loss within 30 days after delivery |
+| F102 | Two or more claims on the contract within 60 days |
+| F103 | Reported on day 28 to 30 after the loss, the last days of the window |
+| F104 | Service quote at 55% to 60% of R, just under the replace threshold |
+| F105 | Same claimant with claims on four or more contracts |
+| F106 | Photo metadata date before date of loss, or the same document hash on another claim |
+| F107 | Date of loss within the last 30 days of the term |
+| F108 | Claimant's account of the cause changed between FNOL and statement |
 
-HF5's threshold is four, not electronics' three: with one piece per contract, one household's living room is several contracts, and one spill can reach two of them.
+F105's threshold is four, not electronics' three: with one piece per contract, one household's living room is several contracts, and one spill can reach two of them.
 
 ### 12.8 Golden claims (FG-01..FG-12)
 
 | FG | Plan | Facts | Decision | Reasons |
 |---|---|---|---|---|
 | 01 | Spotless | Fabric sofa; wine spill in month 5, reported 3 days later; FP-A; documents complete | Approve 18000 | All pass; 18000, fee 0 |
-| 02 | Spotless | Torn seat cushion | Deny (null) | H6 |
-| 03 | Heirloom | Power recliner; mechanism fails on day 200 | Deny | H3 |
-| 04 | Everyday | Fabric armchair; soiling built up over months; reported 45 days after it was noticed | Deny | H4 + H8, both cited |
-| 05 | Everyday | Dining table, burn; FP-C | Refer → approve 145000 as store credit on adjuster sign-off | Replace threshold; H23 |
+| 02 | Spotless | Torn seat cushion | Deny (null) | E106 |
+| 03 | Heirloom | Power recliner; mechanism fails on day 200 | Deny | E103 |
+| 04 | Everyday | Fabric armchair; soiling built up over months; reported 45 days after it was noticed | Deny | E104 + E108, both cited |
+| 05 | Everyday | Dining table, burn; FP-C | Refer → approve 145000 as store credit on adjuster sign-off | Replace threshold; E123 |
 | 06 | Everyday | Small tear in a dining chair; FP-E | Approve 0 | Below the service fee |
 | 07 | Heirloom | Fabric sectional; two earlier claims paid 45000 each, both more than 60 days ago; FP-F | Partial 30000 | Remaining limit; contract fulfilled |
 | 08 | Heirloom | Accent chair; frame cracks on day 500; technician: cannot be repaired; FP-D | Approve 40000 as store credit | No C; contract fulfilled |
-| 09 | Spotless | Third stain claim in 12 months, two approved before | Deny | H18 |
-| 10 | Everyday | Protected-leather chair, ink stain, service cost 15000; no incident statement | Pend | H22; not a denial |
-| 11 | Heirloom | Fabric loveseat, price 110000, R 115000, service cost 22000; rip on day 12 after delivery, reported 29 days later | Refer (calculated 22000) | HF1 + HF3 |
-| 12 | Spotless | Suede ottoman; a stain the holder cannot explain | Deny | H7 + H8, both cited |
+| 09 | Spotless | Third stain claim in 12 months, two approved before | Deny | E118 |
+| 10 | Everyday | Protected-leather chair, ink stain, service cost 15000; no incident statement | Pend | E122; not a denial |
+| 11 | Heirloom | Fabric loveseat, price 110000, R 115000, service cost 22000; rip on day 12 after delivery, reported 29 days later | Refer (calculated 22000) | F101 + F103 |
+| 12 | Spotless | Suede ottoman; a stain the holder cannot explain | Deny | E107 + E108, both cited |
 
 No furniture golden plays a supplemental, an override other than FG-05's sign-off, or an appeal: GC-15 and AP-01..06 prove those on electronics, and the code is the same.

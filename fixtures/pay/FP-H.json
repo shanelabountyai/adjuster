@@ -1,0 +1,13 @@
+{
+  "id": "FP-H",
+  "kind": "ref",
+  "product": "furniture",
+  "title": "Spotless denial: valuation does not run, amount is null (not 0)",
+  "source": "domain brief s12.4",
+  "ref": "FG-02",
+  "expected": {
+    "payableCents": null,
+    "valuation": null,
+    "outcome": "DENY"
+  }
+}

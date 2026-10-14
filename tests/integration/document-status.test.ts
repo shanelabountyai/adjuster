@@ -208,6 +208,13 @@ describe('the database rules', () => {
     for (const reason of ev06.rejectionReasons) await reject((await upload(id, 'repairEstimate')).versionId, reason);
     expect(await count('DocumentReview')).toBe(5);
     expect((await client.query(`SELECT DISTINCT "reasonProduct" FROM "DocumentReview"`)).rows).toEqual([{ reasonProduct: 'electronics' }]);
+    // Task 4.8: furniture's first rejection through the service. Its claim takes its own reason and refuses electronics'.
+    versionIds.furniture = await publishRuleSet(client, read('rules/furniture/plan-v1.json'));
+    const piece = await upload(await claim('DS-piece', 'furniture'), 'technicianReport');
+    await expect(reject(piece.versionId, 'serial_mismatch')).rejects.toMatchObject({ constraint: 'DocumentReview_reasonCode_fkey' });
+    await reject(piece.versionId, 'item_mismatch');
+    expect((await client.query(`SELECT "reasonProduct", "reasonCode" FROM "DocumentReview" WHERE "versionId" = $1`, [piece.versionId])).rows).toEqual([{ reasonProduct: 'furniture', reasonCode: 'item_mismatch' }]);
+    await expect(upload('DS-piece', 'repairEstimate')).rejects.toThrow(); // electronics' document type is not in furniture's dictionary
     expect(await insert('accepted')).toBe('accepted'); // v is superseded: the table is the service's, the database only keeps one review per version
     expect(await insert('accepted')).toBe('DocumentReview_versionId_key');
   });

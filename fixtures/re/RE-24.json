@@ -1,0 +1,70 @@
+{
+  "id": "RE-24",
+  "kind": "derived",
+  "product": "furniture",
+  "title": "A limit that is a fact: the price is above what was paid, by ratio_exceeds_bps at 10000 (E119)",
+  "source": "D81",
+  "dictionary": "rules/furniture/facts-v1.json",
+  "plan": "plan-v1",
+  "fact": "d.priceExceedsPaid",
+  "cases": [
+    {
+      "facts": {
+        "product.purchasePriceCents": 120000,
+        "history.priorClaims": []
+      },
+      "expected": true
+    },
+    {
+      "facts": {
+        "product.purchasePriceCents": 120000,
+        "history.priorClaims": [
+          {
+            "claimId": "P1",
+            "dateOfLoss": "2025-03-07",
+            "peril": "stain",
+            "outcome": "APPROVE",
+            "paidCents": 119999
+          }
+        ]
+      },
+      "expected": true
+    },
+    {
+      "facts": {
+        "product.purchasePriceCents": 120000,
+        "history.priorClaims": [
+          {
+            "claimId": "P1",
+            "dateOfLoss": "2025-03-07",
+            "peril": "stain",
+            "outcome": "APPROVE",
+            "paidCents": 120000
+          }
+        ]
+      },
+      "expected": false
+    },
+    {
+      "facts": {
+        "product.purchasePriceCents": 120000,
+        "history.priorClaims": [
+          {
+            "claimId": "P1",
+            "dateOfLoss": "2025-03-07",
+            "peril": "stain",
+            "outcome": "APPROVE",
+            "paidCents": 120001
+          }
+        ]
+      },
+      "expected": false
+    },
+    {
+      "facts": {
+        "history.priorClaims": []
+      },
+      "expected": null
+    }
+  ]
+}

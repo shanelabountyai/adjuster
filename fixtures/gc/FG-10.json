@@ -1,0 +1,222 @@
+{
+  "id": "FG-10",
+  "kind": "decision",
+  "product": "furniture",
+  "title": "Everyday protected-leather chair, ink stain; no incident statement",
+  "source": "domain brief s12.8",
+  "asOf": "2025-06-19",
+  "plan": "plan-v1",
+  "ops": "ops-v1",
+  "facts": {
+    "contract.planCode": "everyday",
+    "contract.status": "active",
+    "contract.termStart": "2025-01-15",
+    "contract.termEnd": "2030-01-14",
+    "product.purchasePriceCents": 80000,
+    "product.material": "protected_leather",
+    "claim.peril": "stain",
+    "claim.dateOfLoss": "2025-06-15",
+    "claim.dateReported": "2025-06-18",
+    "claim.pieceMatchesContract": true,
+    "claim.claimantIsHolder": true,
+    "claim.stainOrigin": "single_incident",
+    "claim.normalWear": false,
+    "claim.preExisting": false,
+    "claim.petDamage": false,
+    "claim.selfRepair": "none",
+    "claim.commercialOrOutdoorUse": false,
+    "claim.intentionalOrAbuse": false,
+    "claim.moveOrStorage": false,
+    "claim.pieceUnavailable": false,
+    "claim.externalCause": false,
+    "claim.accountChanged": false,
+    "claim.repairable": true,
+    "claim.coveredServiceCents": 15000,
+    "claim.replacementValueCents": 80000,
+    "history.priorClaims": [],
+    "history.claimantContractsWithClaims": 1,
+    "evidence.photoMetaDateBeforeLoss": false,
+    "evidence.documentHashOnOtherClaim": false,
+    "docs.proofOfPurchase": "accepted",
+    "docs.photos": "accepted",
+    "docs.incidentStatement": "requested",
+    "docs.technicianReport": "accepted"
+  },
+  "expected": {
+    "outcome": "PEND",
+    "reasons": [
+      "E122.incidentStatement"
+    ],
+    "payableCents": null,
+    "contractFulfilled": null,
+    "skippedStages": [],
+    "rules": [
+      {
+        "ruleId": "E121",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E120",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E105",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E101",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E102",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E103",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E104",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E106",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E107",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E108",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E109",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E110",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E111",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E112",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E113",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E114",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E115",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E116",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E117",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E118",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E119",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E122.proofOfPurchase",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E122.photos",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E122.incidentStatement",
+        "result": "PEND",
+        "missing": []
+      },
+      {
+        "ruleId": "E122.technicianReport",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F101",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F102",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F103",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F104",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F105",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F106",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F107",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F108",
+        "result": "PASS",
+        "missing": []
+      }
+    ],
+    "valuation": null
+  }
+}

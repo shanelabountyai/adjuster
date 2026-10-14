@@ -1,0 +1,396 @@
+{
+  "id": "FG-07",
+  "kind": "decision",
+  "product": "furniture",
+  "title": "Heirloom fabric sectional, two earlier claims paid 45000 each; FP-F: the remaining 30000 caps the payment",
+  "source": "domain brief s12.8",
+  "asOf": "2025-06-19",
+  "plan": "plan-v1",
+  "ops": "ops-v1",
+  "facts": {
+    "contract.planCode": "heirloom",
+    "contract.status": "active",
+    "contract.termStart": "2025-01-15",
+    "contract.termEnd": "2030-01-14",
+    "product.purchasePriceCents": 120000,
+    "product.material": "fabric",
+    "claim.peril": "stain",
+    "claim.dateOfLoss": "2025-06-15",
+    "claim.dateReported": "2025-06-18",
+    "claim.pieceMatchesContract": true,
+    "claim.claimantIsHolder": true,
+    "claim.stainOrigin": "single_incident",
+    "claim.normalWear": false,
+    "claim.preExisting": false,
+    "claim.petDamage": false,
+    "claim.selfRepair": "none",
+    "claim.commercialOrOutdoorUse": false,
+    "claim.intentionalOrAbuse": false,
+    "claim.moveOrStorage": false,
+    "claim.pieceUnavailable": false,
+    "claim.externalCause": false,
+    "claim.accountChanged": false,
+    "claim.repairable": true,
+    "claim.coveredServiceCents": 40000,
+    "claim.replacementValueCents": 125000,
+    "history.priorClaims": [
+      {
+        "claimId": "P1",
+        "dateOfLoss": "2025-03-07",
+        "peril": "stain",
+        "outcome": "APPROVE",
+        "paidCents": 45000
+      },
+      {
+        "claimId": "P2",
+        "dateOfLoss": "2024-11-27",
+        "peril": "stain",
+        "outcome": "APPROVE",
+        "paidCents": 45000
+      }
+    ],
+    "history.claimantContractsWithClaims": 1,
+    "evidence.photoMetaDateBeforeLoss": false,
+    "evidence.documentHashOnOtherClaim": false,
+    "docs.proofOfPurchase": "accepted",
+    "docs.photos": "accepted",
+    "docs.incidentStatement": "accepted",
+    "docs.technicianReport": "accepted"
+  },
+  "expected": {
+    "outcome": "PARTIAL",
+    "reasons": [],
+    "payableCents": 30000,
+    "contractFulfilled": true,
+    "skippedStages": [],
+    "rules": [
+      {
+        "ruleId": "E121",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E120",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E105",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E101",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E102",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E103",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E104",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E106",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E107",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E108",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E109",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E110",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E111",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E112",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E113",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E114",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E115",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E116",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E117",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E118",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E119",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E122.proofOfPurchase",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E122.photos",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E122.incidentStatement",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E122.technicianReport",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F101",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F102",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F103",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F104",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F105",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F106",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F107",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "F108",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E123",
+        "result": "PASS",
+        "missing": []
+      }
+    ],
+    "valuation": {
+      "path": "repair",
+      "steps": [
+        {
+          "id": "c1",
+          "op": "start_from",
+          "reg": "L",
+          "applied": true,
+          "operand": {
+            "kind": "fact",
+            "name": "claim.coveredServiceCents",
+            "value": 40000
+          },
+          "inputCents": null,
+          "outputCents": 40000
+        },
+        {
+          "id": "c2",
+          "op": "start_from",
+          "reg": "L",
+          "applied": false,
+          "operand": null,
+          "inputCents": null,
+          "outputCents": null
+        },
+        {
+          "id": "c3",
+          "op": "cap_at",
+          "reg": "L",
+          "applied": true,
+          "operand": {
+            "kind": "fact",
+            "name": "product.purchasePriceCents",
+            "value": 120000
+          },
+          "inputCents": 40000,
+          "outputCents": 40000
+        },
+        {
+          "id": "c4",
+          "op": "subtract",
+          "reg": "L",
+          "applied": true,
+          "operand": {
+            "kind": "fact",
+            "name": "lookup.serviceFeeCents",
+            "value": 0
+          },
+          "inputCents": 40000,
+          "outputCents": 40000
+        },
+        {
+          "id": "c5",
+          "op": "floor_at",
+          "reg": "L",
+          "applied": true,
+          "operand": {
+            "kind": "const",
+            "name": null,
+            "value": 0
+          },
+          "inputCents": 40000,
+          "outputCents": 40000
+        },
+        {
+          "id": "c6",
+          "op": "start_from",
+          "reg": "DED",
+          "applied": true,
+          "operand": {
+            "kind": "reg",
+            "name": "L",
+            "value": 40000
+          },
+          "inputCents": null,
+          "outputCents": 40000
+        },
+        {
+          "id": "c7",
+          "op": "start_from",
+          "reg": "REM",
+          "applied": true,
+          "operand": {
+            "kind": "fact",
+            "name": "product.purchasePriceCents",
+            "value": 120000
+          },
+          "inputCents": null,
+          "outputCents": 120000
+        },
+        {
+          "id": "c8",
+          "op": "subtract",
+          "reg": "REM",
+          "applied": true,
+          "operand": {
+            "kind": "fact",
+            "name": "d.sumPriorPaid",
+            "value": 90000
+          },
+          "inputCents": 120000,
+          "outputCents": 30000
+        },
+        {
+          "id": "c9",
+          "op": "floor_at",
+          "reg": "REM",
+          "applied": true,
+          "operand": {
+            "kind": "const",
+            "name": null,
+            "value": 0
+          },
+          "inputCents": 30000,
+          "outputCents": 30000
+        },
+        {
+          "id": "c10",
+          "op": "cap_at",
+          "reg": "L",
+          "applied": true,
+          "operand": {
+            "kind": "reg",
+            "name": "REM",
+            "value": 30000
+          },
+          "inputCents": 40000,
+          "outputCents": 30000
+        },
+        {
+          "id": "c11",
+          "op": "start_from",
+          "reg": "AFTER",
+          "applied": true,
+          "operand": {
+            "kind": "reg",
+            "name": "REM",
+            "value": 30000
+          },
+          "inputCents": null,
+          "outputCents": 30000
+        },
+        {
+          "id": "c12",
+          "op": "subtract",
+          "reg": "AFTER",
+          "applied": true,
+          "operand": {
+            "kind": "reg",
+            "name": "L",
+            "value": 30000
+          },
+          "inputCents": 30000,
+          "outputCents": 0
+        }
+      ]
+    }
+  }
+}

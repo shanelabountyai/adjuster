@@ -1,0 +1,167 @@
+{
+  "id": "FG-03",
+  "kind": "decision",
+  "product": "furniture",
+  "title": "Heirloom power recliner, mechanism fails on day 200 (the manufacturer's warranty year)",
+  "source": "domain brief s12.8",
+  "asOf": "2025-08-07",
+  "plan": "plan-v1",
+  "ops": "ops-v1",
+  "facts": {
+    "contract.planCode": "heirloom",
+    "contract.status": "active",
+    "contract.termStart": "2025-01-15",
+    "contract.termEnd": "2030-01-14",
+    "product.purchasePriceCents": 90000,
+    "product.material": "fabric",
+    "claim.peril": "structural",
+    "claim.dateOfLoss": "2025-08-03",
+    "claim.dateReported": "2025-08-06",
+    "claim.pieceMatchesContract": true,
+    "claim.claimantIsHolder": true,
+    "claim.normalWear": false,
+    "claim.preExisting": false,
+    "claim.petDamage": false,
+    "claim.selfRepair": "none",
+    "claim.commercialOrOutdoorUse": false,
+    "claim.intentionalOrAbuse": false,
+    "claim.moveOrStorage": false,
+    "claim.pieceUnavailable": false,
+    "claim.externalCause": false,
+    "claim.accountChanged": false,
+    "claim.repairable": true,
+    "claim.coveredServiceCents": 30000,
+    "claim.replacementValueCents": 90000,
+    "history.priorClaims": [],
+    "history.claimantContractsWithClaims": 1,
+    "evidence.photoMetaDateBeforeLoss": false,
+    "evidence.documentHashOnOtherClaim": false,
+    "docs.proofOfPurchase": "accepted",
+    "docs.photos": "accepted",
+    "docs.incidentStatement": "accepted",
+    "docs.technicianReport": "accepted"
+  },
+  "expected": {
+    "outcome": "DENY",
+    "reasons": [
+      "E103"
+    ],
+    "payableCents": null,
+    "contractFulfilled": null,
+    "skippedStages": [
+      "evidence",
+      "red_flags",
+      "valuation",
+      "deductible_limits",
+      "authority"
+    ],
+    "rules": [
+      {
+        "ruleId": "E121",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E120",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E105",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E101",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E102",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E103",
+        "result": "DENY",
+        "missing": []
+      },
+      {
+        "ruleId": "E104",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E106",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E107",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E108",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E109",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E110",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E111",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E112",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E113",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E114",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E115",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E116",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E117",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E118",
+        "result": "PASS",
+        "missing": []
+      },
+      {
+        "ruleId": "E119",
+        "result": "PASS",
+        "missing": []
+      }
+    ],
+    "valuation": null
+  }
+}
