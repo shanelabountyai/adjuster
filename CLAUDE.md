@@ -38,3 +38,6 @@ TypeScript on a clone of saas-foundation v1.2.0: Next.js 16, Prisma 7, PostgreSQ
 
 ## Definition of done (any task)
 Tests green, `decisions:verify` clean, no plan-specific logic or float in `src/`, decisions doc updated if a rule changed.
+
+## Queued after Phase 4: Document Intake
+`docs/prd-intake.md` (AI track: PDFs and photos in, typed facts out, confidence per field, review queue, eval scorecard). Not started and not part of Phase 4. Do not build any of it until Shane opens it. Its first session is the read-only contract check described at the end of that file. Where that PRD and `docs/decisions.md` disagree, `docs/decisions.md` wins.
