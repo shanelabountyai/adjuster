@@ -33,6 +33,8 @@ jobs:
           --health-retries=5
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the two CP-01 tags below; a shallow clone has neither
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -41,6 +43,9 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run rules:lint
+      # CP-01 (D65, task 4.8): the second product landed between these two tags as rule data, fixtures, the oracle, the seed and tests.
+      # Nothing under src/ or prisma/ moved, and this keeps the claim checkable: a moved or missing tag fails here too.
+      - run: git diff --exit-code cp-01-base cp-01-done -- src/ prisma/
       - run: npm run fixtures:check # task 1.5: fails if a fixture changed without being committed on purpose
       - run: createdb adjuster_test
       - run: npx prisma migrate deploy
