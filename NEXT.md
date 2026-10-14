@@ -1,6 +1,8 @@
 # NEXT
 
-## ▶ Next session: 4.12, the claim page (`docs/phase-4-tasks.md`). The read-only page of item 6: GC-15 read top to bottom on it, and an appealed claim. Print what is stored (decisions, trace, letters from the stored trace, overrides, appeals, payments, audit events); compute nothing. Reuse the 4.9 pattern: server page, `requireOrg`, `namesOf`, services through `src/adjudication/pool.ts`. Recommend Sonnet: no new logic.
+## ▶ Next session: 4.13, seed and gate (`docs/phase-4-tasks.md`). Both products and the appeals seeded through the services; `decisions:verify:test` OK in CI; TM-01..09 and Phase 3 tamper cases each fail with exactly their code; `rules:lint` finds no identifier of either product under `src/`. Gate item: Opus.
+
+**2026-10-14 (4.12 done; 557 tests, `decisions:verify` OK):** the claim page `/o/[org]/claims/[id]` (`src/app/o/[org]/claims/[id]/page.tsx`) prints claim status, each decision (kind, rules table, letter and note via `renderDecision`, payment), documents with statuses and waivers, and the claim's audit events. Computes nothing. The FR-06 invariant needs `requireOrg` as the first await. Not linked from anywhere: there is no claims list; add one if Shane wants it reachable from the nav.
 
 **2026-10-13 (4.11 done; 554 tests, `decisions:verify` OK (67)):** a draft's page ends in `Impact` (`impact.tsx`): deltas table (claim, before, after, reasons added/removed, cents), unhit rows, and a publish button carrying `diffHash` to `publishRuleDraft`. The page fetches the diff (`diffOf`) because the page tests render with `renderToStaticMarkup`, which cannot await. The author sees the button disabled with a line saying so; the service and database refuse anyway. Spec `e2e/rules-publish.spec.ts` (production build, ~1 min: it reseeds the decisions) passes. It truncates the rule tables, so run it alone and rerun `npm test` after.
 
