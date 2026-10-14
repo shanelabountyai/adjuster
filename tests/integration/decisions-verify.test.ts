@@ -203,4 +203,13 @@ describe('decisions:verify', () => {
     await tamper(`UPDATE "Decision" SET "overrideTier" = 'system' WHERE "id" = $1`, [ids['FG-05-signoff']]);
     expect(await codes()).toEqual(['OVERRIDE_UNAUTHORIZED']);
   });
+
+  it('a reseed blocked by another session\'s open transaction fails in 5s and names that session, rather than hanging the hook', async () => {
+    const holder = new pg.Client({ connectionString: process.env.DATABASE_URL, application_name: 'lock-holder' });
+    await holder.connect();
+    try {
+      await holder.query('BEGIN; SELECT 1 FROM "Claim" LIMIT 1');
+      await expect(seedDecisions(client)).rejects.toThrow(/waited 5s for a lock.*lock-holder/);
+    } finally { await holder.end(); }
+  });
 });

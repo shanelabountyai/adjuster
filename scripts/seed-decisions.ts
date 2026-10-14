@@ -85,13 +85,24 @@ export async function playEvent({ db, store, claimId, planVersionId, staff, vers
 export const seedOverrideReasons = (db: Db) => db.query(readFileSync('prisma/migrations/20261012020000_override_authority/migration.sql', 'utf8')
   .match(/INSERT INTO "OverrideReason"[^;]+/)![0] + ' ON CONFLICT DO NOTHING');
 
+/** A TRUNCATE that waited out lock_timeout, rethrown naming the sessions in the way: the suite's intermittent reseed hang (NEXT.md) leaves this evidence. */
+async function blockedBy(db: Db, e: unknown) {
+  if ((e as { code?: string }).code !== '55P03') return e;
+  const { rows } = await db.query(`SELECT pid, state, application_name, xact_start, left(query, 200) AS query FROM pg_stat_activity
+    WHERE datname = current_database() AND pid <> pg_backend_pid() AND state <> 'idle'`);
+  return new Error(`seedDecisions: TRUNCATE waited 5s for a lock. Other sessions: ${JSON.stringify(rows)}`, { cause: e });
+}
+
 export async function seedDecisions(db: Db, store: DocumentStore = new LocalDiskDocumentStore('uploads/documents')) {
-  await db.query('TRUNCATE "TierAssignment", "Payment", "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
-  // D89 c: the audit events of the rows just emptied go too, so a reseeded claim shows one life. AuditEvent refuses DELETE (INV-19), so the
-  // template's own events are kept aside, the table truncated and they are put back; one simple query is one transaction.
-  await db.query(`CREATE TEMP TABLE kept ON COMMIT DROP AS SELECT * FROM "AuditEvent"
-      WHERE "targetType" IS DISTINCT FROM 'Claim' AND "targetType" IS DISTINCT FROM 'RuleSetVersion' AND "action" <> 'authority.tier_assigned';
-    TRUNCATE "AuditEvent"; INSERT INTO "AuditEvent" SELECT * FROM kept`);
+  await db.query(`SET lock_timeout = '5s'`); // fail fast and name the holder rather than hang past the test hook's timeout
+  try {
+    await db.query('TRUNCATE "TierAssignment", "Payment", "ClaimReminder", "ClaimFact", "DocumentReview", "DocumentWaiver", "DocumentVersion", "Document", "Decision", "Claim", "Contract", "RuleSetVersion"'); // row triggers do not fire on TRUNCATE
+    // D89 c: the audit events of the rows just emptied go too, so a reseeded claim shows one life. AuditEvent refuses DELETE (INV-19), so the
+    // template's own events are kept aside, the table truncated and they are put back; one simple query is one transaction.
+    await db.query(`CREATE TEMP TABLE kept ON COMMIT DROP AS SELECT * FROM "AuditEvent"
+        WHERE "targetType" IS DISTINCT FROM 'Claim' AND "targetType" IS DISTINCT FROM 'RuleSetVersion' AND "action" <> 'authority.tier_assigned';
+      TRUNCATE "AuditEvent"; INSERT INTO "AuditEvent" SELECT * FROM kept`);
+  } catch (e) { throw await blockedBy(db, e); } finally { await db.query('RESET lock_timeout'); }
   await seedOverrideReasons(db);
   // Every directory under rules/ is a product, and every plan and ops file in it is published, oldest version first.
   const versions: Record<string, Record<string, string>> = {};

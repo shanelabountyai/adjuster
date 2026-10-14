@@ -16,15 +16,18 @@ const pool = '?connection_limit=10&pool_timeout=20'; // per-project cap on the s
 
 const targets = [
   { file: '.env.local', db: name, extra: ['DEMO_MODE=1'] },
-  { file: '.env.test', db: `${name}_test`, extra: [] },
+  { file: '.env.test', db: `${name}_test`, extra: [], test: true },
 ];
 
-async function ensureDb(dbName: string) {
+async function ensureDb(dbName: string, test = false) {
   const admin = new pg.Client({ connectionString: `${base}/postgres` });
   await admin.connect();
   try {
     const { rowCount } = await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [dbName]);
     if (!rowCount) await admin.query(`CREATE DATABASE "${dbName}"`);
+    // A reseed is ~1,500 commits; with each waiting on an fsync, one disk stall on the laptop pushed it past the 20s hook timeout and
+    // cascaded through decisions-verify (2026-10-14). A test database has nothing to lose in a crash, so commits do not wait.
+    if (test) await admin.query(`ALTER DATABASE "${dbName}" SET synchronous_commit = off`);
   } finally {
     await admin.end();
   }
@@ -32,7 +35,7 @@ async function ensureDb(dbName: string) {
 
 for (const t of targets) {
   const url = `${base}/${t.db}${pool}`;
-  await ensureDb(t.db);
+  await ensureDb(t.db, t.test);
   if (!existsSync(t.file)) {
     writeFileSync(
       t.file,
