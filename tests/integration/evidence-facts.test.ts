@@ -100,6 +100,21 @@ describe('evidence in the pipeline', () => {
     expect([n, (await readDocumentStatuses(client, 'E-EV-02')).docs.repairEstimate]).toEqual([1, 'received']);
   });
 
+  it('D89 b a pend decided while a document stands rejected tells the claimant why, and an earlier letter is unchanged', async () => {
+    await client.query(readFileSync('prisma/migrations/20261014000000_rejection_reason_wording/migration.sql', 'utf8').match(/INSERT INTO "DocumentRejectionReason"[^;]+/)![0]);
+    await play('E-EV-01', read('fixtures/ev/EV-01.json'));
+    const fnol = (await client.query('SELECT "id" FROM "Decision" WHERE "claimId" = $1', ['E-EV-01'])).rows[0].id;
+    const before = await renderDecision(client, fnol);
+    const estimate = await upload('E-EV-01', 'repairEstimate');
+    await reviewDocument(client, { versionId: estimate.versionId, result: 'rejected', reason: 'illegible', userId: STAFF });
+    const proof = await upload('E-EV-01', 'proofOfPurchase');
+    const r = await acceptEvidence(client, { versionId: proof.versionId, userId: STAFF }, '2025-09-20');
+    const { rows: [d] } = await client.query('SELECT "outcome", "facts" FROM "Decision" WHERE "id" = $1', [r.decisionId!]);
+    expect([d.outcome, d.facts['docs.repairEstimate']]).toEqual(['PEND', 'rejected']);
+    expect((await renderDecision(client, r.decisionId!)).letter).toContain('(§8.1) The copy you sent was not accepted because we could not read it.');
+    expect(await renderDecision(client, fnol)).toEqual(before);
+  });
+
 });
 
 const gc15: Life = read('fixtures/gc/GC-15.json');

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import pg from 'pg';
 import { publishRuleSet, verifyDecisions } from '@/adjudication/decisions';
@@ -89,10 +90,11 @@ describe('decisions:verify', () => {
   it('D89 c a second seed leaves one life per claim, and keeps audit events that are not the seed\'s', async () => {
     const lifeOf = async () => (await client.query(`SELECT count(*)::int AS n FROM "AuditEvent" WHERE "targetType" = 'Claim' AND "targetId" = 'GC-15'`)).rows[0].n;
     const once = await lifeOf();
-    await client.query(`INSERT INTO "AuditEvent" ("action", "targetType", "targetId", "data") VALUES ('project.created', 'project', 'p-kept', '{}')`);
+    const kept = randomUUID();
+    await client.query(`INSERT INTO "AuditEvent" ("action", "targetType", "targetId", "data") VALUES ('project.created', 'project', $1, '{}')`, [kept]);
     await seedDecisions(client);
     expect(await lifeOf()).toBe(once);
-    expect((await client.query(`SELECT 1 FROM "AuditEvent" WHERE "targetId" = 'p-kept'`)).rowCount).toBe(1);
+    expect((await client.query(`SELECT 1 FROM "AuditEvent" WHERE "targetId" = $1`, [kept])).rowCount).toBe(1);
   });
 
   it('D44 publish refuses an ops version a stored decision would select on replay, and takes a later one', async () => {

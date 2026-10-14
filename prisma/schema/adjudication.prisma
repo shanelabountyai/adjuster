@@ -91,9 +91,10 @@ model DocumentVersion {
 // Task 3.3, D54. The rejection reasons of domain brief §8, seeded by the migration. Data: a sixth is a row.
 // Task 4.7, D85: one list per product (§12 for the second), so the key is (product, code).
 model DocumentRejectionReason {
-  product String
-  code    String
-  reviews DocumentReview[]
+  product      String
+  code         String
+  claimantText String // D89 b: completes "The copy you sent was not accepted because ...". Frozen by trigger.
+  reviews      DocumentReview[]
 
   @@id([product, code])
 }

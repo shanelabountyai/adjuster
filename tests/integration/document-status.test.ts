@@ -33,7 +33,7 @@ beforeEach(async () => {
   for (const name of ['plan-v1', 'ops-v1', 'plan-v2', 'ops-v2']) versionIds[name] = await publishRuleSet(client, read(`rules/electronics/${name}.json`));
   // The template's resetDb truncates every table, the migration's reference rows included, so whether they are still
   // there depends on which file ran first. Put back exactly what the migration seeds, by running its own statement.
-  await client.query(readFileSync('prisma/migrations/20261013020000_rejection_reason_product/migration.sql', 'utf8').match(/INSERT INTO "DocumentRejectionReason"[^;]+/)![0]);
+  await client.query(readFileSync('prisma/migrations/20261014000000_rejection_reason_wording/migration.sql', 'utf8').match(/INSERT INTO "DocumentRejectionReason"[^;]+/)![0]);
   staff = await staffAt(client, TIERS);
   root = await mkdtemp(join(tmpdir(), 'adjuster-docs-'));
   store = new LocalDiskDocumentStore(root);
@@ -195,6 +195,9 @@ describe('the database rules', () => {
     // D85: each product has its own list (domain brief §12). The claim here is on an electronics plan, so furniture's reason is refused.
     expect(await reasons('furniture')).toEqual(['date_inconsistent', 'illegible', 'incomplete', 'item_mismatch', 'wrong_document']);
     expect((await client.query(`SELECT DISTINCT "product" FROM "DocumentRejectionReason"`)).rowCount).toBe(2);
+    // D89 b: every reason has claimant wording, and the wording is frozen, since letters already rendered read it
+    expect((await client.query(`SELECT 1 FROM "DocumentRejectionReason" WHERE "claimantText" = ''`)).rowCount).toBe(0);
+    await expect(client.query(`UPDATE "DocumentRejectionReason" SET "claimantText" = 'changed' WHERE "code" = 'illegible'`)).rejects.toThrow(/frozen/);
     const id = await claim('DS-reason');
     const v = await upload(id, 'repairEstimate');
     await expect(reject(v.versionId, 'smudged')).rejects.toMatchObject({ constraint: 'DocumentReview_reasonCode_fkey' });

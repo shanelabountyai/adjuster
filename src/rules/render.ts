@@ -13,6 +13,8 @@ export type DecisionRecord = {
   facts: Record<string, unknown>; // the stored snapshot the decision was made on
   documents: { type: string; version: number; versionId: string; sha256: string }[];
   waivers: { type: string; tier: string; asOf: string; by: string | null; reasonText: string }[];
+  // D89 b: the documents the snapshot shows as rejected, with the reason's claimant wording.
+  rejections: { type: string; version: number; claimantText: string }[];
   // An override row carries the engine's trace (D59 c): its own date, amount, author and authority are columns.
   // On the engine row an appeal's decision wrote (D75): who decided the appeal.
   appeal?: { by: string; tier: string } | null;
@@ -54,15 +56,20 @@ const HEAD = {
  * referral reads as the approval it is (D59 b), on the override's date, with none of the referral's reasons and
  * nothing of who signed or why (D62).
  */
-export function renderLetter(t: Trace, rec?: Pick<DecisionRecord, 'override' | 'appeal'>): string {
+export function renderLetter(t: Trace, rec?: Partial<Pick<DecisionRecord, 'override' | 'appeal' | 'rejections'>>): string {
   const { reasons, payableCents, contractFulfilled } = t.decision;
   const outcome = rec?.override ? 'APPROVE' : t.decision.outcome;
   // D42: a referral shows the neutral sentence only, even when the rule that referred it has claimant text (GC-10).
+  // D89 b: a pend line that asks for a document the claimant sent and we rejected says why, from the reason's frozen wording.
+  const rejected = (r: Rule) => {
+    const x = outcome === 'PEND' ? rec?.rejections?.find((j) => r.factsRead[`docs.${j.type}`] === 'rejected') : undefined;
+    return x ? ` The copy you sent was not accepted because ${x.claimantText}.` : '';
+  };
   const shown = rec?.override || outcome === 'REFER' ? [] : t.rules.filter((r) => reasons.includes(r.ruleId) && r.claimantVisible && r.claimantText !== null);
   if (outcome === 'DENY' && shown.length === 0) throw new Error('a denial letter needs at least one claimant-visible reason');
   const lines = [
     `Decision as of ${rec?.override?.asOf ?? t.asOf}: ${outcome === 'DENY' ? `Denied for ${shown.length} reason${shown.length === 1 ? '' : 's'}.` : HEAD[outcome]}`,
-    ...shown.map((r, i) => `(${i + 1}) ${fill(r.claimantText!, r.vars)}${r.clause ? ` (${r.clause})` : ''}`),
+    ...shown.map((r, i) => `(${i + 1}) ${fill(r.claimantText!, r.vars)}${r.clause ? ` (${r.clause})` : ''}${rejected(r)}`),
   ];
   if (outcome === 'APPROVE' || outcome === 'PARTIAL') {
     const { steps, labels } = t.valuation!;

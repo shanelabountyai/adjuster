@@ -88,7 +88,7 @@ describe('renderLetter', () => {
 describe('the decision row (3.11, D62)', () => {
   const override = { overridesId: 'engine-row', asOf: '2025-02-04', payableCents: 37500, by: 'u-1', tier: 'adjuster', totalIncurredCents: 37500,
     opsHash: 'f'.repeat(64), reasonCode: 'FLAG_CLEARED', reasonText: 'Receipt reissued by the retailer; original sale confirmed.' };
-  const rec = { decisionId: 'override-row', engine: 'adjuster.engine/7', waivers: [], facts: read('fixtures/gc/GC-12.json').facts as Record<string, unknown>,
+  const rec = { decisionId: 'override-row', engine: 'adjuster.engine/7', waivers: [], rejections: [], facts: read('fixtures/gc/GC-12.json').facts as Record<string, unknown>,
     documents: [{ type: 'proofOfPurchase', version: 2, versionId: 'dv-1', sha256: 'a'.repeat(64) }] };
 
   it('GC-12 signed off: the letter is the approval with its math, on the override date, and says nothing of flags, reason or signer', () => {
@@ -136,6 +136,15 @@ describe('the decision row (3.11, D62)', () => {
     };
     expect(pend('docs.repairEstimate').split('\n').slice(1, 3)).toEqual(['(1) We need: repair estimate or diagnostic. (§8.1)', 'Please send us what is listed above. We will decide your claim when we have it.']);
     expect(pend('claim.serialMatchesContract').split('\n').slice(1, 2)).toEqual(['You do not need to send anything now. We will contact you if we need something from you.']);
+  });
+
+  it('D89 b a pend line asking for a document we rejected says why, from the reason\'s wording; another outcome or type does not', () => {
+    const fx = read('fixtures/gc/GC-01.json');
+    const t = adjudicate({ plan: rs(fx.plan), ops: rs(fx.ops), dict: dict!, snapshot: { ...fx.facts, 'docs.repairEstimate': 'rejected' }, asOf: fx.asOf });
+    const rejections = [{ type: 'repairEstimate', version: 1, claimantText: 'we could not read it' }];
+    expect(renderLetter(t, { rejections }).split('\n')[1]).toBe('(1) We need: repair estimate or diagnostic. (§8.1) The copy you sent was not accepted because we could not read it.');
+    expect(renderLetter(t, { rejections: [{ ...rejections[0]!, type: 'proofOfPurchase' }] })).not.toContain('not accepted');
+    expect(renderLetter(gc('01'), { rejections })).not.toContain('not accepted');
   });
 });
 

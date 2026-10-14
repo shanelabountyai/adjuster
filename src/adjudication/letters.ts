@@ -5,13 +5,13 @@ import type { Db } from './decisions';
 
 // Task 3.11 (D62). What a letter or note says beyond the trace is read here from stored rows: the decision's own
 // columns, the document versions it names, and the waivers its fact snapshot shows it relied on. Nothing here reads a
-// rule set, a current status or a clock, and every row read is insert-only.
+// rule set, a current status or a clock, and every row read is insert-only or frozen (a rejection reason, D89 b).
 
 type Row = {
   claimId: string; explanation: unknown; engineSemanticsVersion: string; documentVersions: string[]; facts: Record<string, unknown>;
   asOf: string; payableCents: number | null; opsHash: string; overridesId: string | null; overrideBy: string | null; overrideTier: string | null;
   overrideTotalIncurredCents: number | null; overrideReasonCode: string | null; overrideReasonText: string | null;
-  appealBy: string | null; appealTier: string | null;
+  appealBy: string | null; appealTier: string | null; createdAt: Date;
 };
 
 export async function readDecisionRecord(db: Db, decisionId: string): Promise<{ trace: Trace; record: DecisionRecord }> {
@@ -24,10 +24,18 @@ export async function readDecisionRecord(db: Db, decisionId: string): Promise<{ 
   const waivers = (await db.query<DecisionRecord['waivers'][number]>(
     `SELECT "type", "tier", "asOf"::text AS "asOf", "waivedBy" AS "by", "reasonText" FROM "DocumentWaiver"
      WHERE "claimId" = $1 AND $2::jsonb ->> ('docs.' || "type") = 'waived' ORDER BY "type"`, [d.claimId, JSON.stringify(d.facts)])).rows;
+  // D89 b: a type the snapshot shows as `rejected` was rejected by the review of its latest version made before this decision.
+  const rejections = (await db.query<DecisionRecord['rejections'][number]>(
+    `SELECT DISTINCT ON (d."type") d."type", v."version", rr."claimantText"
+     FROM "Document" d JOIN "DocumentVersion" v ON v."documentId" = d."id"
+       JOIN "DocumentReview" rv ON rv."versionId" = v."id" AND rv."result" = 'rejected'
+       JOIN "DocumentRejectionReason" rr ON rr."product" = rv."reasonProduct" AND rr."code" = rv."reasonCode"
+     WHERE d."claimId" = $1 AND $2::jsonb ->> ('docs.' || d."type") = 'rejected' AND rv."reviewedAt" <= $3
+     ORDER BY d."type", v."version" DESC`, [d.claimId, JSON.stringify(d.facts), d.createdAt])).rows;
   return {
     trace: traceSchema.parse(d.explanation),
     record: {
-      decisionId, engine: d.engineSemanticsVersion, facts: d.facts, documents, waivers,
+      decisionId, engine: d.engineSemanticsVersion, facts: d.facts, documents, waivers, rejections,
       appeal: d.appealBy === null ? null : { by: d.appealBy, tier: d.appealTier! },
       override: d.overridesId === null ? null : {
         overridesId: d.overridesId, asOf: d.asOf, payableCents: d.payableCents!, by: d.overrideBy, tier: d.overrideTier!,
