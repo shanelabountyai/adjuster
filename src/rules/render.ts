@@ -57,7 +57,8 @@ const HEAD = {
 export function renderLetter(t: Trace, rec?: Pick<DecisionRecord, 'override' | 'appeal'>): string {
   const { reasons, payableCents, contractFulfilled } = t.decision;
   const outcome = rec?.override ? 'APPROVE' : t.decision.outcome;
-  const shown = rec?.override ? [] : t.rules.filter((r) => reasons.includes(r.ruleId) && r.claimantVisible && r.claimantText !== null);
+  // D42: a referral shows the neutral sentence only, even when the rule that referred it has claimant text (GC-10).
+  const shown = rec?.override || outcome === 'REFER' ? [] : t.rules.filter((r) => reasons.includes(r.ruleId) && r.claimantVisible && r.claimantText !== null);
   if (outcome === 'DENY' && shown.length === 0) throw new Error('a denial letter needs at least one claimant-visible reason');
   const lines = [
     `Decision as of ${rec?.override?.asOf ?? t.asOf}: ${outcome === 'DENY' ? `Denied for ${shown.length} reason${shown.length === 1 ? '' : 's'}.` : HEAD[outcome]}`,

@@ -95,8 +95,8 @@ describe('the decision row (3.11, D62)', () => {
     const letter = renderLetter(gc('12'), { override });
     expect(letter.split('\n')).toEqual(expect.arrayContaining(['Decision as of 2025-02-04: Approved.', 'Less your deductible: $400.00 − $25.00 = $375.00', 'Amount payable: $375.00.']));
     expect(letter).not.toMatch(/\bF\d+\b|FLAG|Receipt|retailer|adjuster|u-1|review/);
-    // GC-10 refers on a rule that has claimant text: once signed off, the referral's reason is not a reason of the approval
-    expect(renderLetter(gc('10'))).toContain('(1) The product identified does not match the covered product. (§8.2)');
+    // GC-10 refers on a rule that has claimant text: the referral shows only the neutral sentence (D42), and signed off, the referral's reason is not a reason of the approval
+    expect(renderLetter(gc('10'))).toBe(`Decision as of ${gc('10').asOf}: Your claim needs review by an adjuster. No decision has been made yet.\n`);
     expect(renderLetter(gc('10'), { override })).not.toMatch(/\(1\)|does not match/);
   });
 

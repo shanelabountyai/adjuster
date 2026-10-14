@@ -200,7 +200,7 @@ Open after 3.9:
 
 Open after 3.11:
 - ~~The note does not print the dates behind a flag~~ settled in D62 (h): the note prints the stored snapshot.
-- **A referral letter prints a visible rule's claimant text under the neutral sentence.** GC-10 refers on E5, whose row has claimant text, so its letter reads "needs review" then "(1) The product identified does not match the covered product. (§8.2)". D42 says a referral shows only the neutral sentence; the code since 2.9 shows any visible deciding rule. Not changed in 3.11.
+- **A referral letter prints a visible rule's claimant text under the neutral sentence.** GC-10 refers on E5, whose row has claimant text, so its letter reads "needs review" then "(1) The product identified does not match the covered product. (§8.2)". D42 says a referral shows only the neutral sentence; the code since 2.9 shows any visible deciding rule. Not changed in 3.11. *Settled in 4.13 (Shane, 2026-10-14): the code follows D42; a referral letter is the neutral sentence only.*
 - **A pend letter does not say a sent document was rejected.** The rejection reasons are codes with no claimant wording (and two of them, `serial_mismatch` and `date_inconsistent`, read as suspicion), and a document type has claimant wording only inside its own rule row. Needs wording in rule data or the reference table, not code.
 - **Nothing serves a letter or note yet**: `renderDecision(db, decisionId)` has no caller outside its test. The authoring and review screens are Phase 4.
 
