@@ -29,7 +29,7 @@ const fill = (template: string, vars: Rule['vars']) => template.replace(/\{(\w+)
 
 // Two decimals from an integer (cents → dollars, bps → percent). Integer arithmetic only.
 const dec2 = (n: number) => `${(n - (n % 100)) / 100}.${String(n % 100).padStart(2, '0')}`;
-const money = (cents: number) => `${cents < 0 ? '-' : ''}$${dec2(Math.abs(cents))}`;
+export const money = (cents: number) => `${cents < 0 ? '-' : ''}$${dec2(Math.abs(cents))}`;
 
 function mathLine(s: Step, label: string) {
   const [a, v, out] = [s.inputCents!, s.operand?.value ?? 0, money(s.outputCents!)];
