@@ -4,7 +4,15 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+    # Docs-only pushes cost Actions minutes and test nothing (2026-10-15).
+    paths-ignore: ['docs/**', '**.md']
   pull_request:
+    paths-ignore: ['docs/**', '**.md']
+
+# A newer push supersedes a running one; no point finishing the old run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ci:
