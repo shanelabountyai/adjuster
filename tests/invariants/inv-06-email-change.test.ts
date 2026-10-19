@@ -44,9 +44,11 @@ describe('INV-06 changing an email', () => {
     expect(await confirmEmailChange((await currentSession())!, token)).toBe(false);
   });
 
-  it('an address that belongs to another user is refused', async () => {
+  it('an address that belongs to another user gets no confirm link, and no different answer (D-10)', async () => {
     await makeUser('taken@example.test');
     await signInAs((await makeUser('ada@example.test')).id);
-    await expect(requestEmailChange((await currentSession())!, 'Taken@Example.test')).rejects.toThrow('another account');
+    await expect(requestEmailChange((await currentSession())!, 'Taken@Example.test')).resolves.toBeUndefined();
+    expect(await db.loginToken.count({ where: { purpose: 'email_change' } })).toBe(0);
+    expect(await db.capturedMessage.count({ where: { to: 'taken@example.test' } })).toBe(0);
   });
 });

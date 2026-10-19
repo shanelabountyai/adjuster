@@ -41,6 +41,7 @@ by a read-only audit agent, not re-checked by me. `UNVERIFIED` = nobody confirme
 | D-18 | **M7 build choices (2026-09-24), taken as defaults.** (a) The drain claims one row at a time with `FOR UPDATE SKIP LOCKED` inside a transaction that also sends and records the result: overlapping drains never double-send, and delivery is **at-least-once** (a crash between the provider accepting and the commit resends). (b) Failure backs off 1/5/30/120 min, and after 5 attempts the row stays unsent with `lastError`. (c) Templates are code (`templates.ts`), looked up at drain time; `enqueue` rejects an unknown name at the call site. (d) SMS copies email's gating: real Twilio sends only in production or to `SMS_SANDBOX_TO`, else a `CapturedMessage` with subject `sms`; `SMS_ENABLED=0` is the kill switch. (e) `/api/cron` drains up to 25 per hourly run and deletes sent rows after 7 days. No boot-time throw for missing Twilio keys, since SMS is optional: the drain records the failure instead. | Found while building M7. Each is reversible. |
 | D-19 | **M8 build choices (2026-09-25), taken as defaults.** (a) `new-project` leaves `FOUNDATION_VERSION` alone: it records the release the clone started from, and drift diffs against it (§11 said it rewrites it). It rewrites `package.json`, `playwright.config.ts`, the CI file and `README.md`. (b) `db:setup` also creates and migrates the test database and writes `.env.local`/`.env.test` if missing (local URLs, a random `AUTH_SECRET`, never printed), so a clone reaches `npm test` with one command. (c) Module cron work moved to the clone-owned `src/app/cron-jobs.ts`, so removing `notifications` never edits the template-owned `/api/cron`. Building the module-removal check found that its first version left a function with no return. (d) `foundation:drift` is a no-op in the template itself; `--base <ref>` overrides `FOUNDATION_VERSION` (the removal check uses `--base HEAD`). Untracked files are not seen (`git diff` limit). (e) The removal check runs on pushes to `main` and on `v*` tags, not only per release: a broken removal shows the day it breaks. (f) `seed.ts` and `drain-outbox.ts` from the §5 tree are not built: nothing needs them. (g) The `/demo` route checks the flag and `demoSignIn` checks it again; mutating out only the route's check leaves INV-27 green by design. | Defaults the plan left open; each was the smallest thing that meets §13. |
 | D-20 | **No cookie consent in the foundation; it sets strictly necessary cookies only** (`session`, `totp_pending`), and those are exempt from consent under ePrivacy Art. 5(3). The cookie consent manager PRD (2026-09-19) is **parked**. **Trigger:** the first project to add a non-essential tracker (GA, ads, PostHog, Hotjar, a Meta pixel) revives it, and it then lands as a shared package under D-7, not as a clone-owned module. Fix these before building it: handhold is Vite, not Next.js; `request.geo` was removed in Next 15 (use `@vercel/functions` `geolocation()`); a private package can't be installed from a public portfolio repo; opting in everywhere and honoring GPC removes the need for geo-branching; and the 2026 legal claims are unverified. | 2026-09-26, Shane. A 2026-09-26 sweep of `~/Projects` found one tracker, `@vercel/analytics` in Use-Case Studio, which is cookieless. |
+| D-21 | **A `scorekeeper` role holding only `results.write` (v1.3.0, 2026-10-14).** Owner and admin hold `results.write` too; member does not. Core checks it nowhere: a clone gates its own result entry on it, so a volunteer can enter scores without `org.update`. A scorekeeper is not MFA-gated: the guard's MFA line is now an explicit owner/admin list (it was `role !== 'member'`, which would have gated any new role), which matches INV-22's wording. `revokeInvitesBeyond` reads the role list from the enum, not a hard-coded three. The members page and `z.enum(Role)` pick the role up unchanged; `mayAssign` lets an admin grant it. | Shane, 2026-10-14: asked for by bracketry (its D-30). Names `results.write`/`scorekeeper` over a generic `records.write`/`contributor`; no MFA over MFA-required. |
 
 ---
 
@@ -437,6 +438,12 @@ currentSession(): Promise<SessionCtx | null>               // React cache(); one
 **Demo sign-in (D-8):** `/demo` exists only when `DEMO_MODE=1`, and otherwise returns 404. It lists `isDemo` users; a POST writes a
 Session row with `mfaAt` set. It refuses any user where `isDemo = false`. Only `scripts/seed-demo.ts` sets `isDemo`,
 and that script refuses a non-local database unless `ALLOW_CLOUD_DB=1` (INV-27).
+A demo account is shared by every visitor and its TOTP seed is public, so (2026-10-12): an `isDemo` user's session resolves
+only while `DEMO_MODE=1`, however it was made; and a demo session is refused org and account deletion, email change, TOTP
+changes, sign-out-everywhere, and inviting, re-roling or removing members (`assertNotDemo` in `core/auth/session.ts`).
+Since 2026-10-13 it is also refused creating an org (`createOrg`) and, where the billing module is present, checkout and the
+billing portal (the guard is in the module's own `settings/billing/actions.ts`, so it goes with the module). Adding projects
+and creating or revoking share links stay open to it.
 
 ### 7b. Authorization
 
@@ -444,11 +451,12 @@ and that script refuses a non-local database unless `ALLOW_CLOUD_DB=1` (INV-27).
 // src/core/authz/permissions.ts — pure, no I/O
 export type Permission =
   | 'org.update' | 'org.delete' | 'members.manage' | 'billing.manage'
-  | 'share.create' | 'share.revoke' | 'audit.read'
+  | 'share.create' | 'share.revoke' | 'audit.read' | 'results.write'
 const grants: Record<Role, readonly Permission[]> = {
-  owner:  ['org.update','org.delete','members.manage','billing.manage','share.create','share.revoke','audit.read'],
-  admin:  ['org.update','members.manage','share.create','share.revoke','audit.read'],
+  owner:  ['org.update','org.delete','members.manage','billing.manage','share.create','share.revoke','audit.read','results.write'],
+  admin:  ['org.update','members.manage','share.create','share.revoke','audit.read','results.write'],
   member: ['share.create'],
+  scorekeeper: ['results.write'],   // D-21
 }
 export const can = (role: Role, p: Permission) => grants[role].includes(p)
 ```

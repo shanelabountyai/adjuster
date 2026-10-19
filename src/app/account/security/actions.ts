@@ -2,7 +2,7 @@
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { requestEmailChange } from '@/core/auth/link';
-import { signOut, signOutEverywhere } from '@/core/auth/session';
+import { assertNotDemo, signOut, signOutEverywhere } from '@/core/auth/session';
 import { confirmTotp, disableTotp, enrolTotp } from '@/core/auth/totp';
 import { userAction } from '@/core/authz/action';
 import { deleteAccount } from '@/core/tenancy/delete';
@@ -31,6 +31,7 @@ export const signOutHere = userAction(none, async () => {
 });
 
 export const signOutAll = userAction(none, async (s) => {
+  assertNotDemo(s); // every /demo visitor shares the account: this would sign them all out
   await signOutEverywhere(s.userId);
   redirect('/');
 });

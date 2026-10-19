@@ -1,6 +1,7 @@
 'use server';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
+import { assertNotDemo } from '@/core/auth/session';
 import { orgAction } from '@/core/authz/action';
 import type { OrgCtx } from '@/core/authz/guards';
 import { db } from '@/core/db';
@@ -18,6 +19,7 @@ const customerOf = async (ctx: OrgCtx) => (await accountOf(ctx))?.stripeCustomer
 // subscriptions; the webhook keeps the first and logs `billing.second_subscription` (FR-04).
 // Store a pending checkout id if that ever happens for real.
 export const startCheckout = orgAction('billing.manage', z.object({ attempt: z.string().regex(/^[\w-]{16,64}$/) }), async (ctx, i) => {
+  assertNotDemo(ctx.session); // a /demo visitor must not subscribe the shared org, or reach its Stripe customer below
   const acct = await accountOf(ctx);
   if (isLive(acct?.status)) throw new Refused('This org already has a subscription. Change it from Manage billing.');
   const url = await paymentProvider().checkout({
@@ -31,6 +33,7 @@ export const startCheckout = orgAction('billing.manage', z.object({ attempt: z.s
 });
 
 export const openPortal = orgAction('billing.manage', z.object({}), async (ctx) => {
+  assertNotDemo(ctx.session);
   const customerId = await customerOf(ctx);
   if (!customerId) throw new Refused('There is no billing account to manage yet.');
   redirect(await paymentProvider().portal({ customerId, returnUrl: returnUrl(ctx) }));

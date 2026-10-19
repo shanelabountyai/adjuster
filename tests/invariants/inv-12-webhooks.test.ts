@@ -1,13 +1,21 @@
 import { createHmac } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// env.ts parses process.env at import; the demo case at the bottom needs a demo session to resolve.
+vi.hoisted(() => { process.env.DEMO_MODE = '1'; });
+
+import { demoSignIn } from '@/core/auth/demo';
+import { SESSION_COOKIE } from '@/core/auth/session';
 import { now } from '@/core/clock';
 import { db } from '@/core/db';
 import { mockProvider, stripeProvider } from '@/modules/billing/provider';
 import { destroyOrg } from '@/app/o/[org]/settings/danger/actions';
-import { startCheckout } from '@/app/o/[org]/settings/billing/actions';
+import { openPortal, startCheckout } from '@/app/o/[org]/settings/billing/actions';
 import { handlers, receiveStripeWebhook, type StripeEvent } from '@/modules/billing/webhook';
 import { resetAuthTables } from '../helpers/auth';
 import { actAs, addMember, makeOrg } from '../helpers/org';
+import { jar } from '../helpers/next';
+import { seedDemo } from '../../scripts/seed-demo';
 
 beforeEach(resetAuthTables);
 afterEach(() => vi.restoreAllMocks());
@@ -193,5 +201,24 @@ describe('Idempotency-Key on Stripe creates', () => {
     await p.checkout(input); // a retry of the same attempt
     await p.portal({ customerId: 'cus_1', returnUrl: 'http://app.test/b' });
     expect(sent.map((h) => h.get('idempotency-key'))).toEqual(['checkout:o1:attempt-1', 'checkout:o1:attempt-1', null]);
+  });
+});
+
+// Owner decision 2026-10-13, with the rest of the demo rules in tests/integration/review-2026-10-12-demo.test.ts:
+// a /demo visitor must not open a checkout or the Stripe portal for the shared demo org.
+describe('a demo session cannot use billing', () => {
+  it('checkout and the portal are refused before the provider is called', async () => {
+    await seedDemo();
+    const owner = await db.user.findUniqueOrThrow({ where: { email: 'owner@acme.demo.test' } });
+    const org = await db.org.findUniqueOrThrow({ where: { slug: 'acme' } });
+    await deliver(subEvent(org.id, { status: 'canceled' })); // a customer id on file, so the portal has somewhere to go
+    jar.set(SESSION_COOKIE, (await demoSignIn(owner.id))!);
+    const checkout = vi.spyOn(mockProvider, 'checkout');
+    const portal = vi.spyOn(mockProvider, 'portal');
+    const DEMO = { error: expect.stringMatching(/shared demo account/) };
+    expect(await startCheckout('acme', { attempt: 'attempt-0123456789abcdef' })).toEqual(DEMO);
+    expect(await openPortal('acme', {})).toEqual(DEMO);
+    expect(checkout).not.toHaveBeenCalled();
+    expect(portal).not.toHaveBeenCalled();
   });
 });

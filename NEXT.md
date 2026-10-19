@@ -15,3 +15,7 @@ Gate at the end of phase 1: typecheck, lint and `rules:lint` OK; `npm test` 571/
 **The decisions-verify reseed hang is diagnosed (2026-10-14).** It was not a lock. A reseed makes ~1,480 commits, and with `synchronous_commit=on` each one waits on an fsync. During a laptop disk stall (Postgres log: a checkpoint syncing 44,846 files took 45s) each reseed went from ~1s to 17-20s. The first one past the 20s hook timeout kept running on the shared client while the next hook started, so the failures cascaded (`duplicate key`, `current transaction is aborted`). Fixes: `adjuster_test` now has `synchronous_commit=off` (applied, and set by `scripts/db-setup.ts`), and the reseed's TRUNCATE has a 5s `lock_timeout` that names the session holding the lock, so a real lock wait now fails fast with evidence. Not proven by a stalled run, since a disk stall can't be forced. If it recurs, check `grep "checkpoint complete" /opt/homebrew/var/log/postgresql@17.log` for that minute.
 
 Phase 4 closure URLs are in `docs/RELEASE_NOTES.md`.
+
+## saas-foundation v1.3.0 upgrade on a branch (2026-10-19)
+
+Branch `foundation-v1.3.0` merges v1.2.1 + v1.3.0 (security release, due 2026-10-21) and awaits review and merge; it is not on main. After merge: `npm run db:migrate` (adds the `scorekeeper` enum value), then update adjuster's row in the template's `CLONES.md` to v1.3.0.

@@ -26,7 +26,7 @@ export async function requireOrg(orgSlug: string, perm?: Permission): Promise<Or
     : null;
   if (!m) notFound();
   // requireUser already sent an enrolled user without mfaAt to /login/mfa; this catches the unenrolled.
-  if (m.role !== 'member' && !(session.totpEnrolled && session.mfaAt)) redirect('/account/security?mfa=required');
+  if ((m.role === 'owner' || m.role === 'admin') && !(session.totpEnrolled && session.mfaAt)) redirect('/account/security?mfa=required');
   if (perm && !can(m.role, perm)) throw new AuthzError(perm);
   return { userId: session.userId, orgId: m.orgId, slug: orgSlug, role: m.role, session };
 }

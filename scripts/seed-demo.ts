@@ -6,7 +6,8 @@ import type { Role } from '@/generated/prisma/enums';
 
 // Demo data (spec §7, D-8): two orgs, an owner, admin and member in each. Only this script sets `isDemo`,
 // and the cloud guard in `@/core/db` refuses a non-local database unless ALLOW_CLOUD_DB=1.
-// The TOTP secret is a fixed, public demo value: known credentials are fine because this seed cannot reach production.
+// The TOTP secret is a fixed, public demo value. That is safe only because of two rules in core/auth/session.ts:
+// an `isDemo` user's session resolves only while DEMO_MODE=1, and a demo session cannot change its email or TOTP.
 export const DEMO_TOTP_SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';
 
 const ORGS = [

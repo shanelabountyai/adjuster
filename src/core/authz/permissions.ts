@@ -1,12 +1,14 @@
 import type { Role } from '@/generated/prisma/enums';
 
 // Pure, no I/O (spec §7b). Unknown roles get nothing.
-export type Permission = 'org.update' | 'org.delete' | 'members.manage' | 'billing.manage' | 'share.create' | 'share.revoke' | 'audit.read';
+export type Permission = 'org.update' | 'org.delete' | 'members.manage' | 'billing.manage' | 'share.create' | 'share.revoke' | 'audit.read' | 'results.write';
 
 const grants: Record<Role, readonly Permission[]> = {
-  owner: ['org.update', 'org.delete', 'members.manage', 'billing.manage', 'share.create', 'share.revoke', 'audit.read'],
-  admin: ['org.update', 'members.manage', 'share.create', 'share.revoke', 'audit.read'],
+  owner: ['org.update', 'org.delete', 'members.manage', 'billing.manage', 'share.create', 'share.revoke', 'audit.read', 'results.write'],
+  admin: ['org.update', 'members.manage', 'share.create', 'share.revoke', 'audit.read', 'results.write'],
   member: ['share.create'],
+  // D-21: enters and corrects a clone's results and nothing else; core checks results.write nowhere.
+  scorekeeper: ['results.write'],
 };
 
 export const can = (role: Role, p: Permission) => grants[role]?.includes(p) ?? false;
