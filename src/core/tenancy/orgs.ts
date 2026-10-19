@@ -1,14 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import { notFound } from 'next/navigation';
 import { audit } from '@/core/audit';
-import type { SessionCtx } from '@/core/auth/session';
+import { assertNotDemo, type SessionCtx } from '@/core/auth/session';
 import { AuthzError, type OrgCtx } from '@/core/authz/guards';
 import { mayAssign } from '@/core/authz/permissions';
 import { now } from '@/core/clock';
 import { db } from '@/core/db';
 import { Refused } from '@/core/errors';
 import type { Prisma } from '@/generated/prisma/client';
-import type { Role } from '@/generated/prisma/enums';
+import { Role } from '@/generated/prisma/enums';
 
 type Tx = Prisma.TransactionClient;
 
@@ -17,6 +17,7 @@ const slugify = (name: string) =>
 
 /** Creates an org with the caller as its owner; returns the slug. A taken slug gets a random suffix. */
 export async function createOrg(s: SessionCtx, name: string): Promise<string> {
+  assertNotDemo(s); // an org made by the shared account belongs to every /demo visitor and is never cleaned up
   const base = slugify(name);
   for (let i = 0; i < 5; i++) {
     const slug = i === 0 ? base : `${base}-${randomBytes(3).toString('hex')}`;
@@ -52,6 +53,7 @@ export async function assertOwnerRemains(tx: Tx, orgId: string, losingUserId: st
  * the guard read them. A target outside this org is notFound, like any other id (INV-02/04).
  */
 async function withMembers(ctx: OrgCtx, userId: string, fn: (tx: Tx, actor: Role, target: Role) => Promise<void>) {
+  assertNotDemo(ctx.session);
   await db.$transaction(async (tx) => {
     await lockOrg(tx, ctx.orgId);
     const [actor, target] = await Promise.all(
@@ -62,6 +64,16 @@ async function withMembers(ctx: OrgCtx, userId: string, fn: (tx: Tx, actor: Role
   });
 }
 
+/**
+ * Revokes the pending invites `userId` sent that their new `role` (null: no longer a member) could not
+ * send. `acceptInvite` refuses these anyway; this keeps them out of the pending lists.
+ */
+const revokeInvitesBeyond = (tx: Tx, orgId: string, userId: string, role: Role | null) =>
+  tx.invite.updateMany({
+    where: { orgId, invitedById: userId, acceptedAt: null, revokedAt: null, ...(role && { role: { in: Object.values(Role).filter((r) => !mayAssign(role, null, r)) } }) },
+    data: { revokedAt: now() },
+  });
+
 /** D-11 in core, not the UI: only an owner grants, changes or removes `owner` (INV-28). */
 export async function changeRole(ctx: OrgCtx, userId: string, role: Role) {
   await withMembers(ctx, userId, async (tx, actor, from) => {
@@ -69,6 +81,7 @@ export async function changeRole(ctx: OrgCtx, userId: string, role: Role) {
     if (from === role) return;
     if (from === 'owner') await assertOwnerRemains(tx, ctx.orgId, userId);
     await tx.membership.update({ where: { orgId_userId: { orgId: ctx.orgId, userId } }, data: { role } });
+    await revokeInvitesBeyond(tx, ctx.orgId, userId, role);
     await audit(ctx, 'member.role_changed', { targetType: 'user', targetId: userId, data: { from, to: role } }, tx);
   });
 }
@@ -83,6 +96,7 @@ export async function removeMember(ctx: OrgCtx, userId: string) {
     // K6: a share link outlives its creator's membership otherwise — anyone still holding the
     // URL keeps read access to the org's resource after the person who shared it is gone.
     await tx.shareLink.updateMany({ where: { orgId: ctx.orgId, createdById: userId, revokedAt: null }, data: { revokedAt: now() } });
+    await revokeInvitesBeyond(tx, ctx.orgId, userId, null);
     await audit(ctx, self ? 'member.left' : 'member.removed', { targetType: 'user', targetId: userId, data: { role: from } }, tx);
   });
 }

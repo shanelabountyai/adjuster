@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { now } from '@/core/clock';
 import { db } from '@/core/db';
+import { env } from '@/core/env';
 import { Refused } from '@/core/errors';
 import { hashToken, newToken } from '@/core/tokens';
 
@@ -26,6 +27,7 @@ export type SessionCtx = {
   authAt: Date;
   mfaAt: Date | null;
   totpEnrolled: boolean;
+  isDemo: boolean;
 };
 
 /** Thrown when an action needs a sign-in within the last 5 minutes (INV-26). */
@@ -48,15 +50,18 @@ export async function setSessionCookie(token: string) {
   (await cookies()).set(SESSION_COOKIE, token, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: TTL_MS / 1000, secure: true });
 }
 
-export async function sessionFor(token: string | undefined): Promise<SessionCtx | null> {
+export async function sessionFor(token: string | undefined, e: { DEMO_MODE?: string } = env): Promise<SessionCtx | null> {
   if (!token) return null;
   const s = await db.session.findUnique({
     where: { hash: hashToken(token) },
-    include: { user: { select: { email: true, totpEnrolledAt: true } } },
+    include: { user: { select: { email: true, totpEnrolledAt: true, isDemo: true } } },
   });
   if (!s || s.expiresAt <= now()) return null;
+  // A demo account's TOTP seed is public (scripts/seed-demo.ts), so with the flag off it must be no login at
+  // all, whichever way the session was made: /demo before the flag went off, or a sign-in link (INV-27).
+  if (s.user.isDemo && e.DEMO_MODE !== '1') return null;
   if (s.user.totpEnrolledAt && !s.mfaAt && now().getTime() - s.authAt.getTime() > PENDING_MFA_MS) return null;
-  return { hash: s.hash, userId: s.userId, email: s.user.email, authAt: s.authAt, mfaAt: s.mfaAt, totpEnrolled: !!s.user.totpEnrolledAt };
+  return { hash: s.hash, userId: s.userId, email: s.user.email, authAt: s.authAt, mfaAt: s.mfaAt, totpEnrolled: !!s.user.totpEnrolledAt, isDemo: s.user.isDemo };
 }
 
 /** One query per request. */
@@ -73,7 +78,18 @@ export async function requireUser(opts: { allowPendingMfa?: boolean } = {}): Pro
   return s;
 }
 
+/**
+ * A demo account is shared by every /demo visitor, so nothing it does may destroy the demo or change who
+ * holds it. `assertFresh` calls this, which covers every INV-26 action (org and account deletion, email
+ * change, TOTP changes); membership changes and org creation in core/tenancy call it directly, and so do the
+ * billing module's own actions.
+ */
+export function assertNotDemo(s: SessionCtx) {
+  if (s.isDemo) throw new Refused('This is a shared demo account, so that is switched off here.');
+}
+
 export function assertFresh(s: SessionCtx) {
+  assertNotDemo(s);
   if (now().getTime() - s.authAt.getTime() > FRESH_MS) throw new ReauthRequired();
 }
 

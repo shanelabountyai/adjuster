@@ -2,6 +2,68 @@
 
 Entries prefixed `security:` are mandatory for anything touching an invariant. Clones must take a `security:` release within 7 days.
 
+## 1.3.0 (2026-10-14)
+
+A `scorekeeper` role that holds only a new `results.write` permission (D-21), asked for by bracketry so a volunteer can enter
+and correct scores without `org.update`. Owner and admin hold `results.write` too; member does not. Core checks it nowhere:
+a clone gates its own result entry on it. One migration (`20261014000000_role_scorekeeper`, `ALTER TYPE "Role" ADD VALUE`),
+additive. No new env var.
+
+security: (INV-22) The guard's MFA line was `role !== 'member'`, so any role added later would have been MFA-gated by
+accident and the rule's wording ("an owner or admin without MFA") was not what the code said. It is now an explicit
+owner/admin list; behaviour for the three existing roles is unchanged. A scorekeeper is not MFA-gated, by decision.
+
+security: (INV-28) `revokeInvitesBeyond` listed the roles by hand (`owner`, `admin`, `member`), so a demoted issuer's pending
+invite for any newer role would have stayed live. It now reads `Object.values(Role)`. Tests in
+`tests/integration/scorekeeper-role.test.ts` (4); both fixes were reverted one at a time and each turned its test red.
+
+Upgrade: merge, then `npm run db:migrate` (the enum value arrives with the merge). The members page and `z.enum(Role)` offer
+the new role with no clone change. A clone that does not want it simply never checks `results.write`; an admin can still
+assign the role, and it grants nothing there. Clones owe this within 7 days (by 2026-10-21); it can be taken together with
+v1.2.1.
+
+## 1.2.1 (2026-10-13)
+
+The four fixes from the 2026-10-12 review. No schema change, no migration, no new env var.
+
+security: (review 2026-10-12 #1, INV-28) A pending invite outlived its issuer's authority: a removed owner could re-enter as
+owner through an owner invite they had sent to a spare address, and a demoted admin's `admin` invites stayed good.
+`acceptInvite` now reads the issuer's membership as it is at acceptance and refuses (same "not valid" answer) unless the
+issuer could still send that invite — so removal, demotion, leaving and account deletion are all covered at the one place an
+invite is honoured. `removeMember` and `changeRole` also revoke the invites the person can no longer back, in the same
+transaction, so they drop out of the pending lists. An `Invite` row with no `invitedById` (none is written by core) is no
+longer acceptable.
+
+security: (review 2026-10-12 #4, D-10, INV-09) `requestEmailChange` answered "That address belongs to another account" for a
+registered address, and returned before its rate limit counted the request — so any signed-in user could enumerate accounts
+at request speed. The limit is now counted before the lookup, and a taken address resolves exactly like a free one: same
+"check your new inbox" result, no link created, no mail sent. Cost: someone who types an address that already has an account
+is told to check that inbox and nothing arrives. INV-06's "taken address is refused" case now asserts the silent form.
+
+security: (review 2026-10-12 #2, INV-27, INV-26) A `/demo` session was born fresh and MFA-passed, so any visitor could delete
+the demo org, delete a demo account, or move the demo owner to an email they control — and since the demo TOTP seed is a
+public constant, that became a normal owner login that kept working after `DEMO_MODE` was turned off. Two rules now, both in
+`core/auth/session.ts`: (1) `sessionFor` resolves no session for an `isDemo` user unless `DEMO_MODE=1`, whether the session
+came from `/demo` or a sign-in link; (2) `assertNotDemo` refuses a demo session org deletion, account deletion, email change
+and TOTP enrol/confirm/disable (via `assertFresh`, which every INV-26 action already calls), inviting, re-roling, removing
+and leaving (`createInvite`, and `withMembers` in `core/tenancy/orgs.ts`), and sign-out-everywhere (the shared account would
+sign every other visitor out). `SessionCtx` gains `isDemo`. A demo session can still browse, add projects, and create and
+revoke share links — a clone that wants more locked calls `assertNotDemo(ctx.session)` itself.
+
+security: (owner decision 2026-10-13, INV-27) A demo session is also refused creating an org and using billing. `createOrg`
+(`core/tenancy/orgs.ts`) calls `assertNotDemo`: an org made by the shared account was owned by every visitor and never
+cleaned up. `startCheckout` and `openPortal` call it too, in the billing module's own
+`src/app/o/[org]/settings/billing/actions.ts`, so a visitor cannot subscribe the shared demo org or open its Stripe customer
+portal; the guard is removed with the module and core imports nothing from it. Tests: the org half in
+`tests/integration/review-2026-10-12-demo.test.ts`, the billing half in `tests/invariants/inv-12-webhooks.test.ts`.
+
+Upgrade: no schema or config change. **Behaviour change for a deployed demo:** demo visitors can no longer invite or manage
+members, create an org, subscribe or open the billing portal, or delete anything listed above, so a `DEMO.md` step that does
+one of those needs a real account. And any environment
+holding `isDemo` rows without `DEMO_MODE=1` (local dev without the flag included) can no longer sign those users in at all.
+Existing damage is not repaired: a demo row whose email was already changed still has it — re-run `seed:demo` or check the
+`isDemo` rows by hand.
+
 ## 1.2.0 (2026-09-28)
 
 F-03: a clone can now declare a module required in the clone-owned `src/app/required-modules.ts`. `foundation:check-modules`

@@ -62,16 +62,18 @@ export async function redeemLink(token: string): Promise<string | null> {
 }
 
 /**
- * Sends a confirm link to the NEW address (spec §7a.6). Needs a fresh sign-in (INV-26); the new
- * address must not belong to another user. Limited per user like link requests are per email.
+ * Sends a confirm link to the NEW address (spec §7a.6). Needs a fresh sign-in (INV-26). An address
+ * that belongs to another user gets no link and the same answer. Limited per user like link requests are per email.
  */
 export async function requestEmailChange(s: SessionCtx, input: string): Promise<void> {
   assertFresh(s);
   const email = normalizeEmail(input);
   if (!email) throw new Refused('Enter a valid email address.');
   if (email === s.email) throw new Refused('That is already your email address.');
-  if (await db.user.findUnique({ where: { email }, select: { id: true } })) throw new Refused('That address belongs to another account.');
+  // Counted before the lookup, and a taken address resolves exactly like a free one (D-10): otherwise
+  // any signed-in user could probe who has an account, at request speed. No mail goes to a taken address.
   if (!(await hit(`email-change:user:${s.userId}`, LIMITS.linkPerEmail))) throw new Refused('Too many requests. Wait a few minutes and try again.');
+  if (await db.user.findUnique({ where: { email }, select: { id: true } })) return;
   const token = newToken();
   const t = now();
   await db.loginToken.create({

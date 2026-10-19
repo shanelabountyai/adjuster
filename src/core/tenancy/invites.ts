@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { audit } from '@/core/audit';
 import { normalizeEmail } from '@/core/auth/link';
-import type { SessionCtx } from '@/core/auth/session';
+import { assertNotDemo, type SessionCtx } from '@/core/auth/session';
 import { AuthzError, inOrg, type OrgCtx } from '@/core/authz/guards';
 import { can, mayAssign } from '@/core/authz/permissions';
 import { now } from '@/core/clock';
@@ -19,6 +19,7 @@ const INVALID = 'This invite is not valid for your account. It may have expired 
 
 /** Hashed, 7-day, single-use (spec §7b). Replaces any pending invite to the same address. */
 export async function createInvite(ctx: OrgCtx, emailInput: string, role: Role) {
+  assertNotDemo(ctx.session);
   const email = normalizeEmail(emailInput);
   if (!email) throw new Refused('Enter a valid email address.');
   const token = newToken();
@@ -74,6 +75,12 @@ export async function acceptInvite(s: SessionCtx, token: string): Promise<string
     });
     if (spent.count !== 1) throw new Refused(INVALID);
     const invite = await tx.invite.findUniqueOrThrow({ where: { tokenHash: hashToken(token) }, include: { org: { select: { slug: true } } } });
+    // An invite carries its issuer's authority as it is now, not as it was when sent: once the issuer is
+    // removed, demoted or deleted, the invite must not grant a role they could no longer grant themselves.
+    const issuer = invite.invitedById
+      ? await tx.membership.findUnique({ where: { orgId_userId: { orgId: invite.orgId, userId: invite.invitedById } }, select: { role: true } })
+      : null;
+    if (!issuer || !mayAssign(issuer.role, null, invite.role)) throw new Refused(INVALID);
     const key = { orgId_userId: { orgId: invite.orgId, userId: s.userId } };
     // Already a member: keep the role they have. An invite never silently changes one.
     if (!(await tx.membership.findUnique({ where: key }))) {
