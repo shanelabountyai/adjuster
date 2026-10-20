@@ -8,7 +8,7 @@ Built (D91; CLAUDE.md "Intake module"): `intake/electronics/schemas-v1.json` (li
 1. Print the 15 files in `eval/print/`, photograph each one, and save the photos as `eval/photos/<id>.jpg`.
 2. `npm run eval:signoff`, then sign all 120 labels. Commit `eval/labels/` and `eval/photos/`.
 
-Phase 2 (normalizers and validators, TDD from the signed labels) starts when `loadSignedLabels()` returns 120 labels. The kickoff is in `docs/prd-intake.md`, "Phase 2". Show the edge-case list before implementing.
+Phase 2 (normalizers and validators, TDD from the signed labels) starts when `loadSignedLabels()` returns 120 labels. The contract re-check (2026-10-20, `docs/intake-contract-recheck.md`) is signed as D92–D103: read them first. Phase 2 owes D92's network-shop validator for `evidence.estimateFromNetwork` and D98's `required` flag in the schema data. The kickoff is in `docs/prd-intake.md`, "Phase 2". Show the edge-case list before implementing.
 
 Gate at the end of phase 1: typecheck, lint and `rules:lint` OK; `npm test` 571/571.
 

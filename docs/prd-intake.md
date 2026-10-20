@@ -3,10 +3,14 @@
 Drafted 2026-10-05, decisions recorded 2026-10-13. Owner: Shane LaBounty.
 Source of truth while drafting: https://claude.ai/code/artifact/9f17f9d4-f401-485b-9b0d-76c840c90c78
 
-> **Status in this repo: queued, not started.** Phase 4 is the current work (`NEXT.md`). The first Intake
-> session is the contract check at the end of this file. It writes no code.
+> **Status in this repo (2026-10-20): phase 1 built; phase 2 waits on the signed labels (`NEXT.md`).** The contract
+> is settled by `docs/decisions.md` D90–D103, from `docs/intake-contract-check.md` (2026-10-14) and
+> `docs/intake-contract-recheck.md` (2026-10-20). Where this PRD differs from them, they win. In short: Intake hands
+> the engine two facts (`evidence.proofOfPurchaseDate`, `evidence.estimateFromNetwork`, D92); every other field is a
+> hint for the reviewer; Intake never writes `claim.serialMatchesContract` (D93); source is not a fact and is not in
+> the decision trace (D100); auto-accept moves the document only (D101).
 
-## Read this first: where this PRD is already known to differ from the repo
+## Read this first: where this PRD is already known to differ from the repo (historical, 2026-10-13; superseded by D90–D103)
 
 This PRD was written against the September draft of the Adjuster PRD, before the repo was read. A first look at
 the repo on 2026-10-13 found the differences below. They are leads for the contract check, not a complete list.
@@ -64,7 +68,8 @@ the time is unusable until you know which 5% to send to a person.
 2. Every extracted field carries a confidence score, an evidence quote and a page number.
 3. Fields under threshold block in a review queue until a person confirms or corrects them.
 4. Accuracy is measured against a hand-verified label set, on a held-out split, and committed as a scorecard.
-5. Accepted facts flow into 09's claim facts with provenance, so one claim runs upload to decision.
+5. Accepted facts flow into 09's claim facts with provenance (two facts, D92), and every other field reaches the
+   reviewer as a hint, so one claim runs upload to decision with a person entering the rest.
 6. **(Builder goal)** Schema-constrained extraction, confidence design without token probabilities, eval
    discipline, human-in-the-loop UX.
 
@@ -100,9 +105,8 @@ writes claim facts.
 | Reproducibility | 09's decision stores the facts snapshot, so re-running a decision never re-runs extraction |
 | Direction | One way. Intake writes facts and never reads rule sets or decisions |
 
-**Rules 09 can now express.** Two examples, as data in a rule set: route to review when `serial_matches_claim`
-is false; route to review when a payout-affecting fact has source `human_corrected` and the amount is over a set
-limit.
+**Rules 09 can now express.** None new: the two examples once here (routing on `serial_matches_claim` and on
+source `human_corrected`) are dropped by D93 and D100.
 
 This contract is written against 09's draft PRD from September. A contract check against the built adjuster
 schema runs before phase 1. See the table at the top of this file for what is already known to differ.
@@ -359,9 +363,10 @@ run; the rest are pass or fail.
 | Traceability | 100% of claim facts resolve to document, page, quote and run |
 | End to end | A seeded batch of 40 claims runs upload to 09 decision, every claim terminal |
 
-**Capstone demo.** Upload a clean receipt and a blurry photo of the same receipt. The clean one auto-accepts and
-09 decides in one pass. The blurry one stops in review with the serial flagged; the reviewer corrects one digit,
-and 09's decision trace shows the fact as `human_corrected`.
+**Capstone demo** (restated by D92, D100). Upload a clean receipt and a blurry photo of the same receipt. The clean
+one auto-accepts (the document move only, D101). The blurry one stops in review with the serial flagged; the reviewer
+corrects one digit, and the claim page shows that field as `human_corrected`. 09 decides once the reviewer has
+entered the facts no document can supply.
 
 **Phasing**
 
