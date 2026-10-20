@@ -4,6 +4,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { extname, join, resolve } from 'node:path';
 import sharp from 'sharp';
 import { OTHER_TYPE } from '@/intake/schema';
+import { refusal } from './local-only';
 import { EVAL_DIR, LABEL_DIR, labelIds, loadSchema, readLabel, shapeProblems, sign, unsignedReason, type FieldLabel, type Label } from './labels';
 
 // `npm run eval:signoff` (D91 e): one file beside its draft label; confirm or fix each field, then sign. Signing is
@@ -102,6 +103,8 @@ const photoFor = async (label: Label) => (label.kind === 'real_photo' ? adoptPho
 
 createServer(async (req, res) => {
   try {
+    const refused = refusal(req.method, req.headers, PORT);
+    if (refused) return send(res, 403, `refused: ${refused}`, 'text/plain');
     const url = new URL(req.url!, 'http://localhost');
     if (url.pathname === '/') {
       const id = nextUnsigned();
@@ -129,10 +132,10 @@ createServer(async (req, res) => {
   } catch (e) {
     send(res, 500, `<pre>${esc((e as Error).stack)}</pre>`);
   }
-}).listen(PORT, async () => {
+}).listen(PORT, '127.0.0.1', async () => {
   const ids = labelIds();
   const photos = ids.map(readLabel).filter((l) => l.kind === 'real_photo');
   const missing = (await Promise.all(photos.map((l) => adoptPhoto(l.id)))).filter((s) => s === 'missing').length;
   const signed = ids.filter((id) => !unsignedReason(readLabel(id), schema)).length;
-  console.log(`eval:signoff: http://localhost:${PORT}  ${signed}/${ids.length} signed, ${photos.length - missing}/${photos.length} real photos in eval/photos`);
+  console.log(`eval:signoff: http://127.0.0.1:${PORT}  ${signed}/${ids.length} signed, ${photos.length - missing}/${photos.length} real photos in eval/photos`);
 });

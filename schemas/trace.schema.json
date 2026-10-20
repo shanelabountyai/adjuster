@@ -4,17 +4,75 @@
   "properties": {
     "schema": {
       "type": "string",
-      "const": "adjuster.trace/0"
+      "const": "adjuster.trace/1"
     },
     "asOf": {
       "type": "string",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
     },
-    "planVersion": {
-      "type": "string"
-    },
-    "opsVersion": {
-      "type": "string"
+    "versions": {
+      "type": "object",
+      "properties": {
+        "plan": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "effectiveFrom": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "selectedBy": {
+              "type": "string",
+              "const": "contract_pin"
+            }
+          },
+          "required": [
+            "name",
+            "hash",
+            "effectiveFrom",
+            "selectedBy"
+          ],
+          "additionalProperties": false
+        },
+        "ops": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "effectiveFrom": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "selectedBy": {
+              "type": "string",
+              "const": "latest_effective_on_asOf"
+            }
+          },
+          "required": [
+            "name",
+            "hash",
+            "effectiveFrom",
+            "selectedBy"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "plan",
+        "ops"
+      ],
+      "additionalProperties": false
     },
     "skipped": {
       "type": "array",
@@ -132,6 +190,37 @@
               "string",
               "null"
             ]
+          },
+          "claimantVisible": {
+            "type": "boolean"
+          },
+          "vars": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
           }
         },
         "required": [
@@ -144,7 +233,9 @@
           "factsRead",
           "missing",
           "claimantText",
-          "noteText"
+          "noteText",
+          "claimantVisible",
+          "vars"
         ],
         "additionalProperties": false
       }
@@ -259,11 +350,31 @@
                 ],
                 "additionalProperties": false
               }
+            },
+            "labels": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "outputs": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
             }
           },
           "required": [
             "path",
-            "steps"
+            "steps",
+            "labels",
+            "outputs"
           ],
           "additionalProperties": false
         },
@@ -322,8 +433,7 @@
   "required": [
     "schema",
     "asOf",
-    "planVersion",
-    "opsVersion",
+    "versions",
     "skipped",
     "rules",
     "valuation",

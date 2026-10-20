@@ -12,7 +12,11 @@ export const FACT_SOURCES = ['input', 'derived', 'lookup', 'calc'] as const;
 export const STAGES = ['intake', 'contract_verification', 'coverage_period', 'peril_exclusions', 'frequency_limits', 'evidence', 'red_flags', 'valuation', 'deductible_limits', 'authority', 'decision'] as const;
 export const OUTCOMES = ['PASS', 'DENY', 'REFER', 'PEND'] as const;
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+// A real calendar day in ISO form. The regex alone is not enough: Date.parse rolls '2023-02-29' over to March 1, so a
+// date that does not round-trip is refused instead of being read as another day.
+export const isIsoDate = (v: unknown): v is string =>
+  typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v;
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isIsoDate, 'not a calendar date');
 const scalar = z.union([z.string(), z.number().int(), z.boolean()]); // .int(): floats never enter rule data (D16)
 
 // ---- fact dictionary
