@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { calcStepTraceSchema } from '@/rules/schema';
+import { calcStepTraceSchema, isIsoDate } from '@/rules/schema';
 import { validateDictionary, validateRuleSet } from '@/rules/validate';
 import { applyEdits } from '../helpers/edits';
 
@@ -102,5 +102,24 @@ describe('unique lookups: overlap fails validation (D7, 1.8)', () => {
     const p = (op: string, value: unknown) => ({ fact: 'contract.planCode', op, value });
     expect(codes(lookup(row('a', p('in', ['plus'])), row('b', p('not_in', ['plus']))))).toEqual([]);
     expect(codes(lookup(row('a', p('neq', 'plus')), row('b', p('neq', 'premier'))))).toEqual(['OVERLAP']);
+  });
+});
+
+// Hardening 2026-10-20. Date.parse rolls an impossible day over ('2023-02-29' parses as March 1), so the format check
+// alone let a day that does not exist into rule data, a version's effectiveFrom and a staff-entered fact.
+describe('dates are calendar days', () => {
+  it('isIsoDate accepts real days, leap days included, and refuses ones that roll over', () => {
+    expect(['2024-02-29', '2000-02-29', '2026-12-31', '2026-01-01'].map(isIsoDate)).toEqual([true, true, true, true]);
+    expect(['2023-02-29', '1900-02-29', '2026-04-31', '2026-02-30', '2026-13-01', '2026-00-10', '2026-1-01', '20260101', ''].map(isIsoDate))
+      .toEqual([false, false, false, false, false, false, false, false, false]);
+    expect([null, undefined, 20260101, new Date('2026-01-01')].map(isIsoDate)).toEqual([false, false, false, false]);
+  });
+  const row = (value: unknown) => ({ id: 'E5.when', when: [{ fact: 'claim.dateOfLoss', op: 'gte', value }], then: { outcome: 'PASS' } });
+  it('a cell on a date fact must hold a real day', () => {
+    expect(codes(minimal(row('2024-02-29')))).toEqual([]);
+    expect(codes(minimal(row('2023-02-29')))).toEqual(['TYPE_MISMATCH']);
+  });
+  it('a version effective on a day that does not exist does not parse', () => {
+    expect(codes({ ...ops, effectiveFrom: '2026-02-30' })).toEqual(['SCHEMA']);
   });
 });
