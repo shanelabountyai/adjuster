@@ -28,6 +28,10 @@
     "factDictionary": {
       "type": "string"
     },
+    "factDictionaryHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "roundingMode": {
       "type": "string",
       "const": "half_up"

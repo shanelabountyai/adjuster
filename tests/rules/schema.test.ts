@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { calcStepTraceSchema, isIsoDate } from '@/rules/schema';
+import { z } from 'zod';
+import { calcStepTraceSchema, dictionarySchema, isIsoDate, ruleSetSchema, traceSchema } from '@/rules/schema';
 import { validateDictionary, validateRuleSet } from '@/rules/validate';
 import { applyEdits } from '../helpers/edits';
 
@@ -122,4 +123,11 @@ describe('dates are calendar days', () => {
   it('a version effective on a day that does not exist does not parse', () => {
     expect(codes({ ...ops, effectiveFrom: '2026-02-30' })).toEqual(['SCHEMA']);
   });
+});
+
+// Hardening 2026-10-20. The committed JSON Schemas had drifted (trace still said adjuster.trace/0). They are emitted
+// by `npm run rules:schemas`; this holds them equal to the zod definitions so a schema change ships with its file.
+describe('schemas/ is what `npm run rules:schemas` writes', () => {
+  for (const [name, s] of [['fact-dictionary', dictionarySchema], ['rule-set', ruleSetSchema], ['trace', traceSchema]] as const)
+    it(`${name}.schema.json`, () => expect(readFileSync(`schemas/${name}.schema.json`, 'utf8')).toBe(JSON.stringify(z.toJSONSchema(s), null, 2) + '\n'));
 });
