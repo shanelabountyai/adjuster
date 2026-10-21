@@ -16,6 +16,6 @@ Gate at the end of phase 1: typecheck, lint and `rules:lint` OK; `npm test` 571/
 
 Phase 4 closure URLs are in `docs/RELEASE_NOTES.md`.
 
-## saas-foundation v1.3.0 upgrade on a branch (2026-10-19)
+## saas-foundation v1.3.0: merged (2026-10-19, PR #1)
 
-Branch `foundation-v1.3.0` merges v1.2.1 + v1.3.0 (security release, due 2026-10-21) and awaits review and merge; it is not on main. After merge: `npm run db:migrate` (adds the `scorekeeper` enum value), then update adjuster's row in the template's `CLONES.md` to v1.3.0.
+Migrations applied to `adjuster_test` and the dev database (`prisma migrate status`: up to date, 21). The template's `CLONES.md` already lists adjuster on v1.3.0.
