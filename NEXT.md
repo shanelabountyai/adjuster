@@ -1,6 +1,13 @@
 # NEXT
 
-## ▶ v1.4.0 prepared 2026-10-26 on branch `org-list-hook` (PR #7 to `main`, not merged, NOT tagged)
+## ▶ 2026-11-03: v1.3.1 and v1.4.0 both tagged and pushed. Nothing open in this repo.
+
+v1.4.0 (PR #7) was already merged and tagged; v1.3.1 (`security:`) was tagged at `1bc3386` and pushed 2026-11-03, a week
+past its 10-27 date. Still owed, **each in that clone's own session**: every clone still on v1.3.0 in `CLONES.md` owes
+v1.3.1 (`security:`, overdue); quorum, ledgerleave, coursework also implement `filterListedOrgs` (v1.4.0, steps in PR #7).
+Older queue: talk4me SEC-01, storage SEC-01/02, both in their own folders.
+
+### (done) v1.4.0 prepared 2026-10-26 on branch `org-list-hook`
 
 Owner decision 2026-10-26 (D-22): clone hook `filterListedOrgs(userId, orgs) => orgs` in clone-owned `src/app/org-hooks.ts`,
 beside `beforeOrgDelete`. `/onboarding` and `/demo` call it through `keepListedOrgs` (`src/core/tenancy/listed.ts`), which
