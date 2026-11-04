@@ -1,5 +1,13 @@
 # NEXT
 
+## ▶ 2026-11-04: clone upgrades to v1.4.0 run FROM HERE, one at a time (owner decision)
+
+Shane chose to drive every clone's v1.4.0 merge (carries `security:` v1.3.1) from this session instead of one session per
+clone: one Opus subagent per clone, **sequential** (no overlapping builds or pools). Each one merges, runs typecheck, lint,
+unit tests, drift and a build, then opens a PR and **does not merge it**. CI runs e2e. Order: ledgerleave, coursework,
+tradepost, gavel, pulseboard, callboard (`onsitestaffing/`), loanbook, adjuster, bracketry, housefile (no `template` remote yet),
+footnote. Skipped: boxloop (on hold), gridline (12 uncommitted files, not in `CLONES.md`). `CLONES.md` rows move only when a PR merges.
+
 ## ▶ 2026-11-03: v1.3.1 and v1.4.0 both tagged and pushed. Nothing open in this repo.
 
 v1.4.0 (PR #7) was already merged and tagged; v1.3.1 (`security:`) was tagged at `1bc3386` and pushed 2026-11-03, a week
