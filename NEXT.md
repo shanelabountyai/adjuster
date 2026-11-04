@@ -8,6 +8,11 @@ unit tests, drift and a build, then opens a PR and **does not merge it**. CI run
 tradepost, gavel, pulseboard, callboard (`onsitestaffing/`), loanbook, adjuster, bracketry, housefile (no `template` remote yet),
 footnote. Skipped: boxloop (on hold), gridline (12 uncommitted files, not in `CLONES.md`). `CLONES.md` rows move only when a PR merges.
 
+**Mid-queue 2026-11-04 (owner decision): v1.4.1 `security:` cut.** `npm audit` found a critical `next` RCE (Image Optimization +
+SVG, `<=16.4.0`, so v1.3.1's 16.3.8 doesn't cover it) plus highs in zod/prisma/sharp/source-map-js/fast-uri. v1.4.1 bumps next to
+16.4.5 (audit 0). Remaining clones take **v1.4.1**; already-open v1.4.0 PRs (tradepost #3, gavel #3, pulseboard #3, callboard #18,
+loanbook) and the clones already on v1.4.0 (quorum, commons, coursework, ledgerleave) each get v1.4.1 merged in.
+
 ## ▶ 2026-11-03: v1.3.1 and v1.4.0 both tagged and pushed. Nothing open in this repo.
 
 v1.4.0 (PR #7) was already merged and tagged; v1.3.1 (`security:`) was tagged at `1bc3386` and pushed 2026-11-03, a week
