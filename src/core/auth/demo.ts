@@ -9,7 +9,7 @@ export const demoEnabled = (e: { DEMO_MODE?: string } = env) => e.DEMO_MODE === 
 export const listDemoUsers = () =>
   db.user.findMany({
     where: { isDemo: true },
-    select: { id: true, email: true, memberships: { select: { role: true, org: { select: { name: true } } } } },
+    select: { id: true, email: true, memberships: { select: { role: true, org: { select: { id: true, slug: true, name: true } } } } },
     orderBy: { email: 'asc' },
   });
 
