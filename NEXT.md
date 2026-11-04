@@ -13,6 +13,30 @@ SVG, `<=16.4.0`, so v1.3.1's 16.3.8 doesn't cover it) plus highs in zod/prisma/s
 16.4.5 (audit 0). Remaining clones take **v1.4.1**; already-open v1.4.0 PRs (tradepost #3, gavel #3, pulseboard #3, callboard #18,
 loanbook) and the clones already on v1.4.0 (quorum, commons, coursework, ledgerleave) each get v1.4.1 merged in.
 
+**Roll-out done 2026-11-04: every clone (except boxloop, gridline) has an open, unmerged `security:` v1.4.1 PR; `npm audit --omit=dev` 0 in each.**
+Owner merges each, by 2026-11-11 (sooner: critical RCE), and moves the `CLONES.md` row to v1.4.1 as each merges.
+
+| Clone | PR | CI | Owner note |
+|---|---|---|---|
+| tradepost | #3 | green | hand port (no shared history) |
+| gavel | #3 | green | D-99 spec scoped, D-100 previews off; **deployed: redeploy after merge** |
+| pulseboard | #3 | green | |
+| callboard | #18 | green | next 16.4.0 → 16.4.5; **deployed: fire deploy hook after merge** |
+| loanbook | #4 | green | `modules-removed` flaked once (Google font fetch) |
+| adjuster | #3 | green | `sharp` pin 0.35.4 → 0.35.5 (D91 c) |
+| bracketry | #2 | green | |
+| housefile | #9 | green | then merge `main` into `phase-1` and the phase-2 branch; local `housefile_test` has the phase schema (17 billing tests fail on `main`) |
+| footnote | #1 | green | also fixes CI (pgvector image); `main` red until merged; your `CLAUDE.md` edit untouched, line 33 still says v1.3.0 |
+| quorum | #5 | green | |
+| commons | #13 | green | note is D-99; phase-7.1 numbers from D-100 |
+| coursework | #4 | green | |
+| ledgerleave | #5 | ci green, **Vercel preview red** (also red on #3, #4; cause unread) | **deploying: redeploy after merge** |
+
+**Release-process lesson:** a clone's CI resolves `FOUNDATION_VERSION` via the tag *in the clone's own repo*. quorum, commons,
+coursework and ledgerleave failed `foundation:drift` (`bad revision 'v1.4.1'`) until the tag was pushed to each. Next release: push
+the tag to clone repos as part of the roll-out (or keep the `Release vX:` commit-message line some clones fall back on).
+Follow-up: F-05 vitest 5 (dev-only advisories) in `BACKLOG.md`.
+
 ## ▶ 2026-11-03: v1.3.1 and v1.4.0 both tagged and pushed. Nothing open in this repo.
 
 v1.4.0 (PR #7) was already merged and tagged; v1.3.1 (`security:`) was tagged at `1bc3386` and pushed 2026-11-03, a week
