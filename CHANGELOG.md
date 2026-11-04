@@ -2,6 +2,21 @@
 
 Entries prefixed `security:` are mandatory for anything touching an invariant. Clones must take a `security:` release within 7 days.
 
+## 1.4.1 (2026-11-04)
+
+security: `next` and `eslint-config-next` 16.3.8 -> 16.4.5. `next` 16.0.0 through 16.4.0 is affected by a **critical** unauthenticated
+remote code execution in Image Optimization when SVG files are used (GHSA-2464-fhr4-w9xw, GHSA-673q-mjm6-r5xr), and by a denial of
+service in App Router Server Actions (GHSA-p3m5-59mp-jv5r). v1.3.1's 16.3.8 is inside that range, so every clone on v1.3.1 or v1.4.0
+is still exposed. Also: `zod` 4.6.5 -> 4.6.7 (memory exhaustion validating oversized constrained collections, GHSA-mrhx-c7xc-m3w5);
+`prisma`, `@prisma/client`, `@prisma/adapter-pg` 7.10.0 -> 7.10.1 (drops the vulnerable `deepmerge-ts` and `mysql2`); and
+lockfile-only bumps for `sharp` (>= 0.35.5), `source-map-js` (>= 1.2.2) and `fast-uri` (>= 3.1.9). `npm audit --omit=dev` reports 0
+vulnerabilities. No runtime code, migration or env var changes. Clones must take this within 7 days (by 2026-11-11). Given the
+severity, take it now, and redeploy deployed clones as soon as it merges.
+
+Upgrade: merge, `npm ci`, then generate, typecheck, lint, test and a production build. A clone already on a newer `next` keeps the
+newer version, provided it is 16.4.1 or later. After `npm audit fix`, run `npm ci`: `audit fix --omit=dev` prunes devDependencies from
+`node_modules` (not from the lockfile), and typecheck then fails with "Cannot find module 'vitest'".
+
 ## 1.4.0 (2026-10-26)
 
 A clone hook for the template's org lists (D-22), asked for by quorum, ledgerleave and coursework, whose archived orgs still

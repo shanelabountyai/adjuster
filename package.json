@@ -34,14 +34,14 @@
     "foundation:check-modules": "tsx scripts/foundation-check-modules.ts"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.10.0",
-    "@prisma/client": "^7.10.0",
-    "next": "^16.3.8",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "next": "^16.4.5",
     "otpauth": "^9.5.2",
     "pg": "^8.23.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
@@ -52,8 +52,8 @@
     "dotenv": "^17",
     "dotenv-cli": "^11.0.0",
     "eslint": "^9",
-    "eslint-config-next": "^16.3.8",
-    "prisma": "^7.10.0",
+    "eslint-config-next": "^16.4.5",
+    "prisma": "^7.10.1",
     "tsx": "^4.23.13",
     "typescript": "^5.6",
     "vitest": "^2.1"
