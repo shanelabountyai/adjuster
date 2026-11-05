@@ -30,18 +30,39 @@ async function viaDemo(email: string) {
   return u;
 }
 
+/**
+ * Seed-agnostic, like INV-27 and INV-12: a clone's seed-demo.ts has its own orgs, so the first demo org (by slug)
+ * and its owner, admin and member are looked up by membership, never by the template's sample addresses.
+ */
+async function demoOrg() {
+  const { org } = await db.membership.findFirstOrThrow({ where: { role: 'owner', user: { isDemo: true } }, orderBy: { org: { slug: 'asc' } }, select: { org: true } });
+  const email = async (role: 'owner' | 'admin' | 'member') =>
+    (await db.membership.findFirstOrThrow({ where: { orgId: org.id, role, user: { isDemo: true } }, select: { user: { select: { email: true } } } })).user.email;
+  return { slug: org.slug, owner: await email('owner'), admin: await email('admin'), member: await email('member') };
+}
+
+/** What a demo session must leave as it found it. */
+const demoCounts = async (slug: string) => ({
+  orgs: await db.org.count({ where: { slug } }),
+  demoUsers: await db.user.count({ where: { isDemo: true } }),
+  demoTotp: await db.user.count({ where: { isDemo: true, totpEnrolledAt: { not: null } } }),
+  memberships: await db.membership.count({ where: { org: { slug } } }),
+});
+
 describe('a demo session cannot destroy the demo or change who owns it', () => {
   it('org and account deletion, email change and TOTP changes are refused, on a fresh session', async () => {
     await seedDemo();
-    await viaDemo('owner@acme.demo.test');
-    const ctx = await requireOrg('acme');
-    await expect(deleteOrg(ctx, 'acme')).rejects.toThrow(DEMO);
+    const d = await demoOrg();
+    const before = await demoCounts(d.slug);
+    await viaDemo(d.owner);
+    const ctx = await requireOrg(d.slug);
+    await expect(deleteOrg(ctx, d.slug)).rejects.toThrow(DEMO);
     await expect(requestEmailChange(ctx.session, 'mine@example.test')).rejects.toThrow(DEMO);
     await expect(disableTotp()).rejects.toThrow(DEMO);
 
-    const admin = await viaDemo('admin@acme.demo.test');
+    const admin = await viaDemo(d.admin);
     await expect(deleteAccount((await currentSession())!, admin.email)).rejects.toThrow(DEMO);
-    await viaDemo('member@acme.demo.test');
+    await viaDemo(d.member);
     await expect(enrolTotp()).rejects.toThrow(DEMO);
 
     // Every /demo visitor shares the account, so "sign out everywhere" would sign the others out.
@@ -50,42 +71,41 @@ describe('a demo session cannot destroy the demo or change who owns it', () => {
     expect(await signOutAll({})).toEqual({ error: expect.stringMatching(DEMO) });
     expect(await db.session.count()).toBe(sessions);
 
-    expect(await db.org.count({ where: { slug: 'acme' } })).toBe(1);
-    expect(await db.user.count({ where: { isDemo: true, totpEnrolledAt: { not: null } } })).toBe(4);
-    expect(await db.user.count({ where: { isDemo: true } })).toBe(6);
+    expect(await demoCounts(d.slug)).toEqual(before);
+    expect(before.orgs).toBe(1);
+    expect(before.demoTotp).toBeGreaterThan(0); // owners and admins are enrolled, so "TOTP unchanged" means something
     expect(await db.loginToken.count()).toBe(0);
   });
 
   it('inviting, re-roling, removing and leaving are refused', async () => {
     await seedDemo();
-    const member = await demoUser('member@acme.demo.test');
-    await viaDemo('owner@acme.demo.test');
-    const ctx = await requireOrg('acme');
+    const d = await demoOrg();
+    const before = await demoCounts(d.slug);
+    const member = await demoUser(d.member);
+    await viaDemo(d.owner);
+    const ctx = await requireOrg(d.slug);
     await expect(createInvite(ctx, 'mine@example.test', 'owner')).rejects.toThrow(DEMO);
     await expect(changeRole(ctx, member.id, 'owner')).rejects.toThrow(DEMO);
     await expect(removeMember(ctx, member.id)).rejects.toThrow(DEMO);
-    await viaDemo('member@acme.demo.test');
-    await expect(removeMember(await requireOrg('acme'), member.id)).rejects.toThrow(DEMO);
+    await viaDemo(d.member);
+    await expect(removeMember(await requireOrg(d.slug), member.id)).rejects.toThrow(DEMO);
 
     expect(await db.invite.count()).toBe(0);
-    expect(await db.membership.count({ where: { org: { slug: 'acme' } } })).toBe(3);
+    expect(await demoCounts(d.slug)).toEqual(before);
     expect(await db.membership.count({ where: { userId: member.id, role: 'member' } })).toBe(1);
   });
 
   // Owner decision 2026-10-13. Billing is a removable module, so its half is in tests/invariants/inv-12-webhooks.test.ts.
-  it('creating an org is refused; adding a project and sharing it still work', async () => {
+  // The other half (a demo session can still add and share a project) tests the example resource a clone replaces,
+  // so it is in review-2026-10-12-demo-projects.test.ts, which a clone deletes with `/o/[org]/projects`.
+  it('creating an org is refused', async () => {
     await seedDemo();
-    await viaDemo('owner@acme.demo.test');
+    await viaDemo((await demoOrg()).owner);
     const orgs = await db.org.count();
     await expect(createOrg((await currentSession())!, 'Mine')).rejects.toThrow(DEMO);
     const { startOrg } = await import('@/app/onboarding/actions');
     expect(await startOrg({ name: 'Mine' })).toEqual({ error: expect.stringMatching(DEMO) });
     expect(await db.org.count()).toBe(orgs);
-
-    const { addProject, shareProject } = await import('@/app/o/[org]/projects/actions');
-    await expect(addProject('acme', { name: 'Demo project' })).rejects.toThrow('redirect /o/acme/projects');
-    const p = await db.project.findFirstOrThrow({ where: { name: 'Demo project' } });
-    expect(await shareProject('acme', { id: p.id, days: '7' })).toEqual({ notice: expect.stringContaining('/s/') });
   });
 
   it('a real account is not affected', async () => {
@@ -100,7 +120,7 @@ describe('a demo session cannot destroy the demo or change who owns it', () => {
 describe('demo accounts stop working when DEMO_MODE is off', () => {
   it('no session resolves for a demo user, however it was made; a real user is unaffected', async () => {
     await seedDemo();
-    const owner = await demoUser('owner@acme.demo.test');
+    const owner = await demoUser((await demoOrg()).owner);
     const token = (await demoSignIn(owner.id))!;
     expect(await sessionFor(token, { DEMO_MODE: '1' })).not.toBeNull();
     expect(await sessionFor(token, {})).toBeNull();

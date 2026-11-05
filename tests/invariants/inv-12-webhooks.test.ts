@@ -209,15 +209,16 @@ describe('Idempotency-Key on Stripe creates', () => {
 describe('a demo session cannot use billing', () => {
   it('checkout and the portal are refused before the provider is called', async () => {
     await seedDemo();
-    const owner = await db.user.findUniqueOrThrow({ where: { email: 'owner@acme.demo.test' } });
-    const org = await db.org.findUniqueOrThrow({ where: { slug: 'acme' } });
+    // Seed-agnostic (a clone's seed has its own orgs): the first demo org's owner.
+    const m = await db.membership.findFirstOrThrow({ where: { role: 'owner', user: { isDemo: true } }, orderBy: { org: { slug: 'asc' } }, select: { user: true, org: true } });
+    const { user: owner, org } = m;
     await deliver(subEvent(org.id, { status: 'canceled' })); // a customer id on file, so the portal has somewhere to go
     jar.set(SESSION_COOKIE, (await demoSignIn(owner.id))!);
     const checkout = vi.spyOn(mockProvider, 'checkout');
     const portal = vi.spyOn(mockProvider, 'portal');
     const DEMO = { error: expect.stringMatching(/shared demo account/) };
-    expect(await startCheckout('acme', { attempt: 'attempt-0123456789abcdef' })).toEqual(DEMO);
-    expect(await openPortal('acme', {})).toEqual(DEMO);
+    expect(await startCheckout(org.slug, { attempt: 'attempt-0123456789abcdef' })).toEqual(DEMO);
+    expect(await openPortal(org.slug, {})).toEqual(DEMO);
     expect(checkout).not.toHaveBeenCalled();
     expect(portal).not.toHaveBeenCalled();
   });

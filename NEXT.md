@@ -19,3 +19,7 @@ Phase 4 closure URLs are in `docs/RELEASE_NOTES.md`.
 ## saas-foundation v1.3.0: merged (2026-10-19, PR #1)
 
 Migrations applied to `adjuster_test` and the dev database (`prisma migrate status`: up to date, 21). The template's `CLONES.md` already lists adjuster on v1.3.0.
+
+## saas-foundation v1.4.1: awaiting merge on branch `foundation-v1.4.1` (2026-11-04)
+
+Security release (critical RCE in next's Image Optimization; take by 2026-11-11), carrying v1.3.1 and v1.4.0. `filterListedOrgs` keeps the template default (adjuster hides no orgs). The `sharp` devDependency moved to 0.35.5 to stay on Next's version (D91 c); committed `eval/` files were not regenerated. No migrations. Gate: typecheck, lint, `rules:lint`, `foundation:drift` clean; `npm test` 621/621; `npm run build` OK; `npm audit --omit=dev` 0.

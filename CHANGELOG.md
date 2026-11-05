@@ -2,6 +2,67 @@
 
 Entries prefixed `security:` are mandatory for anything touching an invariant. Clones must take a `security:` release within 7 days.
 
+## 1.4.1 (2026-11-04)
+
+security: `next` and `eslint-config-next` 16.3.8 -> 16.4.5. `next` 16.0.0 through 16.4.0 is affected by a **critical** unauthenticated
+remote code execution in Image Optimization when SVG files are used (GHSA-2464-fhr4-w9xw, GHSA-673q-mjm6-r5xr), and by a denial of
+service in App Router Server Actions (GHSA-p3m5-59mp-jv5r). v1.3.1's 16.3.8 is inside that range, so every clone on v1.3.1 or v1.4.0
+is still exposed. Also: `zod` 4.6.5 -> 4.6.7 (memory exhaustion validating oversized constrained collections, GHSA-mrhx-c7xc-m3w5);
+`prisma`, `@prisma/client`, `@prisma/adapter-pg` 7.10.0 -> 7.10.1 (drops the vulnerable `deepmerge-ts` and `mysql2`); and
+lockfile-only bumps for `sharp` (>= 0.35.5), `source-map-js` (>= 1.2.2) and `fast-uri` (>= 3.1.9). `npm audit --omit=dev` reports 0
+vulnerabilities. No runtime code, migration or env var changes. Clones must take this within 7 days (by 2026-11-11). Given the
+severity, take it now, and redeploy deployed clones as soon as it merges.
+
+Upgrade: merge, `npm ci`, then generate, typecheck, lint, test and a production build. A clone already on a newer `next` keeps the
+newer version, provided it is 16.4.1 or later. After `npm audit fix`, run `npm ci`: `audit fix --omit=dev` prunes devDependencies from
+`node_modules` (not from the lockfile), and typecheck then fails with "Cannot find module 'vitest'".
+
+## 1.4.0 (2026-10-26)
+
+A clone hook for the template's org lists (D-22), asked for by quorum, ledgerleave and coursework, whose archived orgs still
+showed on `/onboarding`. No schema change, no migration, no new env var. Not a `security:` release: no invariant changes,
+and the hook cannot widen what a user sees.
+
+- `src/app/org-hooks.ts` (clone-owned) gains `filterListedOrgs(userId, orgs) => orgs`, beside `beforeOrgDelete`. The
+  default returns every org, so a clone that does nothing lists exactly what it did before.
+- `/onboarding` and `/demo` (each account's org line) now pass the user's orgs through it via the new
+  `keepListedOrgs` (`src/core/tenancy/listed.ts`), which keeps only the page's own rows whose id the hook returned, in
+  their order. An id the user is not in, a duplicate, or a renamed org from the hook never reaches the page; the hook gets
+  frozen copies. Display only: a hidden org's `/o/<slug>` still opens for its members.
+- `listDemoUsers` (`src/core/auth/demo.ts`) also selects each org's `id` and `slug`.
+- `tests/integration/org-list-hook.test.ts` (12): default unchanged on both pages; a hook hiding one org hides it on both;
+  a hook returning an extra org id, a renamed org, or mutating its input changes nothing. Mutation-checked: returning the
+  hook's output instead of intersecting turns 7 red; unwiring the two pages turns 4 red.
+
+Upgrade: merge. `src/app/org-hooks.ts` is clone-owned, so a clone that edited it gets a merge conflict there: keep the
+clone's `beforeOrgDelete` and add the template's `filterListedOrgs` (typecheck fails if it is missing, since the template
+pages import it). Then implement it if the clone hides orgs (an archive table, say) and add one test that a hidden org is
+not on `/onboarding`. No deadline (not `security:`).
+
+## 1.3.1 (2026-10-20)
+
+security: `next` and `eslint-config-next` 16.3.6 -> 16.3.8 (`npm audit --omit=dev` no longer lists `next`; 16.3.7 and earlier are
+affected). Fixes: server-side request forgery in Image Optimization (GHSA-cjq9-62q9-8jv4); cache poisoning of SSG and ISR pages
+in self-hosted apps (GHSA-4jqv-mc3x-m676, GHSA-mcj8-r9mp-w47p); information disclosure in App Router metadata image routes
+(GHSA-f87g-xv8r-7p7x) and in the dev server's MCP endpoint (GHSA-39w2-rjm5-chcv); `use cache` fill leaking Draft Mode content
+(GHSA-3w37-wq28-93x7). Only `package.json`, `package-lock.json` and next's own packages (`@next/*`) change; no runtime code,
+migration or env var. Clones must take this within 7 days (by 2026-10-27).
+
+Upgrade: merge, `npm ci`, then typecheck, lint, test and a production build. Also carries the tests-only changes below.
+
+Tests only, no runtime change:
+
+- `tests/invariants/inv-12-webhooks.test.ts`: the "a demo session cannot use billing" case (v1.3.0) looked up
+  `owner@acme.demo.test` and org `acme`, which only the template's sample seed creates, so a clone with its own
+  `seed-demo.ts` failed it with P2025 (tradepost, 2026-10-19). It now takes the first demo org's owner by membership, as
+  INV-27 does. Assertions unchanged. The text is identical to tradepost's excused patch (`52c17ca7d099`), so that clone
+  can drop the row from `FOUNDATION_PATCHES.md` once it takes this release.
+- `tests/integration/review-2026-10-12-demo.test.ts` (v1.2.1): the same lookup by membership instead of `acme` addresses,
+  and the fixed counts (6 demo users, 4 with TOTP, 3 memberships) are now "unchanged from before the demo session
+  acted", which is what they were checking. The "add and share a project" half moved to
+  `tests/integration/review-2026-10-12-demo-projects.test.ts`, because it tests the example resource a clone replaces
+  (D-16): a clone that removes `/o/[org]/projects` deletes that file instead of editing this one.
+
 ## 1.3.0 (2026-10-14)
 
 A `scorekeeper` role that holds only a new `results.write` permission (D-21), asked for by bracketry so a volunteer can enter
