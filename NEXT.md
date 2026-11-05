@@ -1,5 +1,19 @@
 # NEXT
 
+## ▶ Next session: v1.6.0 M9 (RLS core). Model: Opus (security/permissions). Prompt: `docs/v1.6.0-KICKOFF.md`, M9 block.
+
+**Owner decisions 2026-11-04:** (1) The RLS/SSO/enterprise release is **v1.6.0**, not v1.5.0: v1.5.0 is already tagged (`cdc146b`,
+vitest 5) and pushed tags never move. `docs/v1.6.0-ADDENDUM.md` and `docs/v1.6.0-KICKOFF.md` are renamed and carry a note; the branch
+is `v1.6.0`, the PR "v1.6.0: RLS, SSO, enterprise modules". (2) Claude created the local `app_rw` role (NOBYPASSRLS, no superuser),
+granted DML on `saas_foundation_test` plus default privileges; its URL is `DATABASE_URL_APP_RW` in `.env.test` (gitignored, password
+never printed). M9's `db:setup` takes it over and writes `DATABASE_URL` (app_rw) / `DATABASE_URL_SYSTEM` (owner).
+
+**Kickoff pre-flight, still the owner's:** addendum approval + §10 open-decision defaults (kickoff line 8 blank); Okta and Google
+`SSO_TEST_*` in `.env.local`, which does not exist yet (needed by M10, not M9). Done: every clone on v1.4.1; `app_rw`.
+
+**v1.5.0 (vitest) clone rollout is ON HOLD** (owner): only tradepost PR #4 open, unmerged. The rest wait for the owner's go;
+`foundation-rollout` skill resumes it. A clone can also skip straight to v1.6.0 later (it carries v1.5.0).
+
 ## ▶ 2026-11-04 (later): v1.5.0 released (vitest 5, F-05, `cdc146b`); rolling out to clones under the standing rule
 
 Owner, 2026-11-04: run updates end to end without asking (memory `foundation-updates-autonomous`; procedure in
