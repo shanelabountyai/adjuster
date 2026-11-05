@@ -2,6 +2,18 @@
 
 Entries prefixed `security:` are mandatory for anything touching an invariant. Clones must take a `security:` release within 7 days.
 
+## 1.5.0 (2026-11-04)
+
+`vitest` 2.1 -> 5.1 (dev dependency only; F-05). It clears the dev-tree advisories found during v1.4.1: tinypool prototype-pollution RCE
+(critical), `@vitest/mocker` (critical) and vite path traversal (high). `vite` moves 5 -> 8 under vitest. `vitest.config.ts` needed no
+change; 207 tests pass unchanged. Not `security:`: nothing that ships changes, and `npm audit --omit=dev` was already 0. Full
+`npm audit` goes from 14 (2 critical, 1 high, 11 moderate) to 8 moderate, all one `minimatch` DoS reached through `typescript-eslint`
+(lint only). Its only "fix" is `npm audit fix --force`, which would downgrade `eslint-config-next` to 15, so it waits for upstream.
+
+Upgrade: merge, then `npm uninstall vitest && npm install -D vitest@^5.1.0` if the lockfile conflicts (vitest 2's `vite` 5 blocks a
+plain install with ERESOLVE), then `npm ci` and the usual gate. A clone with its own vitest config options or custom pools checks them
+against the vitest 3, 4 and 5 migration notes.
+
 ## 1.4.1 (2026-11-04)
 
 security: `next` and `eslint-config-next` 16.3.8 -> 16.4.5. `next` 16.0.0 through 16.4.0 is affected by a **critical** unauthenticated
