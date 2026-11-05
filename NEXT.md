@@ -6,6 +6,7 @@ Owner, 2026-11-04: run updates end to end without asking (memory `foundation-upd
 `~/.claude/skills/foundation-rollout/SKILL.md`, per-clone agent `~/.claude/agents/clone-upgrader.md`, both user-level so clones
 don't inherit them). v1.5.0: vitest 2.1 -> 5.1, dev only, not `security:`; full `npm audit` 14 -> 8 moderate (lint-only minimatch).
 Clones roll out in batches; housefile goes last (its phase-branch merge is running).
+**ON HOLD (owner, 2026-11-04).** Done: tradepost PR #4 (open, unmerged, CI was pending). Not started: every other clone. Resume only on the owner's go.
 
 ## ▶ 2026-11-04: v1.4.1 is live in every clone. Next item: housefile phase branches (in housefile's folder).
 
