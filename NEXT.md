@@ -1,6 +1,13 @@
 # NEXT
 
-## ▶ Next session: v1.6.0 M12 (AI spend guards, INV-39; proof branch in `footnote` wrapping its query path in `withBudget`, PR opened there, unmerged). Model: Opus (money: caps and refusals). Prompt: `docs/v1.6.0-KICKOFF.md`, M12 row + header; read PR #12's M11 section first.
+## ▶ Next session: v1.6.0 M13 (`apikeys` module ported from Bookable, INV-40/41; Pulseboard `/ingest` migration PR drafted there, unmerged). Model: Opus (auth: key scopes, revocation, webhook signatures). Prompt: `docs/v1.6.0-KICKOFF.md`, M13 row + header; read PR #12's M12 section first.
+
+**M12 done 2026-11-05** (`ef2ce1f`, `55a3390` on `v1.6.0`, PR #12): AI spend guards, INV-39. **Owner decision: hard cap by reservation**
+(`AiHold` under a row lock; the signature gains `maxCostMicros`), addendum §6 "As built in M12". Gate: off 266 + 16 skipped, enforce 281 + 1 skipped,
+e2e enforce 14/14. Proof: footnote PR #2 (`v1.6.0-withbudget-proof`, unmerged), worked in the worktree `~/Projects/footnote-m12` against its own DB
+`footnote_m12_test`, so Shane's uncommitted `CLAUDE.md` edit in `footnote/` is untouched. Remove both once the PR is closed:
+`git -C ../footnote worktree remove ../footnote-m12 && dropdb footnote_m12_test`. INV-34 is red there on purpose (footnote's `CorpusChunk`, `StaffRole`,
+`Answer`, `ApiKey` need export decisions in its real upgrade; `ApiKey` must never be exported whole).
 
 **M11 done 2026-11-05** (`e3f2280` on `v1.6.0`, PR #12): audit viewer, org and account security pages, per-org data export, INV-34.
 Gate: off 254 + 13 skipped, enforce 266 + 1 skipped, e2e enforce 14/14, demo-org exports verify against their manifests,
