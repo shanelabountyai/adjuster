@@ -39,12 +39,23 @@ export const CORE_EXPORT_TABLES: readonly ExportTable[] = [
       tx.shareLink.findMany({ where: { orgId }, select: { id: true, resourceType: true, resourceId: true, createdById: true, expiresAt: true, revokedAt: true, createdAt: true } }),
   },
   { name: 'AuditEvent', rows: (tx, orgId) => auditEvents(tx, orgId) },
+  {
+    name: 'AiUsage',
+    rows: (tx, orgId) =>
+      tx.aiUsage.findMany({ where: { orgId }, orderBy: { createdAt: 'asc' }, select: { id: true, provider: true, model: true, inputTokens: true, outputTokens: true, costMicros: true, feature: true, actorId: true, createdAt: true } }),
+  },
+  {
+    name: 'AiBudget',
+    rows: (tx, orgId) =>
+      tx.aiBudget.findMany({ where: { orgId }, select: { monthlyCapMicros: true, hardStop: true, alertAtPct: true, pausedAt: true, updatedAt: true } }),
+  },
   { name: 'Project', rows: (tx, orgId) => tx.project.findMany({ where: { orgId }, select: { id: true, name: true, notes: true, createdAt: true } }) },
 ];
 
 /** Org-owned models deliberately left out, each with its reason. INV-34 fails on any other orgId model not exported. */
 export const NOT_EXPORTED: Readonly<Record<string, string>> = {
   OrgExport: 'the archives themselves',
+  AiHold: 'in-flight reservations of AI calls, minutes long; the AiUsage ledger is exported',
   SsoState: 'ten-minute sign-in state: a nonce and PKCE verifier, nothing the org owns', // goes with the sso module, harmless when absent
 };
 

@@ -102,6 +102,9 @@ describe.skipIf(!enforce)('INV-29: no org set, no rows; org A set, only A rows',
       await dbSystem.shareLink.create({ data: { orgId, resourceType: 'project', resourceId: p.id, tokenHash: `inv29s-${n}-${tag}`, expiresAt: exp } });
       await dbSystem.auditEvent.createMany({ data: [{ orgId, action: 'inv29' }] });
       await dbSystem.orgExport.create({ data: { orgId, requestedById: user.id, expiresAt: exp } });
+      await dbSystem.aiUsage.create({ data: { orgId, provider: 'anthropic', model: 'inv29', inputTokens: 1, outputTokens: 1, costMicros: 1n, feature: 'inv29' } });
+      await dbSystem.aiBudget.create({ data: { orgId } });
+      await dbSystem.aiHold.create({ data: { orgId, costMicros: 1n, expiresAt: exp } });
       // module tables only when the module is installed (check-modules removes them)
       const model = (m: string) => (dbSystem as unknown as Record<string, { create: (a: unknown) => Promise<unknown> } | undefined>)[m];
       await model('billingAccount')?.create({ data: { orgId } });

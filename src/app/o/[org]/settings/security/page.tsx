@@ -1,5 +1,6 @@
 import { requireOrg } from '@/core/authz/guards';
 import { withOrg } from '@/core/db/rls';
+import { AiSpendCard } from './ai-spend';
 import { SsoSecurityPanel } from '../sso/security-panel'; // sso
 
 export const metadata = { title: 'Org security' };
@@ -41,6 +42,7 @@ export default async function OrgSecurity({ params }: { params: Promise<{ org: s
           ))}
         </tbody>
       </table>
+      <AiSpendCard ctx={ctx} />
       <SsoSecurityPanel ctx={ctx} /> {/* sso */}
     </main>
   );

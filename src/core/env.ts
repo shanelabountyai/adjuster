@@ -22,6 +22,7 @@ export const envSchema = z.object({
   EMAIL_FROM: z.string().min(1).optional(), // "App <no-reply@example.com>"
   EMAIL_SANDBOX_TO: z.email().optional(), // outside production, really send, but only here
   EMAIL_ENABLED: z.enum(['0', '1']).optional(), // '0' = kill switch: nothing is sent or captured
+  AI_ENABLED: z.enum(['0', '1']).optional(), // '0' = kill switch: every withBudget call refuses (addendum §6)
   // Notifications module (spec §4, §7d). Same gating as email: real sends only in production or to the sandbox number.
   TWILIO_ACCOUNT_SID: z.string().min(1).optional(),
   TWILIO_AUTH_TOKEN: z.string().min(1).optional(),

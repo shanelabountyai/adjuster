@@ -19,6 +19,11 @@ for (const [slug, name] of [['acme', 'Acme Studio'], ['globex', 'Globex Labs']] 
     await nav.getByRole('link', { name: 'Security' }).click();
     await expect(page.getByRole('heading', { name: 'Org security' })).toBeVisible();
     await expect(page.getByRole('cell', { name: `owner@${slug}.demo.test` })).toBeVisible();
+    // M12 (§6): the AI spend card shows the demo org's $1.00 cap, and a demo visitor cannot lift it.
+    await expect(page.getByRole('heading', { name: 'AI spending' })).toBeVisible();
+    await expect(page.getByText('of a $1.00 limit')).toBeVisible();
+    await page.getByRole('button', { name: 'Save limit' }).click();
+    await expect(page.getByText('This is a shared demo account')).toBeVisible();
 
     await nav.getByRole('link', { name: 'Export or delete' }).click();
     await expect(page.getByRole('heading', { name: 'Export this org' })).toBeVisible();

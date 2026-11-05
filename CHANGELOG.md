@@ -40,6 +40,16 @@ method, and signs out any one but the current. Owners export the org from `/o/[o
 A clone lists its own tables in the new clone-owned `src/app/export-hooks.ts`. INV-34 added. Migrations `20261106000002_m11_export_sessions`
 (`OrgExport`, sign-in columns) and `20261106000003_rls_policies_export` (11 tables). Deviations: addendum §5, "As built in M11".
 
+**M12: AI spend guards (addendum §6).** `withBudget(ctx, feature, maxCostMicros, fn)` in `src/core/ai/budget.ts` is a **hard cap**: under a
+lock on the org's `AiBudget` row it refuses (`BudgetExceeded`, a `Refused`) when this month's spend, plus every call in flight, plus
+this call's worst-case estimate would pass the cap; otherwise it holds the estimate (`AiHold`) while `fn` runs and swaps the hold for
+an `AiUsage` row priced from the billed tokens. Prices are data in `src/core/ai/prices.ts` (integer micro-dollars per MTok, as of
+2026-10-19); an unpriced model throws. Default cap $25.00 per org per month, hard stop on; demo orgs seed at $1.00. One email to the owners
+per month at 80% and one at the cap, both audited. `AI_ENABLED=0` refuses every call. The *AI spending* card (this month, the limit,
+pause) is on `/o/[org]/settings/security`; changing it needs `billing.manage`. INV-39 added. Migrations `20261107000000_ai_spend`
+(`AiUsage`, `AiBudget`, `AiHold`) and `20261107000001_rls_policies_ai` (14 tables). Inert until a clone calls `withBudget`.
+Deviations: addendum §6, "As built in M12".
+
 ## 1.5.0 (2026-11-04)
 
 `vitest` 2.1 -> 5.1 (dev dependency only; F-05). It clears the dev-tree advisories found during v1.4.1: tinypool prototype-pollution RCE

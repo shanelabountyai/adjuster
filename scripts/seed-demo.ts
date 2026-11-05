@@ -44,6 +44,8 @@ async function seedWith(db: Parameters<Parameters<typeof asSystem>[0]>[0]) {
     for (const name of o.projects) {
       if (!(await db.project.findFirst({ where: { orgId: org.id, name } }))) await db.project.create({ data: { orgId: org.id, name, notes: '' } });
     }
+    // §10.5: demo orgs cap AI spend at $1.00, so the refusal path is reachable in a demo.
+    await db.aiBudget.upsert({ where: { orgId: org.id }, create: { orgId: org.id, monthlyCapMicros: 1_000_000n }, update: { monthlyCapMicros: 1_000_000n } });
   }
   printed.push(...(await seedSso(db)));
   return printed;
