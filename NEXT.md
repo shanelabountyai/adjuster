@@ -1,6 +1,16 @@
 # NEXT
 
-## ▶ Next session: v1.6.0 M9 (RLS core). Model: Opus (security/permissions). Prompt: `docs/v1.6.0-KICKOFF.md`, M9 block.
+## ▶ Next session: v1.6.0 M10 (`sso` module). Model: Opus (auth). Prompt: `docs/v1.6.0-KICKOFF.md`, M10 row + header; read PR #12's body first.
+
+**M9 done 2026-11-05** on branch `v1.6.0`, PR #12 (open; merges at M14 once green). RLS opt-in: `withOrg`/`asSystem`, policies generated
+(`npm run rls:policies`), INV-29..33, CI enforce leg. Gate: off 211 + 9 skipped, enforce 220/220, e2e enforce 10/10, check-modules pass.
+Deviations are in addendum §2 "As built in M9". **Owner question at M9 close:** `withOrg` is 4 round trips (S4c), and off mode pays it too.
+**M10 needs `SSO_TEST_OKTA_*` and `SSO_TEST_GOOGLE_*` in `.env.local`** (owner).
+Local enforce leg: `RLS_MODE=enforce DATABASE_URL=<DATABASE_URL_APP_RW> DATABASE_URL_SYSTEM=<owner> npm test` (URLs from `.env.test`).
+**Doc sync hazard:** the Claude Doc copy of the addendum (Gk498…) still has the pre-approval §10; a doc→file sync at 19:04 on 11-04
+overwrote the approved file once (restored in `aa5ffdb`). Fix the doc's §10 before syncing again.
+
+### (done) M9 handoff, 2026-11-04
 
 **Owner decisions 2026-11-04:** (1) The RLS/SSO/enterprise release is **v1.6.0**, not v1.5.0: v1.5.0 is already tagged (`cdc146b`,
 vitest 5) and pushed tags never move. `docs/v1.6.0-ADDENDUM.md` and `docs/v1.6.0-KICKOFF.md` are renamed and carry a note; the branch
