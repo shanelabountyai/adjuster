@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { onMembershipEnded } from '@/app/org-hooks';
 import { advanceClock } from '@/core/clock';
 import { currentSession, ReauthRequired } from '@/core/auth/session';
 import { deleteAccount, deleteOrg } from '@/core/tenancy/delete';
@@ -41,7 +42,7 @@ describe('INV-26 sensitive changes need a sign-in within 5 minutes', () => {
     const u = await makeUser();
     await signInAs(u.id);
     advanceClock(5 * 60_000 + 1000);
-    await expect(deleteAccount((await currentSession())!, u.email)).rejects.toBeInstanceOf(ReauthRequired);
+    await expect(deleteAccount((await currentSession())!, u.email, onMembershipEnded)).rejects.toBeInstanceOf(ReauthRequired);
     expect(await db.user.count()).toBe(1);
   });
 });

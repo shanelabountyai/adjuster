@@ -1,6 +1,10 @@
 import { createHmac } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { onMembershipEnded } from '@/app/org-hooks';
+import { currentSession } from '@/core/auth/session';
 import { advanceClock, now } from '@/core/clock';
+import { deleteAccount } from '@/core/tenancy/delete';
+import { removeMember } from '@/core/tenancy/orgs';
 import { withOrg } from '@/core/db/rls';
 import { dbSystem as db } from '@/core/db/system'; // fixtures run as the owner role (RLS enforce leg)
 import { emit } from '@/core/events';
@@ -87,6 +91,30 @@ describe('INV-40 an API key resolves only its own org, carries only its scopes, 
       expect(res.status, String(k)).toBe(401);
       expect(res.headers.get('www-authenticate')).toBe('Bearer');
     }
+  });
+
+  it("ending a membership revokes the keys that person created, in the same transaction, and no one else's", async () => {
+    const a = await org('acme');
+    const admin = await addMember(a.orgId, 'admin', 'admin@acme.test');
+    const leaver = await addMember(a.orgId, 'admin', 'leaver@acme.test');
+    const theirs = await createKey(await actAs(admin.id, 'acme'), { label: 'admin crm', scopes: ['read'] });
+    const leavers = await createKey(await actAs(leaver.id, 'acme'), { label: 'leaver crm', scopes: ['read'] });
+    const owners = await createKey(a.owner, { label: 'owner crm', scopes: ['read'] });
+
+    await removeMember(await actAs(a.owner.userId, 'acme'), admin.id, onMembershipEnded);
+    await removeMember(await actAs(leaver.id, 'acme'), leaver.id, onMembershipEnded); // leaving counts too
+    expect((await projects.GET(req('/projects', theirs))).status).toBe(401);
+    expect((await projects.GET(req('/projects', leavers))).status).toBe(401);
+    expect((await projects.GET(req('/projects', owners))).status).toBe(200);
+    expect(await db.auditEvent.count({ where: { action: 'apikey.revoked_with_member' } })).toBe(2);
+  });
+
+  it('deleting an account revokes its keys in every org', async () => {
+    const a = await org('acme');
+    const user = await addMember(a.orgId, 'admin', 'admin@acme.test');
+    const key = await createKey(await actAs(user.id, 'acme'), { label: 'crm', scopes: ['read'] });
+    await deleteAccount((await currentSession())!, 'admin@acme.test', onMembershipEnded);
+    expect((await projects.GET(req('/projects', key))).status).toBe(401);
   });
 
   it('only the hash and a short prefix are stored; the key is not in any row', async () => {

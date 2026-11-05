@@ -3,7 +3,7 @@ import { audit } from '@/core/audit';
 import { assertNotDemo } from '@/core/auth/session';
 import { inOrg, type OrgCtx } from '@/core/authz/guards';
 import { now } from '@/core/clock';
-import { asSystem, withOrg } from '@/core/db/rls';
+import { asSystem, withOrg, type Tx } from '@/core/db/rls';
 import { Refused } from '@/core/errors';
 import { hashToken, newToken } from '@/core/tokens';
 import { API_SCOPES } from '@/app/api-scopes';
@@ -44,6 +44,12 @@ export async function revokeKey(ctx: OrgCtx, id: string) {
     await tx.apiKey.update({ where: { id: k.id }, data: { revokedAt: now() } });
     await audit(ctx, 'apikey.revoked', { targetType: 'apiKey', targetId: k.id }, tx);
   });
+}
+
+/** A member's keys die with their membership (org-hooks.ts onMembershipEnded): a copied key must not outlive access. */
+export async function revokeKeysCreatedBy(tx: Tx, orgId: string, userId: string) {
+  const { count } = await tx.apiKey.updateMany({ where: { orgId, createdById: userId, revokedAt: null }, data: { revokedAt: now() } });
+  if (count) await audit({ orgId, userId: null }, 'apikey.revoked_with_member', { targetType: 'user', targetId: userId, data: { count } }, tx);
 }
 
 export const listKeys = (ctx: OrgCtx) =>

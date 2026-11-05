@@ -55,7 +55,7 @@ billing (`foundation:check-modules`). Owners and admins (new permission `apikeys
 shown once, stored as sha256 with a short visible prefix, scoped, revoked on the next request, rate-limited per key and scope
 (`read` 120 and `write` 20 a minute). `/api/v1/projects` (list, get, create) and `/api/v1/events?since=` (catch-up) show the shape:
 problem+json errors, keyset cursors capped at 100, and `Idempotency-Key` required on every POST (replayed for 24 hours, a reused key
-with another body is 422). Core gains `emit(ctx, type, payload, tx)` (`src/core/events.ts`), which writes the org's event log
+with another body is 422). Removing a member, a member leaving, or deleting an account revokes the keys that person created (owner decision; clone-owned `onMembershipEnded` in `org-hooks.ts`, now a required argument of `removeMember` and `deleteAccount`). Core gains `emit(ctx, type, payload, tx)` (`src/core/events.ts`), which writes the org's event log
 (`OrgEvent`, seq per org handed out at commit by a trigger) in the change's transaction, beside its audit line. The module fans
 the log out to signed webhook endpoints (`Webhook-Signature: t=…,v1=HMAC-SHA256`, 24-hour secret rotation overlap), retries six
 times with backoff, dead-letters, pauses after ten failures in a row, disables on a 410, and replays from the settings page with

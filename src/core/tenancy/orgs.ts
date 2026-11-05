@@ -89,7 +89,13 @@ export async function changeRole(ctx: OrgCtx, userId: string, role: Role) {
 }
 
 /** Removes a member, or the caller themself (leaving needs no permission). Never the last owner. */
-export async function removeMember(ctx: OrgCtx, userId: string) {
+/**
+ * What else ends with a membership, run in its transaction (the app passes `onMembershipEnded` from org-hooks.ts).
+ * Required, so no caller can forget it: a credential the person made must not outlive their access (K6, owner 2026-11-05).
+ */
+export type MembershipEnded = (tx: Prisma.TransactionClient, orgId: string, userId: string) => Promise<void>;
+
+export async function removeMember(ctx: OrgCtx, userId: string, ended: MembershipEnded) {
   const self = userId === ctx.userId;
   await withMembers(ctx, userId, async (tx, actor, from) => {
     if (!self && !mayAssign(actor, from, null)) throw new AuthzError('members.manage');
@@ -99,6 +105,7 @@ export async function removeMember(ctx: OrgCtx, userId: string) {
     // URL keeps read access to the org's resource after the person who shared it is gone.
     await tx.shareLink.updateMany({ where: { orgId: ctx.orgId, createdById: userId, revokedAt: null }, data: { revokedAt: now() } });
     await revokeInvitesBeyond(tx, ctx.orgId, userId, null);
+    await ended(tx, ctx.orgId, userId);
     await audit(ctx, self ? 'member.left' : 'member.removed', { targetType: 'user', targetId: userId, data: { role: from } }, tx);
   });
 }
