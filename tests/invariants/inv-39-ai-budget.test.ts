@@ -135,6 +135,8 @@ describe('owner controls and pricing', () => {
   it('parses dollars without floats and prices round up', () => {
     expect([parseDollars('25'), parseDollars('0.07'), parseDollars('3.1'), parseDollars('-1'), parseDollars('1.234')]).toEqual([25_000_000n, 70_000n, 3_100_000n, null, null]);
     expect(costMicros('anthropic', 'claude-haiku-5-5', 1, 0)).toBe(1n); // 0.1 micro-dollar rounds up
+    expect(costMicros('anthropic', 'claude-haiku-5-5', 100_000, 0)).toBe(10_000n); // at the threshold: base rate
+    expect(costMicros('anthropic', 'claude-haiku-5-5', 100_001, 1000)).toBe(50_001n + 2_500n); // past it: the whole call at the long-prompt rate
     expect(() => costMicros('anthropic', 'no-such-model', 1, 1)).toThrow(/No price/);
   });
 });
