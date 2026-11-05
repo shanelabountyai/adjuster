@@ -8,7 +8,7 @@ is `v1.6.0`, the PR "v1.6.0: RLS, SSO, enterprise modules". (2) Claude created t
 granted DML on `saas_foundation_test` plus default privileges; its URL is `DATABASE_URL_APP_RW` in `.env.test` (gitignored, password
 never printed). M9's `db:setup` takes it over and writes `DATABASE_URL` (app_rw) / `DATABASE_URL_SYSTEM` (owner).
 
-**Kickoff pre-flight, still the owner's:** addendum approval + §10 open-decision defaults (kickoff line 8 blank); Okta and Google
+**Kickoff pre-flight:** addendum APPROVED 2026-11-04 (§10: 2 and 3 tightened). Still the owner's: Okta and Google
 `SSO_TEST_*` in `.env.local`, which does not exist yet (needed by M10, not M9). Done: every clone on v1.4.1; `app_rw`.
 
 **Merge rule (owner, 2026-11-04): "merge without me if saas foundation based".** Template release PRs and clone upgrade PRs merge
