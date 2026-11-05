@@ -1,5 +1,13 @@
 # NEXT
 
+## ▶ 2026-11-04: v1.4.1 is live in every clone. Next item: housefile phase branches (in housefile's folder).
+
+All 13 `security:` v1.4.1 PRs merged by owner request (checks re-verified green before each). Production redeployed: gavel and
+ledgerleave built from `main` automatically; callboard via its manual deploy hook (HTTP 201). All three were Ready by 18:12 CST and
+answer 401 behind their shared password. `CLONES.md`: 13 rows on v1.4.1. Left open, each in its own folder: housefile (merge `main`
+into `phase-1` and the phase-2 branch; refresh `housefile_test`), footnote (`CLAUDE.md` line 33 says v1.3.0, beside Shane's
+uncommitted edit), template F-05 (vitest 5).
+
 ## ▶ 2026-11-04: clone upgrades to v1.4.0 run FROM HERE, one at a time (owner decision)
 
 Shane chose to drive every clone's v1.4.0 merge (carries `security:` v1.3.1) from this session instead of one session per
@@ -13,7 +21,7 @@ SVG, `<=16.4.0`, so v1.3.1's 16.3.8 doesn't cover it) plus highs in zod/prisma/s
 16.4.5 (audit 0). Remaining clones take **v1.4.1**; already-open v1.4.0 PRs (tradepost #3, gavel #3, pulseboard #3, callboard #18,
 loanbook) and the clones already on v1.4.0 (quorum, commons, coursework, ledgerleave) each get v1.4.1 merged in.
 
-**Roll-out done 2026-11-04: every clone (except boxloop, gridline) has an open, unmerged `security:` v1.4.1 PR; `npm audit --omit=dev` 0 in each.**
+**Roll-out done 2026-11-04 (all merged later the same day, see top): every clone (except boxloop, gridline) had an open `security:` v1.4.1 PR; `npm audit --omit=dev` 0 in each.**
 Owner merges each, by 2026-11-11 (sooner: critical RCE), and moves the `CLONES.md` row to v1.4.1 as each merges.
 
 | Clone | PR | CI | Owner note |
