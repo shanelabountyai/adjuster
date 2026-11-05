@@ -30,7 +30,7 @@ Owner merges each, by 2026-11-11 (sooner: critical RCE), and moves the `CLONES.m
 | quorum | #5 | green | |
 | commons | #13 | green | note is D-99; phase-7.1 numbers from D-100 |
 | coursework | #4 | green | |
-| ledgerleave | #5 | ci green, **Vercel preview red** (also red on #3, #4; cause unread) | **deploying: redeploy after merge** |
+| ledgerleave | #5 | green | D-63 Preview builds off (owner, like gavel D-100); **deploying: redeploy after merge** |
 
 **Release-process lesson:** a clone's CI resolves `FOUNDATION_VERSION` via the tag *in the clone's own repo*. quorum, commons,
 coursework and ledgerleave failed `foundation:drift` (`bad revision 'v1.4.1'`) until the tag was pushed to each. Next release: push
