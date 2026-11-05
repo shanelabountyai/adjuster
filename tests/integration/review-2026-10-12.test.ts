@@ -1,6 +1,6 @@
 // One runnable check per finding fixed from the 2026-10-12 review (see CHANGELOG.md, Unreleased).
 import { beforeEach, describe, expect, it } from 'vitest';
-import { db } from '@/core/db';
+import { dbSystem as db } from '@/core/db/system'; // fixtures run as the owner role (RLS enforce leg)
 import { requestEmailChange } from '@/core/auth/link';
 import { currentSession } from '@/core/auth/session';
 import { LIMITS } from '@/core/rate-limit';

@@ -2,6 +2,7 @@ import { pathToFileURL } from 'node:url';
 import { now } from '@/core/clock';
 import { sealSecret } from '@/core/auth/secret-box';
 import { db } from '@/core/db'; // importing it is what refuses a cloud database (INV-18, INV-27)
+import { asSystem } from '@/core/db/rls';
 import type { Role } from '@/generated/prisma/enums';
 
 // Demo data (spec §7, D-8): two orgs, an owner, admin and member in each. Only this script sets `isDemo`,
@@ -16,7 +17,10 @@ const ORGS = [
 ] as const;
 const ROLES: Role[] = ['owner', 'admin', 'member'];
 
-export async function seedDemo() {
+// Cross-org (cross-org.ts): writes several orgs, so it runs as the system role.
+export const seedDemo = () => asSystem((sys) => seedWith(sys));
+
+async function seedWith(db: Parameters<Parameters<typeof asSystem>[0]>[0]) {
   const printed: string[] = [];
   for (const o of ORGS) {
     const org = await db.org.upsert({ where: { slug: o.slug }, create: { slug: o.slug, name: o.name }, update: {} });

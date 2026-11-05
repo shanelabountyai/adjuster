@@ -4,7 +4,7 @@ import { currentSession, ReauthRequired } from '@/core/auth/session';
 import { deleteAccount, deleteOrg } from '@/core/tenancy/delete';
 import { actAs, addMember, makeOrg } from '../helpers/org';
 import { disableTotp, enrolTotp } from '@/core/auth/totp';
-import { db } from '@/core/db';
+import { dbSystem as db } from '@/core/db/system'; // fixtures run as the owner role (RLS enforce leg)
 import { enrol, makeUser, resetAuthTables, signInAs } from '../helpers/auth';
 
 beforeEach(resetAuthTables);

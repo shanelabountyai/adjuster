@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { sealSecret } from '@/core/auth/secret-box';
 import type { ActionSpec } from '@/core/authz/action';
 import { now } from '@/core/clock';
-import { db } from '@/core/db';
+import { dbSystem as db } from '@/core/db/system'; // fixtures run as the owner role (RLS enforce leg)
 import { hashToken } from '@/core/tokens';
 import { seedApp } from '../fixtures/app';
 import { allTables, resetAuthTables, signInAs } from '../helpers/auth';

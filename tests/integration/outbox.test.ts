@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { advanceClock } from '@/core/clock';
-import { db } from '@/core/db';
+import { dbSystem as db } from '@/core/db/system'; // fixtures run as the owner role (RLS enforce leg)
 import { env } from '@/core/env';
 import { drainOutbox, enqueue, LEASE_MS, MAX_ATTEMPTS, sweepOutbox } from '@/modules/notifications/outbox';
 import { sendSms } from '@/modules/notifications/sms';

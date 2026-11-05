@@ -1,11 +1,11 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { notFound } from 'next/navigation';
 import { audit } from '@/core/audit';
 import { assertNotDemo, type SessionCtx } from '@/core/auth/session';
 import { AuthzError, type OrgCtx } from '@/core/authz/guards';
 import { mayAssign } from '@/core/authz/permissions';
 import { now } from '@/core/clock';
-import { db } from '@/core/db';
+import { withOrg } from '@/core/db/rls';
 import { Refused } from '@/core/errors';
 import type { Prisma } from '@/generated/prisma/client';
 import { Role } from '@/generated/prisma/enums';
@@ -22,8 +22,10 @@ export async function createOrg(s: SessionCtx, name: string): Promise<string> {
   for (let i = 0; i < 5; i++) {
     const slug = i === 0 ? base : `${base}-${randomBytes(3).toString('hex')}`;
     try {
-      await db.$transaction(async (tx) => {
-        const org = await tx.org.create({ data: { slug, name, memberships: { create: { userId: s.userId, role: 'owner' } } } });
+      // The id is chosen here so the owner membership can be written inside the new org's own scope (RLS).
+      const id = randomUUID();
+      await withOrg({ orgId: id }, async (tx) => {
+        const org = await tx.org.create({ data: { id, slug, name, memberships: { create: { userId: s.userId, role: 'owner' } } } });
         await audit({ orgId: org.id, userId: s.userId }, 'org.created', { targetType: 'org', targetId: org.id }, tx);
       });
       return slug;
@@ -54,7 +56,7 @@ export async function assertOwnerRemains(tx: Tx, orgId: string, losingUserId: st
  */
 async function withMembers(ctx: OrgCtx, userId: string, fn: (tx: Tx, actor: Role, target: Role) => Promise<void>) {
   assertNotDemo(ctx.session);
-  await db.$transaction(async (tx) => {
+  await withOrg(ctx, async (tx) => {
     await lockOrg(tx, ctx.orgId);
     const [actor, target] = await Promise.all(
       [ctx.userId, userId].map((id) => tx.membership.findUnique({ where: { orgId_userId: { orgId: ctx.orgId, userId: id } }, select: { role: true } })),

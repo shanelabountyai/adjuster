@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AuthzError, requireOrg } from '@/core/authz/guards';
 import { can, type Permission } from '@/core/authz/permissions';
-import { db } from '@/core/db';
+import { dbSystem as db } from '@/core/db/system'; // fixtures run as the owner role (RLS enforce leg)
 import { createInvite } from '@/core/tenancy/invites';
 import { changeRole, removeMember } from '@/core/tenancy/orgs';
 import { Role } from '@/generated/prisma/enums';

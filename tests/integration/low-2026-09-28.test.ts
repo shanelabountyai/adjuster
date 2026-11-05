@@ -1,7 +1,7 @@
 // One runnable check per LOW finding fixed from audit/FOUNDATION-REVIEW-2026-09-26.md on
 // 2026-09-28 (K1, K2, K5, K6, K13 — see that file for what each is and why it matters).
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { db } from '@/core/db';
+import { dbSystem as db } from '@/core/db/system'; // fixtures run as the owner role (RLS enforce leg)
 import { now } from '@/core/clock';
 import { clientIp } from '@/core/http';
 import { confirmEmailChange, redeemLink, requestEmailChange } from '@/core/auth/link';

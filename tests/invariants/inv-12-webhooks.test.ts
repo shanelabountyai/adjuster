@@ -7,7 +7,7 @@ vi.hoisted(() => { process.env.DEMO_MODE = '1'; });
 import { demoSignIn } from '@/core/auth/demo';
 import { SESSION_COOKIE } from '@/core/auth/session';
 import { now } from '@/core/clock';
-import { db } from '@/core/db';
+import { dbSystem as db } from '@/core/db/system'; // fixtures run as the owner role (RLS enforce leg)
 import { mockProvider, stripeProvider } from '@/modules/billing/provider';
 import { destroyOrg } from '@/app/o/[org]/settings/danger/actions';
 import { openPortal, startCheckout } from '@/app/o/[org]/settings/billing/actions';

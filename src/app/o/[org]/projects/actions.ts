@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { audit } from '@/core/audit';
 import { orgAction, ref } from '@/core/authz/action';
 import { inOrg, type OrgCtx } from '@/core/authz/guards';
-import { db } from '@/core/db';
+import { withOrg } from '@/core/db/rls';
 import { createShareLink, revokeShareLink } from '@/core/share/links';
 
 // The example resource and its share links (spec §7c). A clone replaces Project with its own.
@@ -15,7 +15,7 @@ export const addProject = orgAction(
   null,
   z.object({ name: z.string().trim().min(1, 'Give the project a name.').max(120), notes: z.string().max(2000).default('') }),
   async (ctx, i) => {
-    await db.$transaction(async (tx) => {
+    await withOrg(ctx, async (tx) => {
       const p = await tx.project.create({ data: { ...inOrg(ctx), name: i.name, notes: i.notes } });
       await audit(ctx, 'project.created', { targetType: 'project', targetId: p.id }, tx);
     });

@@ -7,6 +7,10 @@ export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.string().min(1),
   DIRECT_URL: z.string().min(1).optional(), // migrations only; falls back to DATABASE_URL
+  // Row-level security (addendum §2). DATABASE_URL is the app role; the system URL is the owner (BYPASSRLS) for the
+  // closed list of cross-org paths in src/core/db/cross-org.ts. Unset system URL = asSystem uses DATABASE_URL.
+  DATABASE_URL_SYSTEM: z.string().min(1).optional(),
+  RLS_MODE: z.enum(['enforce']).optional(), // enforce = the app role must not bypass RLS (INV-33); needs DATABASE_URL_SYSTEM
   AUTH_SECRET: z.string().min(32), // HKDF root for sealed secrets and token hashing
   APP_URL: z.url(),
   CRON_SECRET: z.string().min(16).optional(), // Vercel Cron sends it as a bearer; unset = /api/cron refuses (INV-11)
@@ -39,6 +43,7 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
     throw new Error(`Invalid environment: ${keys}`); // names only — never echo values
   }
   const e = result.data;
+  if (e.RLS_MODE === 'enforce' && !e.DATABASE_URL_SYSTEM) throw new Error('Invalid environment: DATABASE_URL_SYSTEM (required when RLS_MODE=enforce)');
   // INV-13: production with no provider would silently drop every sign-in link.
   if (e.VERCEL_ENV === 'production' && e.EMAIL_ENABLED !== '0' && !(e.RESEND_API_KEY && e.EMAIL_FROM)) {
     throw new Error('Invalid environment: RESEND_API_KEY, EMAIL_FROM (required in production)');

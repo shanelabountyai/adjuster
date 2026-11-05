@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { now } from '@/core/clock';
 import { db } from '@/core/db';
+import { asSystem } from '@/core/db/rls';
 import { env } from '@/core/env';
 import { sendEmail } from '@/core/email/transport';
 import { hit, LIMITS } from '@/core/rate-limit';
@@ -101,14 +102,16 @@ export async function confirmEmailChange(s: SessionCtx, token: string): Promise<
   if (spent.count !== 1) return false;
   const { email } = await db.loginToken.findUniqueOrThrow({ where: { hash } });
   try {
-    await db.$transaction(async (tx) => {
+    // Cross-org (cross-org.ts): invites to the old address are revoked in every org. Under RLS the app role
+    // would silently match none of them (caught by INV-06 in the enforce leg).
+    await asSystem((sys) => sys.$transaction(async (tx) => {
       await tx.user.update({ where: { id: s.userId }, data: { email } });
       await tx.session.deleteMany({ where: otherSessions(s) });
       // K1: any other unused sign-in link for this account (sent to the old address) dies too.
       await tx.loginToken.updateMany({ where: { userId: s.userId, purpose: { in: ['login', 'signup'] }, usedAt: null }, data: { usedAt: t } });
       await tx.invite.updateMany({ where: { email: s.email, acceptedAt: null, revokedAt: null }, data: { revokedAt: t } });
       await audit({ userId: s.userId }, 'account.email_changed', { targetType: 'user', targetId: s.userId }, tx);
-    });
+    }));
   } catch (e) {
     if ((e as { code?: string }).code === 'P2002') return false; // taken since the link was sent
     throw e;

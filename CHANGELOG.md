@@ -2,6 +2,25 @@
 
 Entries prefixed `security:` are mandatory for anything touching an invariant. Clones must take a `security:` release within 7 days.
 
+## Unreleased (1.6.0)
+
+**M9: row-level security, opt-in (addendum §2).** `withOrg(ctx, fn)` and `asSystem(fn)` in `src/core/db/rls.ts`; a second
+client on `DATABASE_URL_SYSTEM` (owner); `RLS_MODE` (unset | `enforce`). `npm run rls:policies` generates the policy migration from
+the schema; `20261105000000_rls_policies` covers the 7 core and module tables with `orgId`. Every org-scoped query runs in `withOrg`;
+the cross-org paths are a closed list in `src/core/db/cross-org.ts` (INV-32). INV-29 to INV-33 added. A clone that merges this and
+sets nothing behaves as on 1.5.0: its role is the owner, which bypasses the policies.
+
+Measured round-trip cost (spike S4c; 200 reads of one Project row after 20 warm-up; integer microseconds):
+
+| Where | plain p50 / p95 | `withOrg` p50 / p95 |
+|---|---|---|
+| local Postgres 17 | 285 / 1082 | 617 / 1265 |
+| Neon pooler, from a laptop (aws-us-east-2) | 43809 / 129913 | 179714 / 262536 |
+
+`withOrg` is BEGIN + `set_config` + the query + COMMIT: four round trips where a plain read is one. From a laptop that is about 4x per
+read on Neon; from a Vercel function in the same region the round trip is a few milliseconds, but the ratio holds. It applies in off
+mode too (the kickoff requires the same code path in both modes). A page should do its reads in one `withOrg`, not one each.
+
 ## 1.5.0 (2026-11-04)
 
 `vitest` 2.1 -> 5.1 (dev dependency only; F-05). It clears the dev-tree advisories found during v1.4.1: tinypool prototype-pollution RCE

@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { requireUser, type SessionCtx } from '@/core/auth/session';
 import { db } from '@/core/db';
+import { withOrg } from '@/core/db/rls';
 import type { Role } from '@/generated/prisma/enums';
 import { can, type Permission } from './permissions';
 
@@ -21,8 +22,13 @@ export class AuthzError extends Error {
  */
 export async function requireOrg(orgSlug: string, perm?: Permission): Promise<OrgCtx> {
   const session = await requireUser();
-  const m = typeof orgSlug === 'string'
-    ? await db.membership.findFirst({ where: { userId: session.userId, org: { slug: orgSlug } }, select: { orgId: true, role: true } })
+  // Org first (no RLS on Org), then the membership inside that org's scope: under RLS a membership cannot be
+  // read before its org is set. An unknown slug and a non-member get the same notFound.
+  const org = typeof orgSlug === 'string' ? await db.org.findUnique({ where: { slug: orgSlug }, select: { id: true } }) : null;
+  const m = org
+    ? await withOrg({ orgId: org.id }, (tx) =>
+        tx.membership.findUnique({ where: { orgId_userId: { orgId: org.id, userId: session.userId } }, select: { orgId: true, role: true } }),
+      )
     : null;
   if (!m) notFound();
   // requireUser already sent an enrolled user without mfaAt to /login/mfa; this catches the unenrolled.
