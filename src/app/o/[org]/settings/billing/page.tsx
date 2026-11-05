@@ -9,7 +9,7 @@ export const metadata = { title: 'Billing' };
 
 export default async function Billing({ params, searchParams }: { params: Promise<{ org: string }>; searchParams: Promise<{ checkout?: string }> }) {
   const ctx = await requireOrg((await params).org, 'billing.manage');
-  const [acct, { checkout }] = await Promise.all([withOrg(ctx, (tx) => tx.billingAccount.findUnique({ where: { orgId: ctx.orgId } })), searchParams]);
+  const [acct, { checkout }] = await Promise.all([withOrg(ctx, (tx) => tx.billingAccount.findUnique({ where: { orgId: ctx.orgId } }), { atomic: false }), searchParams]);
   const live = isLive(acct?.status);
 
   return (

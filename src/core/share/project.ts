@@ -13,6 +13,6 @@ export function toPublicProject(row: Project): PublicProject {
 
 /** Loads by the share link's own org, never by an id alone. */
 export async function loadPublicProject(orgId: string, id: string) {
-  const row = await withOrg({ orgId }, (tx) => tx.project.findFirst({ where: { id, orgId } }));
+  const row = await withOrg({ orgId }, (tx) => tx.project.findFirst({ where: { id, orgId } }), { atomic: false });
   return row && toPublicProject(row);
 }

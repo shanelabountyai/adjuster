@@ -28,6 +28,7 @@ export async function requireOrg(orgSlug: string, perm?: Permission): Promise<Or
   const m = org
     ? await withOrg({ orgId: org.id }, (tx) =>
         tx.membership.findUnique({ where: { orgId_userId: { orgId: org.id, userId: session.userId } }, select: { orgId: true, role: true } }),
+        { atomic: false },
       )
     : null;
   if (!m) notFound();

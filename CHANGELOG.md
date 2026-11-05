@@ -18,8 +18,9 @@ Measured round-trip cost (spike S4c; 200 reads of one Project row after 20 warm-
 | Neon pooler, from a laptop (aws-us-east-2) | 43809 / 129913 | 179714 / 262536 |
 
 `withOrg` is BEGIN + `set_config` + the query + COMMIT: four round trips where a plain read is one. From a laptop that is about 4x per
-read on Neon; from a Vercel function in the same region the round trip is a few milliseconds, but the ratio holds. It applies in off
-mode too (the kickoff requires the same code path in both modes). A page should do its reads in one `withOrg`, not one each.
+read on Neon; from a Vercel function in the same region the round trip is a few milliseconds, but the ratio holds. With RLS off (the default) it
+costs nothing: no `set_config`, and reads marked `{ atomic: false }` skip the transaction (D-31). Under enforce, a page should do
+its reads in one `withOrg`, not one each.
 
 ## 1.5.0 (2026-11-04)
 

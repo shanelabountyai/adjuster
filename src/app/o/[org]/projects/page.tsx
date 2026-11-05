@@ -13,7 +13,7 @@ export default async function Projects({ params }: { params: Promise<{ org: stri
   const [projects, links] = await withOrg(ctx, (tx) => Promise.all([
     tx.project.findMany({ where: inOrg(ctx), orderBy: { createdAt: 'asc' } }),
     tx.shareLink.findMany({ where: { ...inOrg(ctx), resourceType: 'project', revokedAt: null, expiresAt: { gt: now() } }, orderBy: { createdAt: 'asc' } }),
-  ]));
+  ]), { atomic: false });
   const bind = <A extends unknown[], R>(fn: (slug: string, ...a: A) => R) => fn.bind(null, ctx.slug);
 
   return (

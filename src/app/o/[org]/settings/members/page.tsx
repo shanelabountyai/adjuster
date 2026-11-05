@@ -15,7 +15,7 @@ export default async function Members({ params }: { params: Promise<{ org: strin
   const [members, invites] = await withOrg(ctx, (tx) => Promise.all([
     tx.membership.findMany({ where: inOrg(ctx), select: { userId: true, role: true, user: { select: { email: true } } }, orderBy: { createdAt: 'asc' } }),
     manage ? tx.invite.findMany({ where: { ...inOrg(ctx), acceptedAt: null, revokedAt: null, expiresAt: { gt: now() } }, orderBy: { createdAt: 'asc' } }) : [],
-  ]));
+  ]), { atomic: false });
   const roles = Object.values(Role);
   const bind = <A extends unknown[], R>(fn: (slug: string, ...a: A) => R) => fn.bind(null, ctx.slug);
 

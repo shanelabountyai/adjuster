@@ -4,7 +4,7 @@
 
 **M9 done 2026-11-05** on branch `v1.6.0`, PR #12 (open; merges at M14 once green). RLS opt-in: `withOrg`/`asSystem`, policies generated
 (`npm run rls:policies`), INV-29..33, CI enforce leg. Gate: off 211 + 9 skipped, enforce 220/220, e2e enforce 10/10, check-modules pass.
-Deviations are in addendum §2 "As built in M9". **Owner question at M9 close:** `withOrg` is 4 round trips (S4c), and off mode pays it too.
+Deviations are in addendum §2 "As built in M9". **D-31 (owner, 2026-11-05):** `withOrg` is 4 round trips under enforce (S4c); with RLS off it costs nothing (`{ atomic: false }` on reads).
 **M10 needs `SSO_TEST_OKTA_*` and `SSO_TEST_GOOGLE_*` in `.env.local`** (owner).
 Local enforce leg: `RLS_MODE=enforce DATABASE_URL=<DATABASE_URL_APP_RW> DATABASE_URL_SYSTEM=<owner> npm test` (URLs from `.env.test`).
 **Doc sync hazard:** the Claude Doc copy of the addendum (Gk498…) still has the pre-approval §10; a doc→file sync at 19:04 on 11-04
