@@ -13,6 +13,7 @@ export default async function OrgLayout({ children, params }: { children: React.
       <nav>
         <strong>{org.name}</strong> · <Link href={base}>Home</Link> · <Link href={`${base}/projects`}>Projects</Link> · <Link href={`${base}/settings/members`}>Members</Link>
         {can(ctx.role, 'billing.manage') && <> · <Link href={`${base}/settings/billing`}>Billing</Link></>} {/* billing */}
+        {ctx.role === 'owner' && <> · <Link href={`${base}/settings/sso`}>SSO</Link></>} {/* sso */}
         {can(ctx.role, 'org.delete') && <> · <Link href={`${base}/settings/danger`}>Delete org</Link></>}
         {' · '}<Link href="/onboarding">Your orgs</Link> · <Link href="/account/security">Account</Link>
       </nav>

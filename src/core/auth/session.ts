@@ -26,6 +26,7 @@ export type SessionCtx = {
   email: string;
   authAt: Date;
   mfaAt: Date | null;
+  mfaOrgId: string | null; // mfaAt came from this org's SSO provider, and counts only there (addendum §10.2)
   totpEnrolled: boolean;
   isDemo: boolean;
 };
@@ -37,11 +38,13 @@ export class ReauthRequired extends Refused {
   }
 }
 
-export async function createSession(userId: string, opts: { mfa?: boolean } = {}): Promise<string> {
+/** `mfaOrgId`: an SSO sign-in whose ID token's `amr` includes `mfa`; it satisfies the MFA rule for that org only. */
+export async function createSession(userId: string, opts: { mfa?: boolean; mfaOrgId?: string } = {}): Promise<string> {
   const token = newToken();
   const t = now();
+  const mfaAt = opts.mfa || opts.mfaOrgId ? t : null;
   await db.session.create({
-    data: { hash: hashToken(token), userId, authAt: t, mfaAt: opts.mfa ? t : null, createdAt: t, expiresAt: new Date(t.getTime() + TTL_MS) },
+    data: { hash: hashToken(token), userId, authAt: t, mfaAt, mfaOrgId: opts.mfaOrgId ?? null, createdAt: t, expiresAt: new Date(t.getTime() + TTL_MS) },
   });
   return token;
 }
@@ -61,7 +64,7 @@ export async function sessionFor(token: string | undefined, e: { DEMO_MODE?: str
   // all, whichever way the session was made: /demo before the flag went off, or a sign-in link (INV-27).
   if (s.user.isDemo && e.DEMO_MODE !== '1') return null;
   if (s.user.totpEnrolledAt && !s.mfaAt && now().getTime() - s.authAt.getTime() > PENDING_MFA_MS) return null;
-  return { hash: s.hash, userId: s.userId, email: s.user.email, authAt: s.authAt, mfaAt: s.mfaAt, totpEnrolled: !!s.user.totpEnrolledAt, isDemo: s.user.isDemo };
+  return { hash: s.hash, userId: s.userId, email: s.user.email, authAt: s.authAt, mfaAt: s.mfaAt, mfaOrgId: s.mfaOrgId, totpEnrolled: !!s.user.totpEnrolledAt, isDemo: s.user.isDemo };
 }
 
 /** One query per request. */

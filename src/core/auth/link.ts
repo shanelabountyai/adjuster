@@ -9,6 +9,7 @@ import { hashToken, newToken } from '@/core/tokens';
 import { audit } from '@/core/audit';
 import { Refused } from '@/core/errors';
 import { assertFresh, createSession, otherSessions, type SessionCtx } from './session';
+import { ssoRefusesLink } from './sso-hook';
 
 const TTL_MS = 15 * 60_000;
 const COOLDOWN_MS = 60_000;
@@ -32,6 +33,8 @@ export async function requestLink(input: string, ip: string): Promise<void> {
   if (await db.loginToken.count({ where: { email, createdAt: { gt: new Date(t.getTime() - COOLDOWN_MS) } } })) return;
 
   const user = await db.user.findUnique({ where: { email }, select: { id: true } });
+  // SSO-required org (INV-36): no link is sent, and the answer is the same as for any other address.
+  if (user && (await ssoRefusesLink(user.id))) return;
   const token = newToken();
   await db.loginToken.create({
     data: { hash: hashToken(token), purpose: user ? 'login' : 'signup', email, userId: user?.id ?? null, createdAt: t, expiresAt: new Date(t.getTime() + TTL_MS) },
@@ -58,6 +61,8 @@ export async function redeemLink(token: string): Promise<string | null> {
   });
   if (spent.count !== 1) return null;
   const row = await db.loginToken.findUniqueOrThrow({ where: { hash } });
+  // Checked again here: the link may predate the org turning SSO-required on (INV-36).
+  if (row.userId && (await ssoRefusesLink(row.userId))) return null;
   const userId = row.userId ?? (await db.user.upsert({ where: { email: row.email }, create: { email: row.email }, update: {}, select: { id: true } })).id;
   return createSession(userId);
 }

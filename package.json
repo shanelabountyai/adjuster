@@ -38,6 +38,7 @@
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "next": "^16.4.5",
+    "openid-client": "6.8.8",
     "otpauth": "^9.5.2",
     "pg": "^8.23.0",
     "react": "^19.2.8",

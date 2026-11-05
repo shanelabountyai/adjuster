@@ -12,6 +12,7 @@ export const CROSS_ORG_FILES: Readonly<Record<string, string>> = {
   'src/modules/billing/webhook.ts': 'Stripe webhook: the event names the org',
   'src/modules/notifications/outbox.ts': 'cron drain and sweep across every org',
   'scripts/seed-demo.ts': 'seed:demo writes several orgs',
-  // reserved for M10: the SSO callback path
+  'src/modules/sso/hooks.ts': '/login routing by email domain, the SSO-required link check, domain uniqueness, cron sweep', // sso
+  'src/modules/sso/flow.ts': 'the SSO callback: the state row names the org only once it is read', // sso
   // clone entries below
 };

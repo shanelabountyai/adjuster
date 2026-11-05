@@ -28,6 +28,7 @@ model User {
   sessions         Session[]
   loginTokens      LoginToken[]
   recoveryCodes    RecoveryCode[]
+  ssoSubjects      SsoSubject[] // sso
 }
 
 /// Magic-link token. Only sha256 stored; single use; 15 min.
@@ -57,7 +58,8 @@ model Session {
   userId    String    @db.Uuid
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   authAt    DateTime  @db.Timestamptz(6) // when the link was redeemed (INV-26 freshness)
-  mfaAt     DateTime? @db.Timestamptz(6) // when TOTP was verified in this session
+  mfaAt     DateTime? @db.Timestamptz(6) // when TOTP was verified in this session, or an SSO provider asserted MFA
+  mfaOrgId  String?   @db.Uuid // set when mfaAt came from this org's SSO provider (amr includes mfa): counts for that org only
   expiresAt DateTime  @db.Timestamptz(6)
   createdAt DateTime  @db.Timestamptz(6)
 
@@ -86,6 +88,9 @@ model Org {
   // module back-relations: each line ends in its module marker (spec §4)
   billingAccount BillingAccount? // billing
   outbox         Outbox[] // notifications
+  ssoConnection  SsoConnection? // sso
+  ssoDomains     SsoDomain[] // sso
+  ssoStates      SsoState[] // sso
 }
 
 model Membership {

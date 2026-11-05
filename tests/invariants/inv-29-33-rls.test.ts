@@ -105,6 +105,9 @@ describe.skipIf(!enforce)('INV-29: no org set, no rows; org A set, only A rows',
       const model = (m: string) => (dbSystem as unknown as Record<string, { create: (a: unknown) => Promise<unknown> } | undefined>)[m];
       await model('billingAccount')?.create({ data: { orgId } });
       await model('outbox')?.create({ data: { orgId, channel: 'email', to: 'x@example.test', template: 'inv29', data: {} } });
+      await model('ssoConnection')?.create({ data: { orgId, issuer: 'https://idp.example', clientId: 'x', clientSecretSealed: 'x', allowedDomains: [] } });
+      await model('ssoDomain')?.create({ data: { orgId, domain: `inv29-${n}-${tag}.example` } });
+      await model('ssoState')?.create({ data: { hash: `inv29-${n}-${tag}`, orgId, nonce: 'x', codeVerifier: 'x', createdAt: new Date(), expiresAt: exp } });
     }
   });
 

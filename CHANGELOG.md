@@ -22,6 +22,16 @@ read on Neon; from a Vercel function in the same region the round trip is a few 
 costs nothing: no `set_config`, and reads marked `{ atomic: false }` skip the transaction (D-31). Under enforce, a page should do
 its reads in one `withOrg`, not one each.
 
+**M10: `sso` module, OIDC per org (addendum §3).** Removable like billing (`foundation:check-modules`). Tables `SsoConnection`,
+`SsoDomain`, `SsoState` and `SsoSubject` (`prisma/schema/sso.prisma`), plus one core column, `Session.mfaOrgId`. Migrations `20261106000000_sso`
+and `20261106000001_rls_policies_sso` (the regenerated policies, now 10 tables). `SSO_ENABLED=1` turns it on; unset, `/login`
+never routes to a provider. Owners manage the connection, DNS-verified domains, Test sign-in and *Require SSO* at
+`/o/[org]/settings/sso`. Built on `openid-client` 6.8.8 (pinned), with ID-token signature checks turned on. The approved §10 rules hold:
+provider MFA counts only with `amr: mfa`, and only in that org; JIT only on `allowedDomains` plus `hd` for Google. INV-35 to
+INV-38 added, run against a local mock provider (`tests/helpers/oidc-mock.ts`), and INV-22 gains the SSO cases. A clone that merges this and
+leaves `SSO_ENABLED` unset behaves as before. **Hand check before the tag:** one sign-in each through Okta and Google Workspace
+(results to be recorded here).
+
 ## 1.5.0 (2026-11-04)
 
 `vitest` 2.1 -> 5.1 (dev dependency only; F-05). It clears the dev-tree advisories found during v1.4.1: tinypool prototype-pollution RCE

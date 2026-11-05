@@ -32,12 +32,23 @@ export const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().min(1).optional(), // billing
   STRIPE_PRICE_ID: z.string().min(1).optional(), // billing
   STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(), // billing
+  // SSO module (addendum §3). Unset = /login never routes to a provider and /login/sso/** is a 404, connections or not.
+  SSO_ENABLED: z.enum(['1']).optional(), // sso
+  // The two hand-checked test providers (D-26). Read only by seed:demo, which pre-fills a demo org's connection with them.
+  SSO_TEST_GOOGLE_CLIENT_ID: z.string().min(1).optional(), // sso
+  SSO_TEST_GOOGLE_CLIENT_SECRET: z.string().min(1).optional(), // sso
+  SSO_TEST_GOOGLE_DOMAIN: z.string().min(1).optional(), // sso: the Workspace domain, e.g. labintelligence.co
+  SSO_TEST_OKTA_ISSUER: z.url().optional(), // sso
+  SSO_TEST_OKTA_CLIENT_ID: z.string().min(1).optional(), // sso
+  SSO_TEST_OKTA_CLIENT_SECRET: z.string().min(1).optional(), // sso
+  SSO_TEST_OKTA_DOMAIN: z.string().min(1).optional(), // sso: the email domain of the Okta test users
 });
 
 export type Env = z.infer<typeof envSchema>;
 
 export function parseEnv(source: Record<string, string | undefined>): Env {
-  const result = envSchema.safeParse(source);
+  // An empty `NAME=` line (a key waiting for its value) is unset, not an invalid empty string.
+  const result = envSchema.safeParse(Object.fromEntries(Object.entries(source).filter(([, v]) => v !== '')));
   if (!result.success) {
     const keys = [...new Set(result.error.issues.map((i) => i.path.join('.')))].join(', ');
     throw new Error(`Invalid environment: ${keys}`); // names only — never echo values

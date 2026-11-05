@@ -32,8 +32,10 @@ export async function requireOrg(orgSlug: string, perm?: Permission): Promise<Or
       )
     : null;
   if (!m) notFound();
-  // requireUser already sent an enrolled user without mfaAt to /login/mfa; this catches the unenrolled.
-  if ((m.role === 'owner' || m.role === 'admin') && !(session.totpEnrolled && session.mfaAt)) redirect('/account/security?mfa=required');
+  // requireUser already sent an enrolled user without mfaAt to /login/mfa; this catches the unenrolled. An SSO sign-in
+  // whose provider asserted MFA (amr) counts as the second factor, but only in the org whose provider said so (§10.2).
+  const mfa = !!session.mfaAt && (session.totpEnrolled || session.mfaOrgId === m.orgId);
+  if ((m.role === 'owner' || m.role === 'admin') && !mfa) redirect('/account/security?mfa=required');
   if (perm && !can(m.role, perm)) throw new AuthzError(perm);
   return { userId: session.userId, orgId: m.orgId, slug: orgSlug, role: m.role, session };
 }

@@ -73,6 +73,7 @@ const org = (k: 'a' | 'b', n: number) => ({
   invite: ID(n + 4), // ref('invite'): pending
   project: ID(n + 5), // ref('project'): the share example resource
   shareLink: ID(n + 6), // ref('shareLink'): live, on that project
+  ssoDomain: ID(n + 7), // ref('ssoDomain'): unverified (sso module)
 });
 const F = { a: org('a', 100), b: org('b', 200) };
 type Org = typeof F.a;
@@ -97,6 +98,9 @@ async function seed() {
       data: { id: o.shareLink, orgId: o.org, resourceType: 'project', resourceId: o.project, tokenHash: hashToken(`share-${o.key}`), expiresAt: new Date(t.getTime() + 86_400_000) },
     });
     refs[o.key] = { member: o.member, invite: o.invite, project: o.project, shareLink: o.shareLink, ...(await seedApp({ orgId: o.org, userId: o.owner }, o.key)) };
+    // Module rows only when the module is installed (foundation:check-modules removes it).
+    const ssoDomain = (db as unknown as Record<string, { create: (a: unknown) => Promise<{ id: string }> } | undefined>).ssoDomain;
+    if (ssoDomain) refs[o.key].ssoDomain = (await ssoDomain.create({ data: { id: o.ssoDomain, orgId: o.org, domain: `${o.slug}.example.test` } })).id;
   }
 }
 
