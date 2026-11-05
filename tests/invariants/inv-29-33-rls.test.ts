@@ -56,6 +56,15 @@ describe('INV-32: cross-org access only through asSystem, only from cross-org.ts
   });
 });
 
+// The mirror of INV-33. Policies are always on, and off mode sets no org (D-31), so with RLS off the app role must be one
+// that bypasses them; app_rw here would make every org page a 404 and refuse every org-owned insert.
+describe.skipIf(enforce)('RLS off: the runtime role bypasses RLS', () => {
+  it('DATABASE_URL role has BYPASSRLS or SUPERUSER (else set RLS_MODE=enforce)', async () => {
+    const [r] = await db.$queryRaw<{ rolbypassrls: boolean; rolsuper: boolean }[]>`SELECT rolbypassrls, rolsuper FROM pg_roles WHERE rolname = current_user`;
+    expect(r!.rolbypassrls || r!.rolsuper).toBe(true);
+  });
+});
+
 describe.skipIf(!enforce)('INV-33: the runtime role cannot bypass RLS', () => {
   it('DATABASE_URL role has neither BYPASSRLS nor SUPERUSER', async () => {
     const [r] = await db.$queryRaw<{ rolbypassrls: boolean; rolsuper: boolean }[]>`SELECT rolbypassrls, rolsuper FROM pg_roles WHERE rolname = current_user`;

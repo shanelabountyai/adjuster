@@ -31,8 +31,9 @@ and go in `.env.local`; without them email is captured in the database, billing 
 
 ### Row-level security on Neon (optional, `RLS_MODE=enforce`)
 
-`db:setup` gives you two roles locally: the owner (migrations, `DATABASE_URL_SYSTEM`, `DIRECT_URL`) and `<name>_app_rw` with
-`NOBYPASSRLS` (`DATABASE_URL`). On Neon, the role the console creates is a `neon_superuser` with `BYPASSRLS`, so the app role is made
+`db:setup` gives you two roles locally: the owner (`DATABASE_URL` while RLS is off, `DATABASE_URL_SYSTEM`, `DIRECT_URL`) and
+`<name>_app_rw` with `NOBYPASSRLS` (`DATABASE_URL_APP_RW`). To enforce locally, set `DATABASE_URL` to the app_rw URL and
+`RLS_MODE=enforce` together: app_rw with RLS off sees no org rows, because off mode sets no org. On Neon, the role the console creates is a `neon_superuser` with `BYPASSRLS`, so the app role is made
 in SQL, as the owner, on the branch:
 
 ```sql

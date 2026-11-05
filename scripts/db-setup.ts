@@ -68,11 +68,14 @@ for (const t of targets) {
   const url = `${base}/${t.db}?connection_limit=2&pool_timeout=20`;
   await ensureDb(t.db);
   if (!existsSync(t.file)) {
-    // A role made by an earlier run has a password only that run knew: then the app URL stays the owner (RLS off).
-    const appUrl = appPw ? `${appBase}/${t.db}?connection_limit=8&pool_timeout=20` : `${base}/${t.db}${pool}`;
+    // RLS starts off, and off mode is the role (addendum §2, D-31): the app connects as the owner, which bypasses the
+    // always-on policies. The app_rw login sits beside it; to enforce, make it DATABASE_URL and set RLS_MODE=enforce.
+    // (app_rw with RLS off would see no org rows at all: off mode sets no app.org_id.)
+    // A role made by an earlier run has a password only that run knew, so then there is no app_rw line.
+    const appRw = appPw ? [`DATABASE_URL_APP_RW=${appBase}/${t.db}?connection_limit=8&pool_timeout=20`] : [];
     writeFileSync(
       t.file,
-      [`DATABASE_URL=${appUrl}`, `DATABASE_URL_SYSTEM=${url}`, `DIRECT_URL=${url}`, '# RLS_MODE=enforce', `AUTH_SECRET=${randomBytes(32).toString('hex')}`, `APP_URL=http://localhost:${port}`, ...t.extra, ''].join('\n'),
+      [`DATABASE_URL=${base}/${t.db}${pool}`, `DATABASE_URL_SYSTEM=${url}`, `DIRECT_URL=${url}`, ...appRw, '# RLS_MODE=enforce', `AUTH_SECRET=${randomBytes(32).toString('hex')}`, `APP_URL=http://localhost:${port}`, ...t.extra, ''].join('\n'),
     );
     console.log(`wrote ${t.file}`);
   }
