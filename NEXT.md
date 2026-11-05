@@ -1,16 +1,12 @@
 # NEXT
 
-## ▶ Next session: v1.6.0 M11 (F-01 audit viewer, F-02 security pages, data export, INV-34). Model: Sonnet (UI and export, spec-following); Opus if the export's secret scan gets subtle. Prompt: `docs/v1.6.0-KICKOFF.md`, M11 row + header; read PR #12's M10 section first.
+## ▶ Next session: v1.6.0 M12 (AI spend guards, INV-39; proof branch in `footnote` wrapping its query path in `withBudget`, PR opened there, unmerged). Model: Opus (money: caps and refusals). Prompt: `docs/v1.6.0-KICKOFF.md`, M12 row + header; read PR #12's M11 section first.
 
-**M10 done 2026-11-05** (`e97ca8c` on `v1.6.0`, PR #12): `sso` module, INV-35 to 38, mock OIDC provider. Gate: off 242 + 12 skipped,
-enforce 253 + 1 skipped, e2e enforce 12/12, check-modules pass (sso removed too). Deviations are in addendum §3, "As built in M10".
-**Open first, before M11:**
-1. CI green on `d510e71` (off, enforce, modules-removed). One GitHub fault on 11-05 (existing refs refused, "commit_refs_rules") cleared within the session; if it recurs, `gh api -X PATCH .../git/refs/heads/<branch>` fast-forwards.
-2. **Owner hand checks** (PR body lists the steps): Okta needs `SSO_TEST_OKTA_DOMAIN` in `.env.local` (line 6, empty); Google needs the
-   OAuth client plus `SSO_TEST_GOOGLE_CLIENT_ID`/`_SECRET` (lines 7-8). `SSO_ENABLED=1` and `SSO_TEST_GOOGLE_DOMAIN=labintelligence.co`
-   are set. Neither blocks M11; both are due before the M14 tag.
-3. **Doc sync hazard, now worse:** the Claude Doc copy of the addendum (Gk498…) predates both the §10 approval and today's §3 rewrite.
-   Never sync doc→file; push file→doc if the doc is wanted.
+**M11 done 2026-11-05** (`e3f2280` on `v1.6.0`, PR #12): audit viewer, org and account security pages, per-org data export, INV-34.
+Gate: off 254 + 13 skipped, enforce 266 + 1 skipped, e2e enforce 14/14, demo-org exports verify against their manifests,
+check-modules pass. Owner decision: export archives live in Postgres (`OrgExport`, 24 h), not Vercel Blob (addendum §5 "As built in M11", item 1).
+**Still open from M10:** CI on `e3f2280`; owner's Okta and Google hand checks (`.env.local` lines 6-8), due before the M14 tag. Doc sync hazard
+unchanged: never sync the Claude Doc copy of the addendum back to the file.
 
 ### (done) M10 handoff, 2026-11-05: Okta app set up (Integrator Free org `integrator-1711217`, redirect `http://localhost:4100/login/sso/callback`)
 
