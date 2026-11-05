@@ -1,5 +1,12 @@
 # NEXT
 
+## ▶ 2026-11-04 (later): v1.5.0 released (vitest 5, F-05, `cdc146b`); rolling out to clones under the standing rule
+
+Owner, 2026-11-04: run updates end to end without asking (memory `foundation-updates-autonomous`; procedure in
+`~/.claude/skills/foundation-rollout/SKILL.md`, per-clone agent `~/.claude/agents/clone-upgrader.md`, both user-level so clones
+don't inherit them). v1.5.0: vitest 2.1 -> 5.1, dev only, not `security:`; full `npm audit` 14 -> 8 moderate (lint-only minimatch).
+Clones roll out in batches; housefile goes last (its phase-branch merge is running).
+
 ## ▶ 2026-11-04: v1.4.1 is live in every clone. Next item: housefile phase branches (in housefile's folder).
 
 All 13 `security:` v1.4.1 PRs merged by owner request (checks re-verified green before each). Production redeployed: gavel and
