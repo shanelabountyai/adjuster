@@ -11,6 +11,9 @@ never printed). M9's `db:setup` takes it over and writes `DATABASE_URL` (app_rw)
 **Kickoff pre-flight, still the owner's:** addendum approval + §10 open-decision defaults (kickoff line 8 blank); Okta and Google
 `SSO_TEST_*` in `.env.local`, which does not exist yet (needed by M10, not M9). Done: every clone on v1.4.1; `app_rw`.
 
+**Merge rule (owner, 2026-11-04): "merge without me if saas foundation based".** Template release PRs and clone upgrade PRs merge
+once green (v1.6.0's at M14); kickoff, memory and `foundation-rollout` skill all say so. An owner "hold" overrides it.
+
 **v1.5.0 (vitest) clone rollout is ON HOLD** (owner): only tradepost PR #4 open, unmerged. The rest wait for the owner's go;
 `foundation-rollout` skill resumes it. A clone can also skip straight to v1.6.0 later (it carries v1.5.0).
 
