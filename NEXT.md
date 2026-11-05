@@ -1,14 +1,21 @@
 # NEXT
 
-## ▶ Next session: v1.6.0 M10 (`sso` module). Model: Opus (auth). Prompt: `docs/v1.6.0-KICKOFF.md`, M10 row + header; read PR #12's body first.
+## ▶ Next session: v1.6.0 M11 (F-01 audit viewer, F-02 security pages, data export, INV-34). Model: Sonnet (UI and export, spec-following); Opus if the export's secret scan gets subtle. Prompt: `docs/v1.6.0-KICKOFF.md`, M11 row + header; read PR #12's M10 section first.
 
-**M9 done 2026-11-05** on branch `v1.6.0`, PR #12 (open; merges at M14 once green). RLS opt-in: `withOrg`/`asSystem`, policies generated
-(`npm run rls:policies`), INV-29..33, CI enforce leg. Gate: off 211 + 9 skipped, enforce 220/220, e2e enforce 10/10, check-modules pass.
-Deviations are in addendum §2 "As built in M9". **D-31 (owner, 2026-11-05):** `withOrg` is 4 round trips under enforce (S4c); with RLS off it costs nothing (`{ atomic: false }` on reads).
-**SSO test providers:** Okta done 2026-11-05 (Integrator Free org `integrator-1711217`, app "saas-foundation SSO (local test)", redirect `http://localhost:4100/login/sso/callback`; `SSO_TEST_OKTA_ISSUER/CLIENT_ID/CLIENT_SECRET` in `.env.local`). Google `SSO_TEST_GOOGLE_*` still owed (owner). Neither blocks M10's build (CI uses the mock); both are for its hand sign-in gate, and Okta MFA policy gets set then (§10.2 amr test). `.env.local` holds only these lines: `db:setup` won't write dev-DB keys into an existing file, so add them by hand when the dev DB is wanted.
-Local enforce leg: `RLS_MODE=enforce DATABASE_URL=<DATABASE_URL_APP_RW> DATABASE_URL_SYSTEM=<owner> npm test` (URLs from `.env.test`).
-**Doc sync hazard:** the Claude Doc copy of the addendum (Gk498…) still has the pre-approval §10; a doc→file sync at 19:04 on 11-04
-overwrote the approved file once (restored in `aa5ffdb`). Fix the doc's §10 before syncing again.
+**M10 done 2026-11-05** (`e97ca8c` on `v1.6.0`, PR #12): `sso` module, INV-35 to 38, mock OIDC provider. Gate: off 242 + 12 skipped,
+enforce 253 + 1 skipped, e2e enforce 12/12, check-modules pass (sso removed too). Deviations are in addendum §3, "As built in M10".
+**Open first, before M11:**
+1. **CI never ran on `e97ca8c`.** GitHub refused every update to an existing ref ("fatal error in commit_refs_rules"), and new refs
+   pushed fine, so the branch went up by REST (`gh api -X PATCH .../git/refs/heads/v1.6.0`, fast-forward). The ref is right, but PR #12
+   still showed head 4928f3f and no run had started. Check `gh pr view 12 --json headRefOid` and `gh run list --branch v1.6.0`; if
+   still stuck, push any next commit and see whether a plain `git push` works again.
+2. **Owner hand checks** (PR body lists the steps): Okta needs `SSO_TEST_OKTA_DOMAIN` in `.env.local` (line 6, empty); Google needs the
+   OAuth client plus `SSO_TEST_GOOGLE_CLIENT_ID`/`_SECRET` (lines 7-8). `SSO_ENABLED=1` and `SSO_TEST_GOOGLE_DOMAIN=labintelligence.co`
+   are set. Neither blocks M11; both are due before the M14 tag.
+3. **Doc sync hazard, now worse:** the Claude Doc copy of the addendum (Gk498…) predates both the §10 approval and today's §3 rewrite.
+   Never sync doc→file; push file→doc if the doc is wanted.
+
+### (done) M10 handoff, 2026-11-05: Okta app set up (Integrator Free org `integrator-1711217`, redirect `http://localhost:4100/login/sso/callback`)
 
 ### (done) M9 handoff, 2026-11-04
 
