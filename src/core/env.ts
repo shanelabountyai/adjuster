@@ -35,6 +35,7 @@ export const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(), // billing
   // SSO module (addendum §3). Unset = /login never routes to a provider and /login/sso/** is a 404, connections or not.
   SSO_ENABLED: z.enum(['1']).optional(), // sso
+  WEBHOOK_ALLOW_PRIVATE: z.enum(['1']).optional(), // apikeys: http and private addresses for a local test receiver; refused in production
   // The two hand-checked test providers (D-26). Read only by seed:demo, which pre-fills a demo org's connection with them.
   SSO_TEST_GOOGLE_CLIENT_ID: z.string().min(1).optional(), // sso
   SSO_TEST_GOOGLE_CLIENT_SECRET: z.string().min(1).optional(), // sso
@@ -56,6 +57,7 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
   }
   const e = result.data;
   if (e.RLS_MODE === 'enforce' && !e.DATABASE_URL_SYSTEM) throw new Error('Invalid environment: DATABASE_URL_SYSTEM (required when RLS_MODE=enforce)');
+  if (e.WEBHOOK_ALLOW_PRIVATE && e.VERCEL_ENV === 'production') throw new Error('Invalid environment: WEBHOOK_ALLOW_PRIVATE (never in production: it lets webhooks reach private addresses)');
   // INV-13: production with no provider would silently drop every sign-in link.
   if (e.VERCEL_ENV === 'production' && e.EMAIL_ENABLED !== '0' && !(e.RESEND_API_KEY && e.EMAIL_FROM)) {
     throw new Error('Invalid environment: RESEND_API_KEY, EMAIL_FROM (required in production)');

@@ -49,6 +49,7 @@ export const CORE_EXPORT_TABLES: readonly ExportTable[] = [
     rows: (tx, orgId) =>
       tx.aiBudget.findMany({ where: { orgId }, select: { monthlyCapMicros: true, hardStop: true, alertAtPct: true, pausedAt: true, updatedAt: true } }),
   },
+  { name: 'OrgEvent', rows: (tx, orgId) => tx.orgEvent.findMany({ where: { orgId }, orderBy: { seq: 'asc' }, select: { id: true, seq: true, type: true, payload: true, key: true, createdAt: true } }) },
   { name: 'Project', rows: (tx, orgId) => tx.project.findMany({ where: { orgId }, select: { id: true, name: true, notes: true, createdAt: true } }) },
 ];
 
@@ -56,6 +57,8 @@ export const CORE_EXPORT_TABLES: readonly ExportTable[] = [
 export const NOT_EXPORTED: Readonly<Record<string, string>> = {
   OrgExport: 'the archives themselves',
   AiHold: 'in-flight reservations of AI calls, minutes long; the AiUsage ledger is exported',
+  IdempotencyRecord: 'a 24-hour replay cache of API responses; the changes they made are in their own tables', // apikeys, harmless when absent
+  WebhookDelivery: 'send attempts; the events they carried are exported as OrgEvent', // apikeys, harmless when absent
   SsoState: 'ten-minute sign-in state: a nonce and PKCE verifier, nothing the org owns', // goes with the sso module, harmless when absent
 };
 

@@ -54,6 +54,13 @@ async function fixture() {
     await db.$executeRaw`INSERT INTO "SsoState" (hash, "orgId", nonce, "codeVerifier", "createdAt", "expiresAt") VALUES ('state-hash-inv34', ${org.id}::uuid, 'nonce-inv34', 'verifier-inv34', now(), now())`;
     known.push(sealed, 'sso-client-secret-inv34', 'state-hash-inv34', 'nonce-inv34', 'verifier-inv34');
   }
+  if (tables.includes('ApiKey')) {
+    const key = `api_${newToken()}`;
+    const sealed = sealSecret('whsec_inv34', 'webhook');
+    await db.$executeRaw`INSERT INTO "ApiKey" (id, "orgId", label, prefix, "keyHash", scopes, "createdById") VALUES (gen_random_uuid(), ${org.id}::uuid, 'crm', 'api_xx', ${hashToken(key)}, '{read}', ${owner.id}::uuid)`;
+    await db.$executeRaw`INSERT INTO "WebhookEndpoint" (id, "orgId", url, "secretSealed", "previousSecretSealed", "eventTypes", "updatedAt") VALUES (gen_random_uuid(), ${org.id}::uuid, 'https://hooks.example.test', ${sealed}, ${sealed}, '{}', now())`;
+    known.push(key, hashToken(key), sealed, 'whsec_inv34');
+  }
   if (tables.includes('Outbox')) {
     const t = newToken();
     await db.$executeRaw`INSERT INTO "Outbox" (id, "orgId", channel, "to", template, data) VALUES (gen_random_uuid(), ${org.id}::uuid, 'email', 'new@acme.test', 'invite', ${JSON.stringify({ url: `https://x.test/onboarding/invite/${t}` })}::jsonb)`;

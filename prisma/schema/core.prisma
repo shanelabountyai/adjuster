@@ -94,12 +94,17 @@ model Org {
   aiUsage        AiUsage[]
   aiBudget       AiBudget?
   aiHolds        AiHold[]
+  events         OrgEvent[]
+  eventSeq       Int             @default(0) // the last OrgEvent.seq handed out; only the commit trigger writes it
   // module back-relations: each line ends in its module marker (spec §4)
   billingAccount BillingAccount? // billing
   outbox         Outbox[] // notifications
   ssoConnection  SsoConnection? // sso
   ssoDomains     SsoDomain[] // sso
   ssoStates      SsoState[] // sso
+  apiKeys        ApiKey[] // apikeys
+  webhookEndpoints WebhookEndpoint[] // apikeys
+  webhookDeliveries WebhookDelivery[] // apikeys
 }
 
 model Membership {
@@ -252,4 +257,24 @@ model AiHold {
   expiresAt  DateTime @db.Timestamptz(6)
 
   @@index([orgId, expiresAt])
+}
+
+/// The org's event log (addendum §7): what a clone publishes with emit(), in the same transaction as the change and its
+/// audit line. `seq` is per org, gapless and in commit order, handed out at COMMIT by a deferred trigger (migration
+/// `org_events`), so it is null only inside the writing transaction. The payload is stored once and is the snapshot
+/// every webhook delivery and replay sends. The apikeys module reads it; without the module nothing does.
+model OrgEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  orgId     String   @db.Uuid
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  seq       Int?
+  type      String // a name from src/app/event-types.ts, e.g. "project.created"
+  payload   Json
+  key       String? // optional dedupe key: a second emit with the same key in the same org is dropped
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  deliveries WebhookDelivery[] // apikeys
+
+  @@unique([orgId, seq])
+  @@unique([orgId, key])
 }

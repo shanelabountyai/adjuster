@@ -74,6 +74,10 @@ const org = (k: 'a' | 'b', n: number) => ({
   project: ID(n + 5), // ref('project'): the share example resource
   shareLink: ID(n + 6), // ref('shareLink'): live, on that project
   ssoDomain: ID(n + 7), // ref('ssoDomain'): unverified (sso module)
+  apiKey: ID(n + 8), // ref('apiKey'): live (apikeys module)
+  webhookEndpoint: ID(n + 9), // ref('webhookEndpoint'): active
+  webhookDelivery: ID(n + 10), // ref('webhookDelivery'): dead, so a replay changes it
+  orgEvent: ID(n + 11),
 });
 const F = { a: org('a', 100), b: org('b', 200) };
 type Org = typeof F.a;
@@ -101,6 +105,15 @@ async function seed() {
     // Module rows only when the module is installed (foundation:check-modules removes it).
     const ssoDomain = (db as unknown as Record<string, { create: (a: unknown) => Promise<{ id: string }> } | undefined>).ssoDomain;
     if (ssoDomain) refs[o.key].ssoDomain = (await ssoDomain.create({ data: { id: o.ssoDomain, orgId: o.org, domain: `${o.slug}.example.test` } })).id;
+    type Create = { create: (a: unknown) => Promise<unknown> };
+    const m = db as unknown as Record<'apiKey' | 'webhookEndpoint' | 'orgEvent' | 'webhookDelivery', Create | undefined>;
+    if (m.apiKey) {
+      await m.apiKey.create({ data: { id: o.apiKey, orgId: o.org, label: `key ${o.key}`, prefix: 'api_xxxxxx', keyHash: hashToken(`apikey-${o.key}`), scopes: ['read'], createdById: o.owner } });
+      await m.webhookEndpoint!.create({ data: { id: o.webhookEndpoint, orgId: o.org, url: 'https://hooks.example.test/in', secretSealed: sealSecret('whsec_fixture', 'webhook') } });
+      await m.orgEvent!.create({ data: { id: o.orgEvent, orgId: o.org, type: 'project.created', payload: {} } });
+      await m.webhookDelivery!.create({ data: { id: o.webhookDelivery, orgId: o.org, endpointId: o.webhookEndpoint, eventId: o.orgEvent, seq: 1, status: 'dead', attempts: 6 } });
+      Object.assign(refs[o.key], { apiKey: o.apiKey, webhookEndpoint: o.webhookEndpoint, webhookDelivery: o.webhookDelivery });
+    }
   }
 }
 

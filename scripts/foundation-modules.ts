@@ -19,6 +19,13 @@ export const MODULES: Record<string, string[]> = {
     'tests/helpers/oidc-mock.ts',
     'e2e/sso.spec.ts',
   ],
+  apikeys: [
+    'src/modules/apikeys',
+    'prisma/schema/apikeys.prisma',
+    'src/app/api/v1',
+    'src/app/o/[org]/settings/apikeys',
+    'tests/invariants/inv-40-41-apikeys.test.ts',
+  ],
 };
 // Files whose `// <module>` (or, in a .tsx file, `{/* <module> */}`) lines go with the module.
 export const MARKED_FILES = ['prisma/schema/core.prisma', 'src/app/cron-jobs.ts', 'src/app/org-hooks.ts', 'src/app/o/[org]/layout.tsx', 'src/app/modules.ts', 'src/core/db/cross-org.ts', 'src/app/o/[org]/settings/security/page.tsx'];

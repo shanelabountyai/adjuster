@@ -26,7 +26,7 @@ export const LIMITS = {
   exportPerOrg: { limit: 1, windowMs: 3_600_000 },
 } as const;
 
-export type Limit = (typeof LIMITS)[keyof typeof LIMITS];
+export type Limit = { limit: number; windowMs: number }; // LIMITS, or a module's own (apikeys: per key and scope)
 
 /** Counts one hit against `key`. True when the hit is within the limit. */
 export async function hit(key: string, { limit, windowMs }: Limit): Promise<boolean> {

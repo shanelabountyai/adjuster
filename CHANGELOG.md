@@ -50,6 +50,22 @@ pause) is on `/o/[org]/settings/security`; changing it needs `billing.manage`. I
 (`AiUsage`, `AiBudget`, `AiHold`) and `20261107000001_rls_policies_ai` (14 tables). Inert until a clone calls `withBudget`.
 Deviations: addendum §6, "As built in M12".
 
+**M13: `apikeys` module, API keys and outbound webhooks (addendum §7, ported from Bookable's W- track).** Removable like
+billing (`foundation:check-modules`). Owners and admins (new permission `apikeys.manage`) issue keys at `/o/[org]/settings/apikeys`:
+shown once, stored as sha256 with a short visible prefix, scoped, revoked on the next request, rate-limited per key and scope
+(`read` 120 and `write` 20 a minute). `/api/v1/projects` (list, get, create) and `/api/v1/events?since=` (catch-up) show the shape:
+problem+json errors, keyset cursors capped at 100, and `Idempotency-Key` required on every POST (replayed for 24 hours, a reused key
+with another body is 422). Core gains `emit(ctx, type, payload, tx)` (`src/core/events.ts`), which writes the org's event log
+(`OrgEvent`, seq per org handed out at commit by a trigger) in the change's transaction, beside its audit line. The module fans
+the log out to signed webhook endpoints (`Webhook-Signature: t=…,v1=HMAC-SHA256`, 24-hour secret rotation overlap), retries six
+times with backoff, dead-letters, pauses after ten failures in a row, disables on a 410, and replays from the settings page with
+`replayed: true`. Clone-owned: `src/app/api-scopes.ts` and `src/app/event-types.ts`. INV-40 and INV-41 added; the outbound half of
+INV-12 lives with INV-41. Migrations `20261108000000_org_events` (core), `20261108000001_apikeys_init` and
+`20261108000002_rls_policies_apikeys`. `WEBHOOK_ALLOW_PRIVATE=1` (test only, refused in production) lets an endpoint be
+`http://localhost`. A clone that merges this and calls no `emit` behaves as before. Delivery timing: an API write sends its
+webhooks right after the response; everything else (retries, events from page actions) waits for `/api/cron`, which the
+template schedules **daily** (see addendum §7 "As built in M13", item 3).
+
 ## 1.5.0 (2026-11-04)
 
 `vitest` 2.1 -> 5.1 (dev dependency only; F-05). It clears the dev-tree advisories found during v1.4.1: tinypool prototype-pollution RCE

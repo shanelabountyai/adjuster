@@ -13,8 +13,12 @@ export type ActionSpec =
   | { kind: 'user'; schema: z.ZodType };
 export type Failure = { error: string };
 
-// Forms post FormData; tests and client code may pass a plain object.
-const fields = (input: unknown) => (input instanceof FormData ? Object.fromEntries(input) : input);
+// Forms post FormData; tests and client code may pass a plain object. A name posted more than once (a checkbox
+// group) becomes an array; once, a plain value, as before.
+function fields(input: unknown) {
+  if (!(input instanceof FormData)) return input;
+  return Object.fromEntries([...new Set(input.keys())].map((k) => [k, input.getAll(k).length > 1 ? input.getAll(k) : input.get(k)]));
+}
 
 async function run<C, S extends z.ZodType, R>(ctx: C, schema: S, input: unknown, fn: (ctx: C, input: z.infer<S>) => Promise<R>) {
   const parsed = schema.safeParse(fields(input));

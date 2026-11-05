@@ -41,7 +41,7 @@ export async function requireOrg(orgSlug: string, perm?: Permission): Promise<Or
 }
 
 /** Spread into every Prisma `where` on an org-owned model (rule 2), including secondary ids (rule 3). */
-export const inOrg = (ctx: OrgCtx) => ({ orgId: ctx.orgId });
+export const inOrg = (ctx: { orgId: string }) => ({ orgId: ctx.orgId }); // an OrgCtx, or an API key's ApiCtx
 
 /** Prisma's "record to update/delete not found" is "not yours" too. */
 export function notFoundOnP2025(e: unknown): never {
