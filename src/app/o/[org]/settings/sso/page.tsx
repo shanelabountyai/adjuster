@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireOrg } from '@/core/authz/guards';
 import { withOrg } from '@/core/db/rls';
@@ -5,7 +6,7 @@ import { ActionForm } from '@/core/ui/action-form';
 import { Role } from '@/generated/prisma/enums';
 import { callbackUrl } from '@/modules/sso/flow';
 import { txtName, txtValue } from '@/modules/sso/settings';
-import { addSsoDomain, removeSsoDomain, saveSsoConnection, setSsoEnabled, setSsoRequired, verifySsoDomain } from './actions';
+import { addSsoDomain, removeSsoDomain, saveSsoConnection, setSsoEnabled, verifySsoDomain } from './actions';
 
 export const metadata = { title: 'Single sign-on' };
 
@@ -74,14 +75,9 @@ export default async function Sso({ params, searchParams }: { params: Promise<{ 
             <button type="submit">{c.enabledAt ? 'Turn SSO off' : 'Turn SSO on'}</button>
           </ActionForm>
           {c.enabledAt && (
-            <ActionForm action={setSsoRequired.bind(null, slug)}>
-              <p>
-                Require SSO: <strong>{c.required ? 'yes' : 'no'}</strong>. When on, members cannot use an email sign-in link. You keep yours for 24 hours, in case the
-                provider is misconfigured.
-              </p>
-              <input type="hidden" name="on" value={c.required ? '0' : '1'} />
-              <button type="submit">{c.required ? 'Stop requiring SSO' : 'Require SSO'}</button>
-            </ActionForm>
+            <p>
+              Require SSO: <strong>{c.required ? 'yes' : 'no'}</strong>. The switch is on the <Link href={`/o/${slug}/settings/security`}>Security</Link> page.
+            </p>
           )}
         </>
       )}

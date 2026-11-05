@@ -130,7 +130,7 @@ export async function finishSso(params: URLSearchParams): Promise<SsoDone> {
   const user = await signIn(c, r);
   if (!user) return null;
   // An enrolled user keeps their own TOTP step; the provider's MFA stands in only for users without one (§10.2).
-  return { kind: 'session', token: await createSession(user.id, r.mfa && !user.totpEnrolledAt ? { mfaOrgId: c.orgId } : {}) };
+  return { kind: 'session', token: await createSession(user.id, { method: 'sso', ...(r.mfa && !user.totpEnrolledAt ? { mfaOrgId: c.orgId } : {}) }) };
 }
 
 type Signed = Extract<Checked, { ok: true }>;

@@ -26,7 +26,7 @@ export const setSsoEnabled = orgAction('org.update', z.object({ on }), async (ct
 
 export const setSsoRequired = orgAction('org.update', z.object({ on }), async (ctx, i) => {
   await setRequired(ctx, i.on);
-  back(ctx);
+  redirect(`/o/${ctx.slug}/settings/security`); // the switch lives on the Security page (addendum §4)
 });
 
 export const addSsoDomain = orgAction('org.update', z.object({ domain: z.string() }), async (ctx, i) => {

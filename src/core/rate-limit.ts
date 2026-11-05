@@ -22,6 +22,8 @@ export const LIMITS = {
   inviteAcceptPerUser: { limit: 10, windowMs: 15 * 60_000 },
   // Anonymous reads of /s/[token]. Generous for a person, tight for a token guesser.
   shareReadPerIp: { limit: 60, windowMs: 15 * 60_000 },
+  // Data export (addendum §5): one an hour per org.
+  exportPerOrg: { limit: 1, windowMs: 3_600_000 },
 } as const;
 
 export type Limit = (typeof LIMITS)[keyof typeof LIMITS];

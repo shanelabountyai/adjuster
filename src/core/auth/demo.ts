@@ -19,5 +19,5 @@ export const listDemoUsers = () =>
 export async function demoSignIn(userId: string, e: { DEMO_MODE?: string } = env): Promise<string | null> {
   if (!demoEnabled(e)) return null;
   const u = await db.user.findFirst({ where: { id: userId, isDemo: true }, select: { id: true } });
-  return u ? createSession(u.id, { mfa: true }) : null;
+  return u ? createSession(u.id, { mfa: true, method: 'demo' }) : null;
 }

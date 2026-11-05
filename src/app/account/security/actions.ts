@@ -2,7 +2,7 @@
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { requestEmailChange } from '@/core/auth/link';
-import { assertNotDemo, signOut, signOutEverywhere } from '@/core/auth/session';
+import { assertNotDemo, revokeSession, signOut, signOutEverywhere } from '@/core/auth/session';
 import { confirmTotp, disableTotp, enrolTotp } from '@/core/auth/totp';
 import { userAction } from '@/core/authz/action';
 import { deleteAccount } from '@/core/tenancy/delete';
@@ -28,6 +28,11 @@ export const turnOffTotp = userAction(none, async () => {
 export const signOutHere = userAction(none, async () => {
   await signOut();
   redirect('/');
+});
+
+export const signOutSession = userAction(z.object({ hash: z.string().regex(/^[0-9a-f]{64}$/) }), async (s, { hash }) => {
+  await revokeSession(s, hash);
+  redirect('/account/security');
 });
 
 export const signOutAll = userAction(none, async (s) => {

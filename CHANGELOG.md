@@ -32,6 +32,14 @@ INV-38 added, run against a local mock provider (`tests/helpers/oidc-mock.ts`), 
 leaves `SSO_ENABLED` unset behaves as before. **Hand check before the tag:** one sign-in each through Okta and Google Workspace
 (results to be recorded here).
 
+**M11: audit-log viewer, security pages, per-org data export (addendum §4, §5).** `/o/[org]/settings/audit` (F-01: filter by
+actor, action and day, 50 a page, CSV download) and `/o/[org]/settings/security` (F-02: two-factor status and last sign-in per member,
+SSO status and the *Require SSO* switch) for owners and admins; `/account/security` lists sessions with last seen, country and
+method, and signs out any one but the current. Owners export the org from `/o/[org]/settings/danger`: a zip of JSON Lines plus
+`manifest.json` (row counts and sha256 per file), fresh sign-in, one an hour, kept 24 hours, emailed as a link to a signed-in page.
+A clone lists its own tables in the new clone-owned `src/app/export-hooks.ts`. INV-34 added. Migrations `20261106000002_m11_export_sessions`
+(`OrgExport`, sign-in columns) and `20261106000003_rls_policies_export` (11 tables). Deviations: addendum §5, "As built in M11".
+
 ## 1.5.0 (2026-11-04)
 
 `vitest` 2.1 -> 5.1 (dev dependency only; F-05). It clears the dev-tree advisories found during v1.4.1: tinypool prototype-pollution RCE

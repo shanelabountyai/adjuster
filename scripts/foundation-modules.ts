@@ -21,7 +21,7 @@ export const MODULES: Record<string, string[]> = {
   ],
 };
 // Files whose `// <module>` (or, in a .tsx file, `{/* <module> */}`) lines go with the module.
-export const MARKED_FILES = ['prisma/schema/core.prisma', 'src/app/cron-jobs.ts', 'src/app/org-hooks.ts', 'src/app/o/[org]/layout.tsx', 'src/app/modules.ts', 'src/core/db/cross-org.ts'];
+export const MARKED_FILES = ['prisma/schema/core.prisma', 'src/app/cron-jobs.ts', 'src/app/org-hooks.ts', 'src/app/o/[org]/layout.tsx', 'src/app/modules.ts', 'src/core/db/cross-org.ts', 'src/app/o/[org]/settings/security/page.tsx'];
 
 // F-03: a clone can use a module outside the marked lines (src/app/required-modules.ts), so
 // check-modules must leave that module in place rather than deleting it and failing tsc.

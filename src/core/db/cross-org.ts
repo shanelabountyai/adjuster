@@ -8,6 +8,7 @@ export const CROSS_ORG_FILES: Readonly<Record<string, string>> = {
   'src/core/auth/totp.ts': 'turning TOTP off checks the user is owner/admin nowhere (deviation: not in the kickoff list)',
   'src/core/share/links.ts': 'share-link read by token before its org is known (deviation: not in the kickoff list)',
   'src/core/auth/link.ts': 'email change revokes invites to the old address in every org (deviation: not in the kickoff list)',
+  'src/core/tenancy/export.ts': 'cron builds and sweeps exports in every org; the manifest reads _prisma_migrations',
   'src/core/auth/demo.ts': "demo sign-in lists every demo user's orgs (sign-in)",
   'src/modules/billing/webhook.ts': 'Stripe webhook: the event names the org',
   'src/modules/notifications/outbox.ts': 'cron drain and sweep across every org',

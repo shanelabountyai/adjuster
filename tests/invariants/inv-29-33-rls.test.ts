@@ -101,6 +101,7 @@ describe.skipIf(!enforce)('INV-29: no org set, no rows; org A set, only A rows',
       await dbSystem.invite.create({ data: { orgId, email: `x-${n}-${tag}@example.test`, tokenHash: `inv29-${n}-${tag}`, expiresAt: exp } });
       await dbSystem.shareLink.create({ data: { orgId, resourceType: 'project', resourceId: p.id, tokenHash: `inv29s-${n}-${tag}`, expiresAt: exp } });
       await dbSystem.auditEvent.createMany({ data: [{ orgId, action: 'inv29' }] });
+      await dbSystem.orgExport.create({ data: { orgId, requestedById: user.id, expiresAt: exp } });
       // module tables only when the module is installed (check-modules removes them)
       const model = (m: string) => (dbSystem as unknown as Record<string, { create: (a: unknown) => Promise<unknown> } | undefined>)[m];
       await model('billingAccount')?.create({ data: { orgId } });
