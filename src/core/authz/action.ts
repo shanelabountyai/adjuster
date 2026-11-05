@@ -13,11 +13,14 @@ export type ActionSpec =
   | { kind: 'user'; schema: z.ZodType };
 export type Failure = { error: string };
 
-// Forms post FormData; tests and client code may pass a plain object. A name posted more than once (a checkbox
-// group) becomes an array; once, a plain value, as before.
-function fields(input: unknown) {
+// Forms post FormData; tests and client code may pass a plain object. A name posted twice keeps its last value, as
+// it always has (a hidden "0" before a checkbox of the same name relies on that). Opt in to every value with a `[]`
+// name: `name="scopes[]"` arrives as `scopes: string[]` (a checkbox group).
+export function fields(input: unknown) {
   if (!(input instanceof FormData)) return input;
-  return Object.fromEntries([...new Set(input.keys())].map((k) => [k, input.getAll(k).length > 1 ? input.getAll(k) : input.get(k)]));
+  const out: Record<string, unknown> = Object.fromEntries([...input].filter(([k]) => !k.endsWith('[]')));
+  for (const k of new Set([...input.keys()].filter((k) => k.endsWith('[]')))) out[k.slice(0, -2)] = input.getAll(k);
+  return out;
 }
 
 async function run<C, S extends z.ZodType, R>(ctx: C, schema: S, input: unknown, fn: (ctx: C, input: z.infer<S>) => Promise<R>) {

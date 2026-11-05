@@ -1,6 +1,16 @@
 # NEXT
 
-## ▶ Next session: v1.6.0 M13 (`apikeys` module ported from Bookable, INV-40/41; Pulseboard `/ingest` migration PR drafted there, unmerged). Model: Opus (auth: key scopes, revocation, webhook signatures). Prompt: `docs/v1.6.0-KICKOFF.md`, M13 row + header; read PR #12's M12 section first.
+## ▶ Next session: v1.6.0 M14 (release). Model: Sonnet is enough for the mechanics, but merging RLS/SSO/auth release PR #12 is a phase gate: Opus. Prompt: `docs/v1.6.0-KICKOFF.md`, M14 row + header; read PR #12's M13 section first.
+**Before the tag:** the owner's Okta and Google hand checks (M10, `.env.local` lines 6-8) are still owed, and the Pulseboard proof PR must be reviewed by the owner (addendum §9 M13 gate).
+
+**M13 done 2026-11-05** (`84d8baa`, `2419b84` on `v1.6.0`, PR #12): `apikeys` module, core `emit` + `OrgEvent`, INV-40/41.
+**Owner decisions:** (1) a member's API keys are revoked when their membership ends (removal, leaving, account deletion), via the
+clone-owned `onMembershipEnded` hook, now a required argument of `removeMember`/`deleteAccount`; (2) retries and page-action events
+ride the **daily** `/api/cron` (kept daily for cost; addendum §7 item 3); (3) Pulseboard reissues its `pk_` write keys as `api_` keys
+(no row copy) with an `ingest` scope at 3,000/min. Deviations: addendum §7 "As built in M13" (13 items). Gate: off 282 + 21 skipped,
+enforce 302 + 1 skipped, e2e enforce 14/14, check-modules passes with all four modules removed; scope, revocation, dedupe and the
+membership hook each mutation-checked red. Pulseboard proof PR: branch `v1.6.0-apikeys-proof` (STATUS: see the line below).
+Local e2e trap: vitest leaves an org with slug `acme`, and the demo seed then shows no "Acme Studio"; truncate the test DB before e2e.
 
 **M12 done 2026-11-05** (`ef2ce1f`, `55a3390` on `v1.6.0`, PR #12): AI spend guards, INV-39. **Owner decision: hard cap by reservation**
 (`AiHold` under a row lock; the signature gains `maxCostMicros`), addendum §6 "As built in M12". Gate: off 266 + 16 skipped, enforce 281 + 1 skipped,

@@ -48,7 +48,7 @@ export default async function ApiKeys({ params }: { params: Promise<{ org: strin
           <legend>Scopes</legend>
           {Object.entries(API_SCOPES).map(([s, { label, perMinute }]) => (
             <label key={s}>
-              <input type="checkbox" name="scopes" value={s} defaultChecked={s === 'read'} /> {label} ({perMinute} a minute)
+              <input type="checkbox" name="scopes[]" value={s} defaultChecked={s === 'read'} /> {label} ({perMinute} a minute)
             </label>
           ))}
         </fieldset>
@@ -91,7 +91,7 @@ export default async function ApiKeys({ params }: { params: Promise<{ org: strin
           <legend>Events (none ticked = every event)</legend>
           {EVENT_TYPES.map((t) => (
             <label key={t}>
-              <input type="checkbox" name="eventTypes" value={t} /> {t}
+              <input type="checkbox" name="eventTypes[]" value={t} /> {t}
             </label>
           ))}
         </fieldset>

@@ -11,8 +11,8 @@ import { createEndpoint, deleteEndpoint, replayDelivery, rotateSecret, setEndpoi
 // response that creates it (`notice`), like a share link.
 const page = (ctx: OrgCtx) => `/o/${ctx.slug}/settings/apikeys`;
 const back = (ctx: OrgCtx) => redirect(page(ctx));
-// A checkbox group: no box ticked posts nothing, one posts a string, several an array (orgAction's form reader).
-const list = z.union([z.string(), z.array(z.string())]).default([]).transform((v) => [v].flat().filter(Boolean));
+// A checkbox group named `scopes[]` / `eventTypes[]`: orgAction's form reader hands it over as an array.
+const list = z.array(z.string()).default([]);
 
 export const createApiKey = orgAction('apikeys.manage', z.object({ label: z.string(), scopes: list }), async (ctx, i) => {
   const key = await createKey(ctx, i);
