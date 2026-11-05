@@ -5,10 +5,7 @@
 **M10 done 2026-11-05** (`e97ca8c` on `v1.6.0`, PR #12): `sso` module, INV-35 to 38, mock OIDC provider. Gate: off 242 + 12 skipped,
 enforce 253 + 1 skipped, e2e enforce 12/12, check-modules pass (sso removed too). Deviations are in addendum §3, "As built in M10".
 **Open first, before M11:**
-1. **CI never ran on `e97ca8c`.** GitHub refused every update to an existing ref ("fatal error in commit_refs_rules"), and new refs
-   pushed fine, so the branch went up by REST (`gh api -X PATCH .../git/refs/heads/v1.6.0`, fast-forward). The ref is right, but PR #12
-   still showed head 4928f3f and no run had started. Check `gh pr view 12 --json headRefOid` and `gh run list --branch v1.6.0`; if
-   still stuck, push any next commit and see whether a plain `git push` works again.
+1. CI green on `d510e71` (off, enforce, modules-removed). One GitHub fault on 11-05 (existing refs refused, "commit_refs_rules") cleared within the session; if it recurs, `gh api -X PATCH .../git/refs/heads/<branch>` fast-forwards.
 2. **Owner hand checks** (PR body lists the steps): Okta needs `SSO_TEST_OKTA_DOMAIN` in `.env.local` (line 6, empty); Google needs the
    OAuth client plus `SSO_TEST_GOOGLE_CLIENT_ID`/`_SECRET` (lines 7-8). `SSO_ENABLED=1` and `SSO_TEST_GOOGLE_DOMAIN=labintelligence.co`
    are set. Neither blocks M11; both are due before the M14 tag.
