@@ -1,5 +1,16 @@
 # NEXT
 
+## ▶ Next session: v1.6.0 M14, finish the release (Opus). Waiting only on the owner's review of Pulseboard PR #4.
+State 2026-11-06: PR #12 green on `d06f41c` (off, enforce, modules-removed). Owner's Okta + Google hand checks DONE and
+recorded in CHANGELOG; they found a real bug (Okta ID token has no `email_verified`), fixed via userinfo fallback + INV-35 case.
+Pulseboard PR #4 has the latest template merged (`1d2a4c6`, worktree `~/Projects/pulseboard-pr4`), CI green; D-027 annotated.
+CHANGELOG already has the 1.6.0 upgrade steps (no separate UPGRADING.md; 1.5.0 precedent).
+**On the owner's "approved":** bump `FOUNDATION_VERSION` to v1.6.0, retitle `## Unreleased (1.6.0)` → `## 1.6.0 (<date>)`,
+merge PR #12, tag `v1.6.0`, push the tag to every clone repo in CLONES.md, confirm `foundation:status` in quorum, then the
+kickoff's "After M14" list (Earmark first with `RLS_ENFORCE=1`, then Pulseboard, then foundation-rollout).
+Local: `.env.test` gained `DATABASE_URL_SYSTEM` (test DB); without it tests' system client hit the dev DB. `.env.local`
+`SSO_TEST_OKTA_DOMAIN=example.com` (Okta user `okta-tester@example.com`, admin of Globex in the dev DB).
+
 ## ▶ Next session: v1.6.0 M14 (release). Model: Sonnet is enough for the mechanics, but merging RLS/SSO/auth release PR #12 is a phase gate: Opus. Prompt: `docs/v1.6.0-KICKOFF.md`, M14 row + header; read PR #12's M13 section first.
 **Before the tag:** the owner's Okta and Google hand checks (M10, `.env.local` lines 6-8) are still owed, and the Pulseboard proof PR must be reviewed by the owner (addendum §9 M13 gate).
 
