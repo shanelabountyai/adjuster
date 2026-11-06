@@ -2,7 +2,7 @@
 
 Entries prefixed `security:` are mandatory for anything touching an invariant. Clones must take a `security:` release within 7 days.
 
-## Unreleased (1.6.0)
+## 1.6.0 (2026-11-06)
 
 **M9: row-level security, opt-in (addendum §2).** `withOrg(ctx, fn)` and `asSystem(fn)` in `src/core/db/rls.ts`; a second
 client on `DATABASE_URL_SYSTEM` (owner); `RLS_MODE` (unset | `enforce`). `npm run rls:policies` generates the policy migration from
