@@ -66,6 +66,24 @@ INV-12 lives with INV-41. Migrations `20261108000000_org_events` (core), `202611
 webhooks right after the response; everything else (retries, events from page actions) waits for `/api/cron`, which the
 template schedules **daily** (see addendum §7 "As built in M13", item 3).
 
+**CI enforce leg is opt-in for clones** (owner, 2026-11-05; addendum §7 item 14). The template always runs `ci (off)` and
+`ci (enforce)`; a clone runs `enforce` only once the repo variable `RLS_ENFORCE=1` is set
+(`gh variable set RLS_ENFORCE --body 1 --repo <clone repo>`). INV-29 seeds clone tables through a fixture hook.
+
+Upgrade (every feature is opt-in; a clone that merges and sets nothing behaves as on 1.5.0 at runtime):
+
+1. Merge the tag, `npm ci`, `npx prisma migrate deploy`. Ten migrations, all additive. If the clone has its own `orgId` tables,
+   run `npm run rls:policies` and commit the migration it writes, or INV-29 fails on them.
+2. Clone-owned files arrive with safe defaults; fill them in when the feature is used: `src/app/export-hooks.ts` (list your
+   org-scoped tables, or INV-34 fails on them), `src/app/api-scopes.ts`, `src/app/event-types.ts`, `src/app/modules.ts`,
+   `src/app/cron-jobs.ts`.
+3. **The one compile break:** `removeMember` and `deleteAccount` take `onMembershipEnded` (from `src/app/org-hooks.ts`) as a
+   required argument. Any clone call site outside `src/core` must pass it.
+4. `.env.example` adds `DATABASE_URL_SYSTEM`, `RLS_MODE`, `AI_ENABLED`, `SSO_ENABLED`, `WEBHOOK_ALLOW_PRIVATE` and the
+   `SSO_TEST_*` set. All may stay unset. Turning on enforce needs an `app_rw` role without `BYPASSRLS` (`npm run db:setup` locally;
+   the README has the Neon SQL), `RLS_MODE=enforce`, both URLs, and the repo variable above.
+5. Remove `sso` or `apikeys` you don't use, the same way as billing; `npm run foundation:check-modules` confirms it.
+
 ## 1.5.0 (2026-11-04)
 
 `vitest` 2.1 -> 5.1 (dev dependency only; F-05). It clears the dev-tree advisories found during v1.4.1: tinypool prototype-pollution RCE
