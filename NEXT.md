@@ -1,6 +1,48 @@
 # NEXT
 
-## ▶ Next session: v1.6.0 M9 (RLS core). Model: Opus (security/permissions). Prompt: `docs/v1.6.0-KICKOFF.md`, M9 block.
+## ▶ Next session: v1.6.0 M14, finish the release (Opus). Waiting only on the owner's review of Pulseboard PR #4.
+State 2026-11-06: PR #12 green on `d06f41c` (off, enforce, modules-removed). Owner's Okta + Google hand checks DONE and
+recorded in CHANGELOG; they found a real bug (Okta ID token has no `email_verified`), fixed via userinfo fallback + INV-35 case.
+Pulseboard PR #4 has the latest template merged (`1d2a4c6`, worktree `~/Projects/pulseboard-pr4`), CI green; D-027 annotated.
+CHANGELOG already has the 1.6.0 upgrade steps (no separate UPGRADING.md; 1.5.0 precedent).
+**On the owner's "approved":** bump `FOUNDATION_VERSION` to v1.6.0, retitle `## Unreleased (1.6.0)` → `## 1.6.0 (<date>)`,
+merge PR #12, tag `v1.6.0`, push the tag to every clone repo in CLONES.md, confirm `foundation:status` in quorum, then the
+kickoff's "After M14" list (Earmark first with `RLS_ENFORCE=1`, then Pulseboard, then foundation-rollout).
+Local: `.env.test` gained `DATABASE_URL_SYSTEM` (test DB); without it tests' system client hit the dev DB. `.env.local`
+`SSO_TEST_OKTA_DOMAIN=example.com` (Okta user `okta-tester@example.com`, admin of Globex in the dev DB).
+
+## ▶ Next session: v1.6.0 M14 (release). Model: Sonnet is enough for the mechanics, but merging RLS/SSO/auth release PR #12 is a phase gate: Opus. Prompt: `docs/v1.6.0-KICKOFF.md`, M14 row + header; read PR #12's M13 section first.
+**Before the tag:** the owner's Okta and Google hand checks (M10, `.env.local` lines 6-8) are still owed, and the Pulseboard proof PR must be reviewed by the owner (addendum §9 M13 gate).
+
+**M13 done 2026-11-05** (`84d8baa`, `2419b84` on `v1.6.0`, PR #12): `apikeys` module, core `emit` + `OrgEvent`, INV-40/41.
+**Owner decisions:** (1) a member's API keys are revoked when their membership ends (removal, leaving, account deletion), via the
+clone-owned `onMembershipEnded` hook, now a required argument of `removeMember`/`deleteAccount`; (2) retries and page-action events
+ride the **daily** `/api/cron` (kept daily for cost; addendum §7 item 3); (3) Pulseboard reissues its `pk_` write keys as `api_` keys
+(no row copy) with an `ingest` scope at 3,000/min. Deviations: addendum §7 "As built in M13" (13 items). Gate: off 282 + 21 skipped,
+enforce 302 + 1 skipped, e2e enforce 14/14, check-modules passes with all four modules removed; scope, revocation, dedupe and the
+membership hook each mutation-checked red. **Pulseboard proof PR #4** (https://github.com/shanelabountyai/pulseboard/pull/4, unmerged; clone decisions D-025 to D-027): `ci (off)` and
+`modules-removed` green; `ci (enforce)` was red because the template made enforce mandatory for clones. **Fixed in the template**
+(owner, 2026-11-05: enforce is opt-in via repo variable `RLS_ENFORCE=1`; addendum §7 item 14). **Next step:** merge the template's latest
+`v1.6.0` commit into PR #4's branch (in a worktree; Pulseboard's folder is on `foundation-v1.4.0` with draft PR #2 open, leave it), take
+the template `ci.yml` (drop the clone's D-027 if it only records the enforce failure), watch CI green, then the owner reviews the diff.
+Local e2e trap: vitest leaves an org with slug `acme`, and the demo seed then shows no "Acme Studio"; truncate the test DB before e2e.
+
+**M12 done 2026-11-05** (`ef2ce1f`, `55a3390` on `v1.6.0`, PR #12): AI spend guards, INV-39. **Owner decision: hard cap by reservation**
+(`AiHold` under a row lock; the signature gains `maxCostMicros`), addendum §6 "As built in M12". Gate: off 266 + 16 skipped, enforce 281 + 1 skipped,
+e2e enforce 14/14. Proof: footnote PR #2 (`v1.6.0-withbudget-proof`, unmerged), worked in the worktree `~/Projects/footnote-m12` against its own DB
+`footnote_m12_test`, so Shane's uncommitted `CLAUDE.md` edit in `footnote/` is untouched. Remove both once the PR is closed:
+`git -C ../footnote worktree remove ../footnote-m12 && dropdb footnote_m12_test`. INV-34 is red there on purpose (footnote's `CorpusChunk`, `StaffRole`,
+`Answer`, `ApiKey` need export decisions in its real upgrade; `ApiKey` must never be exported whole).
+
+**M11 done 2026-11-05** (`e3f2280` on `v1.6.0`, PR #12): audit viewer, org and account security pages, per-org data export, INV-34.
+Gate: off 254 + 13 skipped, enforce 266 + 1 skipped, e2e enforce 14/14, demo-org exports verify against their manifests,
+check-modules pass. Owner decision: export archives live in Postgres (`OrgExport`, 24 h), not Vercel Blob (addendum §5 "As built in M11", item 1).
+**Still open from M10:** CI on `e3f2280`; owner's Okta and Google hand checks (`.env.local` lines 6-8), due before the M14 tag. Doc sync hazard
+unchanged: never sync the Claude Doc copy of the addendum back to the file.
+
+### (done) M10 handoff, 2026-11-05: Okta app set up (Integrator Free org `integrator-1711217`, redirect `http://localhost:4100/login/sso/callback`)
+
+### (done) M9 handoff, 2026-11-04
 
 **Owner decisions 2026-11-04:** (1) The RLS/SSO/enterprise release is **v1.6.0**, not v1.5.0: v1.5.0 is already tagged (`cdc146b`,
 vitest 5) and pushed tags never move. `docs/v1.6.0-ADDENDUM.md` and `docs/v1.6.0-KICKOFF.md` are renamed and carry a note; the branch

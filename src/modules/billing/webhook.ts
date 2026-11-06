@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { z } from 'zod';
 import { now } from '@/core/clock';
-import { db } from '@/core/db';
+import { asSystem } from '@/core/db/rls';
 import { env } from '@/core/env';
 import { log } from '@/core/log';
 import { safeEqual } from '@/core/tokens';
@@ -100,20 +100,21 @@ export async function receiveStripeWebhook(raw: string, signature: string | null
   const payload = e as unknown as Prisma.InputJsonValue;
 
   try {
-    const applied = await db.$transaction(async (tx) => {
+    // Cross-org (cross-org.ts): the event names its org, so the whole delivery runs as the system role.
+    const applied = await asSystem((sys) => sys.$transaction(async (tx) => {
       await tx.stripeEvent.createMany({ data: [{ id: e.id, type: e.type, payload }], skipDuplicates: true });
       const [row] = await tx.$queryRaw<{ processedAt: Date | null }[]>`SELECT "processedAt" FROM "StripeEvent" WHERE "id" = ${e.id} FOR UPDATE`;
       if (row?.processedAt) return false;
       if (Object.hasOwn(handlers, e.type)) await handlers[e.type]!(tx, e);
       await tx.stripeEvent.update({ where: { id: e.id }, data: { processedAt: now(), error: null } });
       return true;
-    });
+    }));
     return { status: 200, body: applied ? { received: true } : { received: true, duplicate: true } };
   } catch (err) {
     // The transaction rolled back, so the row is absent or still unprocessed: record why, and a 500
     // makes Stripe redeliver, which applies it.
     const error = (err instanceof Error ? err.message : String(err)).slice(0, 500);
-    await db.stripeEvent.upsert({ where: { id: e.id }, create: { id: e.id, type: e.type, payload, error }, update: { error } });
+    await asSystem((sys) => sys.stripeEvent.upsert({ where: { id: e.id }, create: { id: e.id, type: e.type, payload, error }, update: { error } }));
     log('billing.webhook_failed', { event: e.id, type: e.type });
     return { status: 500, body: { error: 'processing_failed' } };
   }
