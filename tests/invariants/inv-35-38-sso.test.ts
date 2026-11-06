@@ -54,6 +54,7 @@ async function connect(extra: { allowedDomains?: string[]; defaultRole?: 'member
 beforeEach(async () => {
   await resetAuthTables();
   mock.tamper = null;
+  mock.okta = false;
   mock.user = { ...ALICE };
   org = await connect();
 });
@@ -79,6 +80,14 @@ describe('the happy path (JIT on an allowed, verified domain)', () => {
     expect((await db.membership.findUniqueOrThrow({ where: { orgId_userId: { orgId: org.id, userId: u.id } } })).role).toBe('member');
     expect(await db.ssoSubject.findUnique({ where: { issuer_subject: { issuer: mock.issuer, subject: ALICE.sub } } })).not.toBeNull();
     expect(await db.session.count({ where: { userId: u.id } })).toBe(1);
+  });
+
+  it('Okta: email_verified only in userinfo (not the ID token) still joins; unverified there is still a 404', async () => {
+    mock.okta = true;
+    expect((await signIn()).done?.kind).toBe('session');
+    const before = await counts();
+    expect((await signIn({ sub: 'sub-bob', email: `bob@${DOMAIN}`, email_verified: false })).done).toBeNull();
+    expect(await counts()).toEqual(before);
   });
 
   it('the subject is the key: an email change at the provider keeps the same account', async () => {

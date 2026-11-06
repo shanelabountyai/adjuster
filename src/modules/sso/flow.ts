@@ -80,15 +80,21 @@ type Checked = { ok: true; issuer: string; subject: string; email: string; domai
 
 /** Step 3-4: exchange the code and check the ID token; then the org's domain and, for Google, `hd`. */
 async function check(c: Conn, params: URLSearchParams, row: { nonce: string; codeVerifier: string }, state: string): Promise<Checked> {
-  let claims: oidc.IDToken | undefined;
+  let claims: (oidc.IDToken & { email?: unknown; email_verified?: unknown }) | undefined;
   try {
-    const tokens = await oidc.authorizationCodeGrant(await configFor(c), new URL(`${callbackUrl()}?${params}`), {
+    const config = await configFor(c);
+    const tokens = await oidc.authorizationCodeGrant(config, new URL(`${callbackUrl()}?${params}`), {
       pkceCodeVerifier: row.codeVerifier,
       expectedNonce: row.nonce,
       expectedState: state,
       idTokenExpected: true,
     });
     claims = tokens.claims(); // iss, aud, exp, nonce and the JWKS signature are checked by openid-client
+    // Okta's ID token carries `email` but never `email_verified`; userinfo does. Bound to the same `sub` (openid-client checks it).
+    if (claims && (claims.email === undefined || claims.email_verified === undefined)) {
+      const info = await oidc.fetchUserInfo(config, tokens.access_token, claims.sub);
+      claims = { ...claims, email: info.email, email_verified: info.email_verified };
+    }
   } catch (e) {
     log('sso.token_refused', { orgId: c.orgId, error: (e as Error).name, code: (e as { code?: string }).code ?? null });
     return { ok: false, reason: 'token' };

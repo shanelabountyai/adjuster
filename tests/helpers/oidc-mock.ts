@@ -1,6 +1,7 @@
 // A local OIDC provider for the sso module's tests and e2e (addendum §3): discovery, JWKS, an authorize endpoint
 // that approves at once as `mock.user`, and a token endpoint that checks the client secret and PKCE before it
-// signs an RS256 ID token. CI needs no provider account. `mock.tamper` breaks one thing on purpose.
+// signs an RS256 ID token. CI needs no provider account. `mock.tamper` breaks one thing on purpose. `mock.okta` mimics
+// Okta's org server: `email_verified` is left out of the ID token and served only by userinfo.
 import { createHash, generateKeyPairSync, randomBytes, sign } from 'node:crypto';
 import { createServer, type IncomingMessage } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -19,17 +20,20 @@ export async function startOidcMock(client = { id: 'mock-client', secret: 'mock-
   const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
   const kid = randomBytes(4).toString('hex');
   const grants = new Map<string, Grant>();
+  const userinfo = new Map<string, MockUser>(); // access token → user
   const mock = {
     issuer: '',
     client,
     user: { sub: 'mock-sub-1', email: 'alice@sso.example', email_verified: true } as MockUser,
     tamper: null as null | 'nonce' | 'aud' | 'signature',
+    okta: false,
     close: () => new Promise<void>((r) => server.close(() => r())),
   };
 
   const idToken = (g: Grant) => {
     const t = Math.floor(Date.now() / 1000);
-    const claims = { iss: mock.issuer, aud: mock.tamper === 'aud' ? 'someone-else' : g.clientId, iat: t, exp: t + 300, nonce: mock.tamper === 'nonce' ? 'wrong' : g.nonce, email_verified: true, ...g.user };
+    const claims: Record<string, unknown> = { iss: mock.issuer, aud: mock.tamper === 'aud' ? 'someone-else' : g.clientId, iat: t, exp: t + 300, nonce: mock.tamper === 'nonce' ? 'wrong' : g.nonce, email_verified: true, ...g.user };
+    if (mock.okta) delete claims.email_verified;
     const input = `${b64(JSON.stringify({ alg: 'RS256', typ: 'JWT', kid }))}.${b64(JSON.stringify(claims))}`;
     const sig = sign('sha256', Buffer.from(input), privateKey);
     if (mock.tamper === 'signature') sig[0] = sig[0]! ^ 1;
@@ -45,6 +49,7 @@ export async function startOidcMock(client = { id: 'mock-client', secret: 'mock-
         authorization_endpoint: `${mock.issuer}/authorize`,
         token_endpoint: `${mock.issuer}/token`,
         jwks_uri: `${mock.issuer}/jwks`,
+        userinfo_endpoint: `${mock.issuer}/userinfo`,
         response_types_supported: ['code'],
         subject_types_supported: ['public'],
         id_token_signing_alg_values_supported: ['RS256'],
@@ -73,7 +78,13 @@ export async function startOidcMock(client = { id: 'mock-client', secret: 'mock-
       if (id !== client.id || secret !== client.secret) return json(401, { error: 'invalid_client' });
       const pkce = g && b64(createHash('sha256').update(p.get('code_verifier') ?? '').digest()) === g.challenge;
       if (!g || !pkce || p.get('redirect_uri') !== g.redirectUri) return json(400, { error: 'invalid_grant' });
-      return json(200, { access_token: randomBytes(16).toString('hex'), token_type: 'Bearer', expires_in: 300, id_token: idToken(g) });
+      const accessToken = randomBytes(16).toString('hex');
+      userinfo.set(accessToken, g.user);
+      return json(200, { access_token: accessToken, token_type: 'Bearer', expires_in: 300, id_token: idToken(g) });
+    }
+    if (url.pathname === '/userinfo') {
+      const u = userinfo.get(req.headers.authorization?.match(/^Bearer (.+)$/)?.[1] ?? '');
+      return u ? json(200, { email_verified: true, ...u }) : json(401, { error: 'invalid_token' });
     }
     json(404, { error: 'not_found' });
   });

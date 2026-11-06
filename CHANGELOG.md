@@ -70,6 +70,14 @@ template schedules **daily** (see addendum §7 "As built in M13", item 3).
 `ci (enforce)`; a clone runs `enforce` only once the repo variable `RLS_ENFORCE=1` is set
 (`gh variable set RLS_ENFORCE --body 1 --repo <clone repo>`). INV-29 seeds clone tables through a fixture hook.
 
+**Real-provider hand checks (owner, 2026-11-06; addendum §3, M10 gate).** Okta (Integrator Free org): a new user on a verified
+domain JIT-joins Globex as member; promoted to admin with no TOTP, the Okta `amr` carries `mfa` and the session gets `mfaOrgId`
+(no TOTP prompt); a user whose email Okta never verified is refused. Google Workspace: a `labintelligence.co` user lands in Acme.
+Not done by hand, covered by INV-35 to 38 through the mock: a personal Gmail on the Google connection (Google honours the login
+hint and skips the account picker), and an Okta sign-in without `mfa` in `amr`. **Found by the Okta check and fixed:** Okta's ID
+token carries `email` but never `email_verified`, so every Okta user was refused. The callback now reads both from userinfo
+when the ID token lacks either, bound to the same `sub`; the mock gains an Okta mode and INV-35 a case (mutation-checked red).
+
 Upgrade (every feature is opt-in; a clone that merges and sets nothing behaves as on 1.5.0 at runtime):
 
 1. Merge the tag, `npm ci`, `npx prisma migrate deploy`. Ten migrations, all additive. If the clone has its own `orgId` tables,
