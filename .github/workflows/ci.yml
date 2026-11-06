@@ -12,7 +12,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rls: [off, enforce] # addendum §2: off = the owner role (as every clone runs today); enforce = app_rw, NOBYPASSRLS
+        # addendum §2: off = the owner role (as every clone runs today); enforce = app_rw, NOBYPASSRLS. RLS is opt-in (D-23;
+        # owner decision 2026-11-05): a clone runs the enforce leg once it sets the repo variable RLS_ENFORCE=1. The template always runs both.
+        rls: ${{ fromJSON((github.repository == 'shanelabountyai/saas-foundation' || vars.RLS_ENFORCE == '1') && '["off","enforce"]' || '["off"]') }}
     env:
       # Ephemeral runner-local Postgres, gone when the job ends.
       PGHOST: localhost

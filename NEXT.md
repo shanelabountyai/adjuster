@@ -9,7 +9,11 @@ clone-owned `onMembershipEnded` hook, now a required argument of `removeMember`/
 ride the **daily** `/api/cron` (kept daily for cost; addendum §7 item 3); (3) Pulseboard reissues its `pk_` write keys as `api_` keys
 (no row copy) with an `ingest` scope at 3,000/min. Deviations: addendum §7 "As built in M13" (13 items). Gate: off 282 + 21 skipped,
 enforce 302 + 1 skipped, e2e enforce 14/14, check-modules passes with all four modules removed; scope, revocation, dedupe and the
-membership hook each mutation-checked red. Pulseboard proof PR: branch `v1.6.0-apikeys-proof` (STATUS: see the line below).
+membership hook each mutation-checked red. **Pulseboard proof PR #4** (https://github.com/shanelabountyai/pulseboard/pull/4, unmerged; clone decisions D-025 to D-027): `ci (off)` and
+`modules-removed` green; `ci (enforce)` was red because the template made enforce mandatory for clones. **Fixed in the template**
+(owner, 2026-11-05: enforce is opt-in via repo variable `RLS_ENFORCE=1`; addendum §7 item 14). **Next step:** merge the template's latest
+`v1.6.0` commit into PR #4's branch (in a worktree; Pulseboard's folder is on `foundation-v1.4.0` with draft PR #2 open, leave it), take
+the template `ci.yml` (drop the clone's D-027 if it only records the enforce failure), watch CI green, then the owner reviews the diff.
 Local e2e trap: vitest leaves an org with slug `acme`, and the demo seed then shows no "Acme Studio"; truncate the test DB before e2e.
 
 **M12 done 2026-11-05** (`ef2ce1f`, `55a3390` on `v1.6.0`, PR #12): AI spend guards, INV-39. **Owner decision: hard cap by reservation**
