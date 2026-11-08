@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { sendEmail } from '@/core/email/transport';
 import { now } from '@/core/clock';
 import { db } from '@/core/db';
+import { asSystem } from '@/core/db/rls';
 import { log } from '@/core/log';
 import type { Prisma } from '@/generated/prisma/client';
 import { sendSms } from './sms';
@@ -14,7 +16,11 @@ export type Enqueue = { channel: 'email' | 'sms'; to: string; template: string; 
 /** Queue a message. Pass `tx` to enqueue inside the caller's transaction so the two commit together. */
 export async function enqueue(m: Enqueue, tx: Pick<typeof db, 'outbox'> = db) {
   render(m.template, m.data); // fail at the call site on a typo, not silently at drain time
-  return tx.outbox.create({ data: { ...m, data: (m.data ?? {}) as Prisma.InputJsonObject }, select: { id: true } });
+  // createMany with our own id, not create: RETURNING must pass the SELECT policy, which a row for another org
+  // (or none) does not under RLS. Insert is open on Outbox; reading it is scoped (addendum §2).
+  const id = randomUUID();
+  await tx.outbox.createMany({ data: [{ ...m, id, data: (m.data ?? {}) as Prisma.InputJsonObject }] });
+  return { id };
 }
 
 /** How long a claimed row stays invisible to other drains; must outlast the transports' 15s fetch timeout. */
@@ -28,42 +34,45 @@ export const LEASE_MS = 2 * 60_000;
  * accepts sends it again once the lease runs out. A failure backs the row off; after MAX_ATTEMPTS it
  * stays unsent with `lastError` for a human.
  */
-export async function drainOutbox(limit = 25): Promise<{ sent: number; failed: number }> {
-  let sent = 0;
-  let failed = 0;
-  for (let i = 0; i < limit; i++) {
-    const row = await db.$transaction(async (tx) => {
-      const [r] = await tx.$queryRaw<{ id: string; channel: string; to: string; template: string; data: unknown; attempts: number }[]>`
-        SELECT id, channel, "to", template, data, attempts FROM "Outbox"
-        WHERE "sentAt" IS NULL AND "sendAfter" <= ${now()} AND attempts < ${MAX_ATTEMPTS}
-        ORDER BY "sendAfter" LIMIT 1 FOR UPDATE SKIP LOCKED`;
-      if (r) await tx.outbox.update({ where: { id: r.id }, data: { attempts: { increment: 1 }, sendAfter: new Date(now().getTime() + LEASE_MS) } });
-      return r;
-    });
-    if (!row) break;
-    const attempts = row.attempts + 1;
-    try {
-      const { subject, body } = render(row.template, row.data);
-      if (row.channel === 'sms') await sendSms({ to: row.to, body });
-      else await sendEmail({ to: row.to, subject, body });
-    } catch (err) {
-      // Error text can echo provider detail but never our body or address: sendEmail/sendSms throw status-only messages.
-      await db.outbox.update({
-        where: { id: row.id },
-        data: { lastError: (err instanceof Error ? err.message : String(err)).slice(0, 500), sendAfter: new Date(now().getTime() + (BACKOFF_MS[attempts - 1] ?? BACKOFF_MS.at(-1)!)) },
+// Cross-org (cross-org.ts): cron drains and sweeps every org's rows as the system role.
+export function drainOutbox(limit = 25): Promise<{ sent: number; failed: number }> {
+  return asSystem(async (sys) => {
+    let sent = 0;
+    let failed = 0;
+    for (let i = 0; i < limit; i++) {
+      const row = await sys.$transaction(async (tx) => {
+        const [r] = await tx.$queryRaw<{ id: string; channel: string; to: string; template: string; data: unknown; attempts: number }[]>`
+          SELECT id, channel, "to", template, data, attempts FROM "Outbox"
+          WHERE "sentAt" IS NULL AND "sendAfter" <= ${now()} AND attempts < ${MAX_ATTEMPTS}
+          ORDER BY "sendAfter" LIMIT 1 FOR UPDATE SKIP LOCKED`;
+        if (r) await tx.outbox.update({ where: { id: r.id }, data: { attempts: { increment: 1 }, sendAfter: new Date(now().getTime() + LEASE_MS) } });
+        return r;
       });
-      log('outbox.failed', { id: row.id, attempts });
-      failed++;
-      continue;
+      if (!row) break;
+      const attempts = row.attempts + 1;
+      try {
+        const { subject, body } = render(row.template, row.data);
+        if (row.channel === 'sms') await sendSms({ to: row.to, body });
+        else await sendEmail({ to: row.to, subject, body });
+      } catch (err) {
+        // Error text can echo provider detail but never our body or address: sendEmail/sendSms throw status-only messages.
+        await sys.outbox.update({
+          where: { id: row.id },
+          data: { lastError: (err instanceof Error ? err.message : String(err)).slice(0, 500), sendAfter: new Date(now().getTime() + (BACKOFF_MS[attempts - 1] ?? BACKOFF_MS.at(-1)!)) },
+        });
+        log('outbox.failed', { id: row.id, attempts });
+        failed++;
+        continue;
+      }
+      await sys.outbox.update({ where: { id: row.id }, data: { sentAt: now(), lastError: null } });
+      sent++;
     }
-    await db.outbox.update({ where: { id: row.id }, data: { sentAt: now(), lastError: null } });
-    sent++;
-  }
-  return { sent, failed };
+    return { sent, failed };
+  });
 }
 
 /** Old sent rows carry addresses and payloads; nothing reads them after a week. */
 export async function sweepOutbox(): Promise<number> {
-  const { count } = await db.outbox.deleteMany({ where: { sentAt: { lt: new Date(now().getTime() - 7 * 86_400_000) } } });
+  const { count } = await asSystem((sys) => sys.outbox.deleteMany({ where: { sentAt: { lt: new Date(now().getTime() - 7 * 86_400_000) } } }));
   return count;
 }

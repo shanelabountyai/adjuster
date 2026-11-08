@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import pg from 'pg';
 
 // The billing page against the production build, with the mock provider (no STRIPE_SECRET_KEY in .env.test).
-const db = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+const db = new pg.Pool({ connectionString: process.env.DATABASE_URL_SYSTEM ?? process.env.DATABASE_URL, max: 1 }); // fixtures as the owner (RLS enforce)
 test.afterAll(() => db.end());
 
 async function seedOwner() {
