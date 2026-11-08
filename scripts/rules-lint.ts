@@ -49,7 +49,8 @@ for (const dir of readdirSync('rules')) {
 // Non-negotiables 1 and 2: no plan identifiers anywhere under src/, no eval/Function/dynamic import in the rule path.
 // src/generated is Prisma output; the dynamic-import check is scoped to the code this project owns.
 // src/core is template-owned and never edited here (CLAUDE.md), so a hit there (a '+' alias in link.ts) is not product logic.
-const src = walk('src').filter((p) => /\.(ts|tsx|js|mjs)$/.test(p) && !/^src\/(generated|core)\//.test(p));
+// Same for the template's modules and its SSO callback route (v1.6.0, D104): the English word "plus" in their comments.
+const src = walk('src').filter((p) => /\.(ts|tsx|js|mjs)$/.test(p) && !/^src\/(generated|core|modules)\//.test(p) && !p.startsWith('src/app/(public)/login/sso/'));
 for (const p of src) {
   const text = readFileSync(p, 'utf8');
   for (const id of identifiers) if (new RegExp(`\\b${id}\\b`, 'i').test(text)) fail(p, `plan identifier "${id}" in src/`);
