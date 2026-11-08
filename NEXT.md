@@ -1,5 +1,10 @@
 # NEXT
 
+## ▶ v1.6.1 (PR open, unmerged): cross-org module markers + status regex
+Earmark Phase 1.5 found INV-32 red in any clone that removed `billing` or `notifications` (unmarked cross-org entries).
+Fixed on branch `v1.6.1`. After the owner merges: tag `v1.6.1`, push the tag to the clones, and roll clones to v1.6.1
+instead of v1.6.0 (every clone that removed billing/notifications would hit the same INV-32 failure on v1.6.0).
+
 ## ▶ Next session: v1.6.0 clone rollout (`foundation-rollout` skill; Opus for Pulseboard, its `/ingest` key migration is auth code and stops for the owner)
 **v1.6.0 released 2026-11-06:** PR #12 merged (`b131bc0`), tag `v1.6.0` pushed to the template and to all 15 clone repos
 (the 14 in CLONES.md + earmark). `foundation:status` in quorum: "current v1.4.0, latest v1.6.0" (quorum's folder sits on the
