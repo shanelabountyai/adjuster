@@ -1,4 +1,4 @@
-import { db } from '@/core/db';
+import { withOrg } from '@/core/db/rls';
 import { env } from '@/core/env';
 import { Refused } from '@/core/errors';
 
@@ -96,7 +96,7 @@ export function paymentProvider(): PaymentProvider {
  * deletion stops instead.
  */
 export async function cancelOrgSubscription(orgId: string) {
-  const acct = await db.billingAccount.findUnique({ where: { orgId } });
+  const acct = await withOrg({ orgId }, (tx) => tx.billingAccount.findUnique({ where: { orgId } }), { atomic: false });
   if (!isLive(acct?.status)) return;
   if (!acct!.stripeSubscriptionId) throw new Refused('This org has a live subscription we cannot cancel from here. Cancel it in Manage billing, then delete.');
   await paymentProvider().cancel(acct!.stripeSubscriptionId);

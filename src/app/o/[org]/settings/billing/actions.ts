@@ -4,13 +4,13 @@ import { z } from 'zod';
 import { assertNotDemo } from '@/core/auth/session';
 import { orgAction } from '@/core/authz/action';
 import type { OrgCtx } from '@/core/authz/guards';
-import { db } from '@/core/db';
+import { withOrg } from '@/core/db/rls';
 import { env } from '@/core/env';
 import { Refused } from '@/core/errors';
 import { isLive, paymentProvider } from '@/modules/billing/provider';
 
 const returnUrl = (ctx: OrgCtx) => `${env.APP_URL}/o/${ctx.slug}/settings/billing`;
-const accountOf = (ctx: OrgCtx) => db.billingAccount.findUnique({ where: { orgId: ctx.orgId } });
+const accountOf = (ctx: OrgCtx) => withOrg(ctx, (tx) => tx.billingAccount.findUnique({ where: { orgId: ctx.orgId } }), { atomic: false });
 const customerOf = async (ctx: OrgCtx) => (await accountOf(ctx))?.stripeCustomerId ?? null;
 
 // `attempt` is minted once per rendered form, so a double submit or a retried request reuses the
