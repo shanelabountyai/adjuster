@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { drift, hashOf, patchedHash, type Change } from '../../scripts/foundation-drift';
 import { MARKED_FILES, MODULES, modulesToRemove } from '../../scripts/foundation-modules';
 import { portInUse, rewrite } from '../../scripts/new-project';
+import { orgTables, policySql } from '../../scripts/rls-policies';
 
 const none = () => false;
 const edit = (path: string, ...lines: string[]): Change => ({ status: 'M', path, lines });
@@ -120,5 +121,16 @@ describe('marked files (v1.6.1)', () => {
   it('negative control: the v1.6.0 cross-org line without its marker is caught', () => {
     const planted = [{ f: 'src/core/db/cross-org.ts', text: "  'src/modules/billing/webhook.ts': 'Stripe webhook: the event names the org'," }];
     expect(unmarked(planted)).toHaveLength(1);
+  });
+});
+
+describe('rls:policies module guard (F-09)', () => {
+  const tables = orgTables();
+  it('guards every module table, and no core table', () => {
+    for (const t of tables) {
+      const guarded = policySql([t]).includes(`to_regclass('"${t.table}"')`);
+      expect([t.table, guarded]).toEqual([t.table, Boolean(t.module)]);
+    }
+    expect([...new Set(tables.map((t) => t.module).filter(Boolean))].sort()).toEqual(Object.keys(MODULES).sort());
   });
 });

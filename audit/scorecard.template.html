@@ -32,7 +32,7 @@ td button[aria-pressed=true]{background:var(--sel);color:var(--bg)!important}
 <main>
 <h1>Foundation Scorecard</h1>
 <p class="sub">Every code project against the 14 key pieces of the saas foundation (K1–K14). Select a cell for the reason, the evidence and the backlog item that fixes it.</p>
-<div class="scope"><b>Scope.</b> The foundation row was verified today (122 tests pass, __VER__). Every other row was re-scored against current code on 2026-09-25 by one Sonnet agent per project (read-only, no builds or tests run); each cell says how it was checked. On __ASOF__ an Opus agent swept K4 exhaustively on the four rows that had only been spot-checked (rental and clinic had confirmed HIGH findings; both were fixed the same day, CI green), and rental's re-check request was processed. The dead design bridge keeps its 2026-09-23 baseline.</div>
+<div class="scope"><b>Scope.</b> The foundation row was verified 2026-11-09 (286 tests pass, 21 skipped, __VER__). Every other row was re-scored against current code on 2026-09-25 by one Sonnet agent per project (read-only, no builds or tests run); each cell says how it was checked. On __ASOF__ an Opus agent swept K4 exhaustively on the four rows that had only been spot-checked (rental and clinic had confirmed HIGH findings; both were fixed the same day, CI green), and rental's re-check request was processed. The dead design bridge keeps its 2026-09-23 baseline. <b>Clones of the foundation (pulseboard, gavel, quorum, earmark and the rest) have no rows:</b> they inherit the foundation row's checks by merge, but nothing here scores their own code.</div>
 <div class="legend"><span><b class="s-ok mono">✔</b> compliant</span><span><b class="s-bad mono">✗</b> not compliant</span><span><b class="s-na mono">–</b> N/A</span><span><b class="s-q mono">?</b> not verified</span></div>
 <p class="ev" id="rs">Each project row has a re-check button. A request is queued here and run from the Claude Code session in the foundation repo; it re-scores that project only.</p>
 <div class="wrap"><table id="m"></table></div>
@@ -46,7 +46,7 @@ let h='<thead><tr><th class="n">Project</th>';
 for(const k in D.keys)h+=`<th>${k}<small>${D.keys[k]}</small></th>`;
 h+='<th>✔</th></tr></thead><tbody>';
 D.rows.forEach((r,i)=>{const n=Object.values(r.cells).filter(c=>c.s==="✔").length;
-h+=`<tr class="${i?'':'f'}"><td class="n">${r.name}<div class="t">${i?r.id:'v'+D.foundationVersion}</div>${i?`<button class="rq" type="button" data-id="${r.id}" hidden>Re-check</button><div class="ev st" data-st="${r.id}"></div>`:''}</td>`;
+h+=`<tr class="${i?'':'f'}"><td class="n">${r.name}<div class="t">${i?r.id:D.foundationVersion}</div>${i?`<button class="rq" type="button" data-id="${r.id}" hidden>Re-check</button><div class="ev st" data-st="${r.id}"></div>`:''}</td>`;
 for(const k in D.keys){const c=r.cells[k],g=G[c.s];h+=`<td><button class="${g[1]}" data-r="${i}" data-k="${k}" aria-pressed="false" aria-label="${r.name} ${k}: ${c.s}">${g[0]}</button></td>`}
 h+=`<td class="mono">${n}/14</td></tr>`});
 m.innerHTML=h+'</tbody>';

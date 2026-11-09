@@ -65,7 +65,7 @@ def cell(status, text, ev, basis):
 import os
 RESC = {st: json.load(open(f"rescore/{st}.json")) for st in REPOS if os.path.exists(f"rescore/{st}.json")}
 out = {"asOf": "2026-09-26", "foundationVersion": open("../FOUNDATION_VERSION").read().strip(), "keys": NAMES, "rows": []}
-f = {k: cell("✔", v[0] + " tests green (npm test, 122 pass, 2026-09-25)", v[1], "verified") for k, v in FOUNDATION.items()}
+f = {k: cell("✔", v[0] + " tests green (npm test, 286 pass + 21 skipped, 2026-11-09)", v[1], "verified") for k, v in FOUNDATION.items()}
 out["rows"].append({"id": "foundation", "name": "saas foundation (template)", "cells": f})
 for stem, name in REPOS.items():
     raw = {}
