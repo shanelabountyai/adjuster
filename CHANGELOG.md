@@ -2,6 +2,37 @@
 
 Entries prefixed `security:` are mandatory for anything touching an invariant. Clones must take a `security:` release within 7 days.
 
+## 1.6.2 (2026-11-09)
+
+Fixes from the v1.6.x clone rollout (BACKLOG F-06, F-08, F-09, F-11 to F-14). Not `security:`: no invariant is relaxed.
+
+- **F-06:** core's `Org.events OrgEvent[]` is now `Org.orgEvents`. A clone with its own `Org.events` relation (callboard's
+  `Event`) no longer gets a Prisma name collision. Relation name only: no column, no migration. A clone that renamed it
+  locally drops that patch row from `FOUNDATION_PATCHES.md`.
+- **F-09:** `npm run rls:policies` wraps each removable module's table (`billing`, `notifications`, `sso`, `apikeys`) in a
+  `to_regclass` guard, so a later policy migration still applies after a clone dropped that module's tables. Core and
+  clone tables stay unguarded, so a missing one fails the migration instead of silently getting no policy. The five
+  policy migrations already shipped (up to `20261108000002`) are unchanged: editing an applied migration breaks
+  `migrate dev` in every clone. A clone that drops a module's tables does it in a migration dated after them (README,
+  "Removing a module"); gavel's stub-table pair (its D-102) stays valid.
+- **F-08:** `e2e/demo.spec.ts` and `e2e/security-pages.spec.ts` seed with `npm run seed:demo:test` in a child process
+  instead of importing `scripts/seed-demo` (a clone seed that imports `next/navigation` broke Playwright's loader), and
+  the settings nav is found as the `navigation` that holds the "Audit log" link, however many nav rows a clone adds.
+- **F-11:** `foundation:check-modules` gives its scratch copy a fresh `git init` instead of copying `.git`. From a git
+  worktree, `.git` is a pointer file and the `scratch` commit landed on the real branch.
+- **F-14:** the CI enforce leg reads the test database name from the job's `DATABASE_URL`, so a clone that set
+  `RLS_ENFORCE=1` no longer edits three `saas_foundation_test` lines.
+
+Upgrade: merge, `npm ci`, `npx prisma generate`. No migration, no env change. Two notes the 1.6.0 and 1.6.1 entries left out:
+
+- **F-12:** 1.6.0's "merge and set nothing, behaves as 1.5.0" holds only when the app connects as the table owner or a
+  role with `BYPASSRLS`. The policy migrations `ENABLE` RLS, and that alone filters every other role: with `RLS_MODE`
+  unset no `app.org_id` is set, so such a role sees no org rows at all. A clone whose runtime role is neither (quorum's
+  `quorum_app`) either gives it `BYPASSRLS` until it adopts enforce (quorum D-61) or turns enforce on. Check with
+  `SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user;` on the runtime connection.
+- **F-13:** a clone that removed `billing` also deletes the `// billing` line in `src/app/modules.ts` (the clone-owned
+  file 1.6.0 added). `foundation:check-modules` already does; a hand removal must too.
+
 ## 1.6.1 (2026-11-07)
 
 Fix: `src/core/db/cross-org.ts` listed `src/modules/billing/webhook.ts` and `src/modules/notifications/outbox.ts` without
