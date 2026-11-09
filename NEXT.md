@@ -1,6 +1,7 @@
 # NEXT
 
 ## ▶ Next session: template v1.6.2 from BACKLOG F-06, F-08, F-09, F-11 to F-14 (rollout fallout). Model: Sonnet for the mechanics; F-09 and F-12 touch RLS migration output and upgrade claims, so Opus.
+First, 5 minutes: rebuild and republish the portfolio scorecard (`audit/build-scorecard.py`, same URL, see CLONES.md footer) now that every clone is on v1.6.1.
 
 ## ✅ 2026-11-09: v1.6.x rollout done. Every clone is on **v1.6.1** (measured `FOUNDATION_VERSION` on each `origin/main`)
 
