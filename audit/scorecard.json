@@ -1,6 +1,6 @@
 {
  "asOf": "2026-09-26",
- "foundationVersion": "v1.0.1",
+ "foundationVersion": "v1.6.1",
  "keys": {
   "K1": "Sessions",
   "K2": "MFA",
@@ -24,98 +24,98 @@
    "cells": {
     "K1": {
      "s": "✔",
-     "text": "INV-05,07,17 tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "INV-05,07,17 tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "src/core/auth/session.ts; src/core/auth/link.ts; tests/invariants/inv-05-sign-out-everywhere.test.ts",
      "secs": [],
      "basis": "verified"
     },
     "K2": {
      "s": "✔",
-     "text": "INV-24,25,26 tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "INV-24,25,26 tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "src/core/auth/totp.ts; tests/invariants/inv-24-totp-replay.test.ts",
      "secs": [],
      "basis": "verified"
     },
     "K3": {
      "s": "✔",
-     "text": "INV-01 tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "INV-01 tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "src/core/authz/action.ts; tests/invariants/inv-01-04-22-actions.test.ts",
      "secs": [],
      "basis": "verified"
     },
     "K4": {
      "s": "✔",
-     "text": "INV-02,03,04 tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "INV-02,03,04 tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "src/core/authz/guards.ts; tests/invariants/harness.ts",
      "secs": [],
      "basis": "verified"
     },
     "K5": {
      "s": "✔",
-     "text": "INV-09 tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "INV-09 tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "src/core/rate-limit.ts; tests/invariants/inv-09-rate-limits.test.ts",
      "secs": [],
      "basis": "verified"
     },
     "K6": {
      "s": "✔",
-     "text": "INV-07,08 tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "INV-07,08 tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "src/core/share/links.ts; tests/invariants/inv-08-share-links.test.ts",
      "secs": [],
      "basis": "verified"
     },
     "K7": {
      "s": "✔",
-     "text": "INV-15 tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "INV-15 tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "next.config.ts:8-16; e2e header specs",
      "secs": [],
      "basis": "verified"
     },
     "K8": {
      "s": "✔",
-     "text": "INV-10,11,16,20 tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "INV-10,11,16,20 tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "src/core/cron.ts; tests/invariants/inv-10-11-16-cron-secrets.test.ts",
      "secs": [],
      "basis": "verified"
     },
     "K9": {
      "s": "✔",
-     "text": "INV-12 tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "INV-12 tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "src/modules/billing/webhook.ts; tests/invariants/inv-12-webhooks.test.ts",
      "secs": [],
      "basis": "verified"
     },
     "K10": {
      "s": "✔",
-     "text": "INV-13 tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "INV-13 tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "src/core/email; tests/invariants/inv-13-email.test.ts",
      "secs": [],
      "basis": "verified"
     },
     "K11": {
      "s": "✔",
-     "text": "INV-14 tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "INV-14 tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "src/core/env.ts; tests/invariants/inv-14-env.test.ts",
      "secs": [],
      "basis": "verified"
     },
     "K12": {
      "s": "✔",
-     "text": "INV-18 tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "INV-18 tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "src/core/db/local-guard.ts; tests/invariants/inv-18-cloud-guard.test.ts",
      "secs": [],
      "basis": "verified"
     },
     "K13": {
      "s": "✔",
-     "text": "INV-19 tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "INV-19 tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "src/core/audit.ts; tests/invariants/inv-19-audit-append-only.test.ts",
      "secs": [],
      "basis": "verified"
     },
     "K14": {
      "s": "✔",
-     "text": "CLAUDE.md tests green (npm test, 122 pass, 2026-09-25)",
+     "text": "CLAUDE.md tests green (npm test, 286 pass + 21 skipped, 2026-11-09)",
      "evidence": "vercel.json (ignoreCommand); package.json (port 4100); src/core/cron.ts",
      "secs": [],
      "basis": "verified"

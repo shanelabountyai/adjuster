@@ -46,7 +46,7 @@ let h='<thead><tr><th class="n">Project</th>';
 for(const k in D.keys)h+=`<th>${k}<small>${D.keys[k]}</small></th>`;
 h+='<th>✔</th></tr></thead><tbody>';
 D.rows.forEach((r,i)=>{const n=Object.values(r.cells).filter(c=>c.s==="✔").length;
-h+=`<tr class="${i?'':'f'}"><td class="n">${r.name}<div class="t">${i?r.id:'v'+D.foundationVersion}</div>${i?`<button class="rq" type="button" data-id="${r.id}" hidden>Re-check</button><div class="ev st" data-st="${r.id}"></div>`:''}</td>`;
+h+=`<tr class="${i?'':'f'}"><td class="n">${r.name}<div class="t">${i?r.id:D.foundationVersion}</div>${i?`<button class="rq" type="button" data-id="${r.id}" hidden>Re-check</button><div class="ev st" data-st="${r.id}"></div>`:''}</td>`;
 for(const k in D.keys){const c=r.cells[k],g=G[c.s];h+=`<td><button class="${g[1]}" data-r="${i}" data-k="${k}" aria-pressed="false" aria-label="${r.name} ${k}: ${c.s}">${g[0]}</button></td>`}
 h+=`<td class="mono">${n}/14</td></tr>`});
 m.innerHTML=h+'</tbody>';
