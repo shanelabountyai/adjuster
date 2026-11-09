@@ -1,6 +1,33 @@
 # NEXT
 
-## ▶ v1.6.1 (PR open, unmerged): cross-org module markers + status regex
+## ▶ Next session: template v1.6.2 from BACKLOG F-06, F-08, F-09, F-11 to F-14 (rollout fallout). Model: Sonnet for the mechanics; F-09 and F-12 touch RLS migration output and upgrade claims, so Opus.
+
+## ✅ 2026-11-09: v1.6.x rollout done. Every clone is on **v1.6.1** (measured `FOUNDATION_VERSION` on each `origin/main`)
+
+| Clone | v1.6.0/1.6.1 PR(s) | Production | Owner decisions / notes |
+|---|---|---|---|
+| pulseboard | #4 (owner-reviewed), #5 | not deployed | `/ingest` on `apikeys` (D-025..027) |
+| tradepost | #4 (hand port), #5 | migrated (11), redeployed via hook, 401 | D-029 |
+| callboard | #19, #20 | migrated (11), redeployed via hook, 401 | `Org.events` renamed locally (F-06); day-of e2e fixture fixed |
+| loanbook | #5, #6 | not deployed | D31: ledger not in org export (no `orgId`), open item |
+| adjuster | #4, #5 | not deployed | D104 |
+| bracketry | #3, #4 | not deployed | D-57 |
+| housefile | #10, #11 (`main` only) | not deployed | phase PRs #1/#5 still owe the merge (donor-table RLS + export, `Org.events`); `main` says port 5500 |
+| footnote | #2, #3 | not deployed | **owner: `apikeys` removed** (D-55), key model `FootnoteApiKey`; owner: pull + `migrate deploy` on dev DB `footnote` |
+| gavel | #4, #5 | migrated (13) before merge, auto-deployed, 401 | D-102 billing RLS stub; local `gavel_test` was migrated early |
+| quorum | #6 (straight to 1.6.1) | not deployed | **owner: `quorum_app` BYPASSRLS** (D-61); before any deploy, `quorum_web` needs real RLS or the same |
+| ledgerleave | #6 (straight to 1.6.1) | migrated (13) before merge, auto-deployed, 401 | D-64 |
+| coursework | #5 (straight to 1.6.1) | not deployed | D-73 |
+| commons | #17 (straight to 1.6.1) | not deployed | D-110: votes and reporter ids not exported |
+| earmark | owner's | owner's | measured on v1.6.1 |
+| boxloop | — | paused | on hold since 2026-10-19 (v1.2.1) |
+
+**Owner decisions this rollout (2026-11-07/09):** migrate deployed clones' production DBs before merging; footnote drops the
+`apikeys` module; quorum gets `BYPASSRLS`; remaining clones went straight to v1.6.1. Rollout lessons are in the
+`foundation-rollout` skill. Cleanups done: `~/Projects/pulseboard-pr4` and `~/Projects/footnote-m12` worktrees removed,
+`footnote_m12_test` dropped, the template's merged local `v1.6.0` branch deleted (it shadowed the tag; the remote branch remains).
+
+## (done) v1.6.1 (merged and tagged, 329baf5): cross-org module markers + status regex
 Earmark Phase 1.5 found INV-32 red in any clone that removed `billing` or `notifications` (unmarked cross-org entries).
 Fixed on branch `v1.6.1`. After the owner merges: tag `v1.6.1`, push the tag to the clones, and roll clones to v1.6.1
 instead of v1.6.0 (every clone that removed billing/notifications would hit the same INV-32 failure on v1.6.0).
