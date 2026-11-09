@@ -16,8 +16,9 @@ env.AUTH_SECRET ??= 'modules-removed-check-not-a-real-secret-000';
 env.APP_URL ??= 'http://localhost:4100';
 const sh = (cmd: string) => execSync(cmd, { cwd: work, stdio: 'inherit', env });
 
-execFileSync('rsync', ['-a', '--exclude', '.next', '--exclude', 'src/generated', '--exclude', 'spikes', '--exclude', 'audit', '--exclude', 'test-results', `${root}/`, `${work}/`], { stdio: 'inherit' });
-sh('git add -A >/dev/null && git -c user.email=ci@local -c user.name=ci commit -qm scratch --allow-empty'); // the base for the drift check
+execFileSync('rsync', ['-a', '--exclude', '.next', '--exclude', 'src/generated', '--exclude', 'spikes', '--exclude', 'audit', '--exclude', 'test-results', '--exclude', '.git', `${root}/`, `${work}/`], { stdio: 'inherit' });
+// A fresh repo, never the real one's .git: in a worktree .git is a pointer file, and the scratch commit landed on the real branch (F-11).
+sh('git init -q && git add -A >/dev/null && git -c user.email=ci@local -c user.name=ci commit -qm scratch --allow-empty'); // the base for the drift check
 
 const removed = modulesToRemove(REQUIRED_MODULES);
 for (const [name, paths] of removed) {
