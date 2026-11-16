@@ -1,15 +1,24 @@
 # NEXT
 
+## ▶ 2026-11-16: v1.6.3 PR open (branch `fix/module-table-guard-removed-modules`): module-table guard respects removed modules (BACKLOG F-17, F-18)
+Housefile PR #1 (`fbab45b`, billing removed) was red on `ci (off)`: the v1.6.2 F-09 guard test asserted all four modules present.
+After the owner merges: tag `v1.6.3`, push the tag to the clones, roll them (CHANGELOG 1.6.3: clones with the "F-17 test patched"
+note take the template's `describe` block on conflict). Housefile is unblocked by merging v1.6.3 into its PR #1 branch.
+**Decision (agent, 2026-11-16, unattended run; owner may reverse):** v1.6.3 is scoped to this fix only. It ships the F-17 test
+change already on `main` in its stronger form (F-18), since both are the same bug. The **demo-gate env fix** (`DEMO_ACCESS_PASSWORD`/`VERCEL`
+read outside `src/core/env.ts`, missing from `.env.example`; K11 ✗ in ledgerleave, gavel, tradepost, callboard), previously
+planned "as v1.6.3 (with F-17)" below, **moves to v1.6.4**.
+
 ## ▶ Next session: scorecard gap plan **Step 2** (Opus, one project per session). Order: event toolkit (K2, K5, K11, K12), storage (K11, K12), reservations, use-case-studio, showcall, countertop.
 **Step 1 DONE (2026-11-13), scorecard version 13** (https://claude.ai/artifact/TognMvisj8T9GNQGtE9MbJ): items 1-2 earlier (design bridge retired, `≈` state);
 **item 3 (BACKLOG F-15) closed: 14 clone rows added**, one Sonnet sweep each against `origin/main` (data `audit/rescore/clones/<name>.json`, built by `build-scorecard.py` `CLONES`;
 boxloop is a paused row). Results: bracketry, coursework, earmark, loanbook, pulseboard, quorum clean (0 ✗); adjuster 1, commons 1, gavel 1, housefile 1, ledgerleave 1, tradepost 1, callboard 3, footnote 3.
 **Clone findings worth a template change:** the demo gate reads `DEMO_ACCESS_PASSWORD`/`VERCEL` from `process.env` outside `src/core/env.ts` and omits it from `.env.example`
-(K11 ✗ in ledgerleave, gavel, tradepost, callboard): fix once in the template as v1.6.3 (with F-17), then clones inherit it.
+(K11 ✗ in ledgerleave, gavel, tradepost, callboard): fix once in the template as v1.6.4 (moved from v1.6.3, decision 2026-11-16 above), then clones inherit it.
 Other ✗: adjuster K4 (no org column, D73, candidate for `≈`); commons K11 `UPLOAD_ROOT`; housefile K14 port 5500 on `main`; footnote K5 (`/api/answers` unlimited, paid LLM calls), K11, K13 (key/role grants unaudited);
 callboard K6 (`/p/*` referrer, no per-link revoke), K9 (Twilio inbound replayable), K11. Clone rows show a Re-check button that nothing services (cosmetic).
 Earlier `≈` candidates and republish recipe: build `audit/scorecard.template.html` with `__DATA__` replaced by `audit/scorecard.json`; read the live source in full first (saved to tool-results), then resend.
-Also owed: template patch v1.6.3 for **BACKLOG F-17** plus the demo-gate env fix above.
+Also owed: template patch **v1.6.4** for the demo-gate env fix above (F-17 ships in v1.6.3).
 
 ## ✅ 2026-11-09: every clone is on **v1.6.2** (13 PRs merged; earmark is the owner's, boxloop is on hold)
 

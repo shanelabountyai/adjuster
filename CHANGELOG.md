@@ -2,6 +2,32 @@
 
 Entries prefixed `security:` are mandatory for anything touching an invariant. Clones must take a `security:` release within 7 days.
 
+## 1.6.3 (unreleased; tag after merge)
+
+Fix: the F-09 unit test `tests/unit/foundation-tools.test.ts` › "guards every module table" asserted that all four removable
+modules have tables, so it failed (`ci (off)`, 1 test) in every clone that removed a module by the "Removing a module"
+recipe. Found by housefile PR #1 (head `fbab45b`, billing removed) after merging v1.6.2 (BACKLOG F-17, F-18). Not `security:`:
+the test was over-strict in clones, never permissive, and no generated policy SQL changes.
+
+- **The guard check is per present module.** `presentModules()` (`scripts/foundation-modules.ts`) says a module is present
+  while its directory exists, the test `foundation:drift` already used (drift now calls it). `guardGaps()`
+  (`scripts/rls-policies.ts`) requires every table of a present module to carry the `to_regclass` guard, no core or clone
+  table to carry it, and each present module to contribute at least one table, so a missing schema file fails instead of
+  passing on nothing. This replaces the interim F-17 assertion on `main` ("every present module is a known one"), which
+  could never fail: `orgTables()` only tags tables from known module files.
+- **New tests** on a fixture tree, so they hold in any clone: (1) all modules present, `BillingAccount` is guarded;
+  (2) billing removed by `removeModule()`, the check passes on the three left; (3) mutation: a present module's table left
+  unguarded, a guarded core table, and a present module with no tables found each fail. The real-tree test and
+  `policySql` were also mutation-checked red (billing left unguarded).
+- **`removeModule()`** is the recipe as code (paths + marked lines); `foundation:check-modules` now calls it instead of its
+  own copy of the loop.
+- **CI `modules-removed` runs the module-tooling unit tests** (`tests/unit/foundation-tools.test.ts`) in its scratch copy
+  after removing the modules, between typecheck and build. It ran validate, typecheck, build and drift only, which is why
+  the template never saw this (as with INV-32 in 1.6.1). The v1.6.2 test fails there; this one passes.
+
+Upgrade: merge, `npm ci`. No migration, no env change. A clone that patched this test locally (footnote, ledgerleave,
+commons, coursework, quorum, gavel: "F-17 test patched") gets a conflict in that `describe` block: take the template's.
+
 ## 1.6.2 (2026-11-09)
 
 Fixes from the v1.6.x clone rollout (BACKLOG F-06, F-08, F-09, F-11 to F-14). Not `security:`: no invariant is relaxed.
