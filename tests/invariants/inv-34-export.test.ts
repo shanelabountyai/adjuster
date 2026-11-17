@@ -4,6 +4,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { auditCsv } from '@/core/audit';
 import { ReauthRequired } from '@/core/auth/session';
 import { sealSecret } from '@/core/auth/secret-box';
 import { advanceClock } from '@/core/clock';
@@ -190,9 +191,7 @@ describe('INV-34 v1.6.5: taking the data out needs a fresh sign-in, and the audi
     const org = await makeOrg('acme');
     const ctx = await actAs((await addMember(org.id, 'owner', 'owner@acme.test')).id, org.slug);
     await db.auditEvent.createMany({ data: Array.from({ length: 10_005 }, (_, i) => ({ orgId: org.id, actorUserId: null, action: `test.e${i}` })) });
-    const { GET } = await import('@/app/o/[org]/settings/audit/csv/route');
-    const res = await GET(new Request('http://app.test/o/acme/settings/audit/csv'), { params: Promise.resolve({ org: ctx.slug }) });
-    const lines = (await res.text()).trim().split('\n');
+    const lines = (await auditCsv(ctx, {})).trim().split('\n');
     expect(lines).toHaveLength(1 + 10_000);
     expect(lines[1]).toContain('test.e10004'); // newest first
     const a = await db.auditEvent.findFirstOrThrow({ where: { action: 'audit.exported' } });
