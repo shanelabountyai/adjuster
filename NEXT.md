@@ -1,5 +1,13 @@
 # NEXT
 
+## ▶ 2026-11-17: v1.7.0 PR open (branch `security/v1.7.0`): A-04, A-08 (owner decisions 2026-11-17)
+Webhook endpoints are disabled with their creator's membership; a demotion below `apikeys.manage` revokes keys and disables
+endpoints. One migration (guarded; backfills creators from the audit log and disables orphans), one breaking change
+(`changeRole` takes `onRoleChanged`). After the owner merges: tag `v1.7.0`, push the tag to quorum, coursework and commons,
+roll to every clone within 7 days (each adds `onRoleChanged` to its own `org-hooks.ts`; earmark keeps its guest lines).
+**Decision (agent, 2026-11-17; owner may reverse):** a demotion also disables the person's endpoints, not only their keys,
+by the same rule. Still open from the audit: A-11, A-12, A-14, webhook address pinning, the `AiHold` CHECK.
+
 ## ▶ 2026-11-17: v1.6.5 PR open (branch `security/v1.6.5`): A-06, A-10 (owner decisions), A-05 guard half, demo gate in core
 v1.6.4 is tagged and on all 19 clones (CLONES.md). After the owner merges v1.6.5: tag `v1.6.5`, push the tag to quorum,
 coursework and commons too (their CI drift step needs it in their own repo), roll to every clone; in ledgerleave, gavel,

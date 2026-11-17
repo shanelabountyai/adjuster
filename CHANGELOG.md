@@ -2,6 +2,39 @@
 
 Entries prefixed `security:` are mandatory for anything touching an invariant. Clones must take a `security:` release within 7 days.
 
+## 1.7.0 (unreleased; tag after merge)
+
+security: the owner decisions on audit A-04 and A-08 (2026-11-17): a credential does not outlive the right that made it.
+**Clones must take this within 7 days.** **One migration** (`20261117000000_webhook_endpoint_creator`, guarded for a clone
+that dropped the apikeys tables). **One breaking change**: `changeRole` takes a fourth, required argument.
+
+- **A-04 webhook endpoints end with their creator.** `WebhookEndpoint` gains `createdById` (no FK, like `ApiKey`). When a
+  membership ends (removed, left, account deleted) the endpoints that person created are **disabled**, not deleted, with a
+  reason the settings page shows; nothing more is sent to them. An owner or admin who switches one back on takes it over
+  (`createdById` becomes theirs, audited as `createdByFrom`/`createdByTo`). Audited as `webhook.disabled_with_member`.
+- **A-08 a demotion ends them too.** A role change that loses `apikeys.manage` (admin → member or scorekeeper) revokes the
+  keys the person created (`apikey.revoked_with_role`) and disables their endpoints (`webhook.disabled_with_role`), in the
+  role change's own transaction. owner ↔ admin changes nothing. Endpoints on demotion are an agent call beside the owner's
+  decision on keys (same rule, and reversible from the settings page); say if you want keys only.
+- **Core seam:** `RoleChanged` beside `MembershipEnded` in `src/core/tenancy/orgs.ts`; `changeRole(ctx, userId, role, changed)`
+  runs it after the checks, so a refused change ends nothing and a throwing hook rolls the change back. The apikeys module
+  exposes one call for both hooks, `endCredentialsOf(tx, orgId, userId, role | null)`; `revokeKeysCreatedBy` stays exported.
+- **Existing endpoints:** the migration reads each endpoint's creator back from the audit log (`webhook.endpoint_created`,
+  written since v1.6.0) and disables, now, any whose creator is no longer a member of its org (audited, `by: migration`).
+  This needs the migrating role to bypass RLS (superuser or BYPASSRLS, as CI and `db:setup`'s owner URL are); otherwise it
+  matches nothing and those endpoints keep a null creator, which behaves as 1.6.x. Not verified against Neon's owner role.
+- The proving tests moved from `tests/defects/` into `tests/invariants/inv-40-41-apikeys.test.ts`; `tests/defects/`,
+  `vitest.defects.config.ts` and the `tsconfig.json` exclude are gone, as every audit test with a test is now gating.
+
+Upgrade: merge, `npm ci`, `prisma migrate deploy`. In the clone-owned `src/app/org-hooks.ts`, change the apikeys import to
+`endCredentialsOf`, make `onMembershipEnded` call `endCredentialsOf(tx, orgId, userId, null)`, and add an exported
+`onRoleChanged: RoleChanged` whose body is `await endCredentialsOf(tx, orgId, userId, to); // apikeys` (copy the template's
+file for the exact lines and markers). A clone without apikeys exports an empty `onRoleChanged`. Every
+`changeRole(...)` call in the clone's own code and tests gets `onRoleChanged` as its fourth argument: `tsc` lists them.
+A clone that patched `onMembershipEnded` (earmark's guests) keeps its own lines and adds the call.
+
+Still open from the audit: A-11, A-12, A-14, webhook address pinning, the `AiHold` CHECK.
+
 ## 1.6.6 (unreleased; tag after merge)
 
 Fix to 1.6.5's Require SSO guard (owner decision 2026-11-17): a session made through `/demo` passes `refusesSession`. Demo
