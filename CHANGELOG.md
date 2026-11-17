@@ -2,7 +2,38 @@
 
 Entries prefixed `security:` are mandatory for anything touching an invariant. Clones must take a `security:` release within 7 days.
 
-## 1.6.3 (unreleased; tag after merge)
+## 1.6.4 (unreleased; tag after merge)
+
+security: fixes from the 2026-11-17 audit (`docs/audits/AUDIT-2026-11-17.md`, findings A-01, A-02, A-03, A-05 session half,
+A-07, A-09, A-13). **Clones must take this within 7 days.** No migration, no env change. Each fix moved its proving test
+from `tests/defects/` into the invariant suite; A-04, A-06 and A-08 stay in `tests/defects/` (v1.7.0 or owner decision).
+
+- **A-01 (high) webhook SSRF filter.** Addresses are now classified by their bytes in a new core module, `src/core/net.ts`
+  (`isPrivateAddress`, `checkOutboundUrl`), so `[::ffff:127.0.0.1]` (which `new URL()` rewrites to `[::ffff:7f00:1]`),
+  a hex-mapped DNS answer, NAT64 `64:ff9b::/96`, IPv4-compatible `::/96`, 6to4 `2002::/16` and Teredo `2001::/32` are
+  judged by their embedded IPv4 address. Also refused now: `192.0.0.0/24`, `198.18.0.0/15`, `fec0::/10`, `ff00::/8`,
+  `*.localhost`, and anything that does not parse as an address. `checkUrl` in apikeys is a thin wrapper; its messages are
+  unchanged. Not closed here: DNS rebinding between check and connect (pinning the address is v1.7.0).
+- **A-02 (medium) SSO issuer.** `saveConnection` refuses an issuer that is, or resolves to, a private address, and
+  `configFor` re-checks the issuer and every endpoint discovery names that the server fetches (`token_endpoint`,
+  `jwks_uri`, `userinfo_endpoint`) before use. The local mock (`insecureOk`: http on localhost, never deployed) is exempt.
+- **A-03 (medium) an unpriced model call is no longer free.** `withBudget` records a call whose model has no price row at
+  the caller's `maxCostMicros` (logged as `ai.usage.unpriced`) instead of throwing after the provider has billed.
+- **A-09 (low)** `withBudget` throws on `maxCostMicros <= 0n` before anything is held or run. (The audit's
+  `CHECK ("costMicros" > 0)` on `AiHold` is left for v1.7.0 so this release needs no migration.)
+- **A-05 (medium, session half)** turning "Require SSO" on deletes every other member's sessions that were not made
+  through SSO (sessions are per user, so they sign in again everywhere); the acting owner keeps theirs. The audit line
+  records `sessionsEnded`. The guard half (`requireOrg` asking how a session was made) is v1.7.0.
+- **A-07 (low)** `redeemLink` resolves a sign-up link's user by email before the INV-36 check, so an account that appeared
+  and joined an SSO-required org inside the link's 15 minutes is refused.
+- **A-13 (low)** the webhook sender reads at most 1 KiB of a receiver's answer and cancels the stream; a delivery whose
+  secrets cannot be opened fails (and retries, then pauses) instead of being posted unsigned; `/api/v1` meters missing or
+  wrong keys per client address before the lookup (`BAD_KEY_PER_IP`, 30 per 15 minutes, then 429).
+
+Upgrade: merge, `npm ci`. A clone that edited `src/modules/apikeys/webhooks.ts`'s address check, `withBudget`, or
+`setRequired` takes the template's version. A clone that removed apikeys or sso loses those halves with the module.
+
+## 1.6.3 (2026-11-17)
 
 Fix: the F-09 unit test `tests/unit/foundation-tools.test.ts` › "guards every module table" asserted that all four removable
 modules have tables, so it failed (`ci (off)`, 1 test) in every clone that removed a module by the "Removing a module"
