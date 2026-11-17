@@ -339,7 +339,7 @@ describe('SSO v1.6.4: the issuer is a public address, and Require SSO ends link 
       const o = await makeOrg('acme');
       const owner = await actAs((await addMember(o.id, 'owner', 'owner@acme.test')).id, o.slug);
       await expect(saveConnection(owner, { issuer, clientId: 'c', clientSecret: 's', allowedDomains: '', defaultRole: 'member' })).rejects.toThrow(/private address/);
-      expect(await db.ssoConnection.count()).toBe(0);
+      expect(await db.ssoConnection.count({ where: { orgId: o.id } })).toBe(0); // `org` from beforeEach has its own
     },
   );
 
