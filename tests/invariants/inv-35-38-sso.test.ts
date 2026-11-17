@@ -448,11 +448,11 @@ describe('Require SSO v1.6.5: per org, by domain, enforced at the guard', () => 
   it('v1.6.6 a /demo session is not refused by Require SSO (shared demo accounts are never on a provider)', async () => {
     const demo = await addMember(org.id, 'member', 'member@acme.demo.test');
     await db.ssoConnection.update({ where: { orgId: org.id }, data: { required: true, requiredAt: now(), requiredById: null } });
-    const token = await createSession(demo.id, { method: 'demo' });
+    const token = await createSession(demo.id, { mfa: true, method: 'demo' });
     jar.clear();
     jar.set(SESSION_COOKIE, token);
     await expect(requireOrg(org.slug)).resolves.toMatchObject({ orgId: org.id });
-    await signInAs(demo.id); // the same account on a link session is still sent to SSO
+    await signInAs(demo.id, { mfa: true }); // the same account on a link session is still sent to SSO
     await expect(requireOrg(org.slug)).rejects.toMatchObject({ kind: 'redirect' });
   });
 
