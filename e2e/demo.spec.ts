@@ -1,9 +1,10 @@
+import { execSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
-import { seedDemo } from '../scripts/seed-demo';
 
 // INV-27, flag-on half (the flag-off half is tests/invariants/inv-27-demo.test.ts). playwright.config.ts starts the
 // server with DEMO_MODE=1; this spec seeds the same database itself.
-test.beforeAll(async () => { await seedDemo(); });
+// Seeded as a child process: a clone's seed may import `next/navigation`, which Playwright's loader cannot resolve (F-08).
+test.beforeAll(() => { execSync('npm run seed:demo:test'); });
 
 test('demo sign-in lands a seeded owner in their org', async ({ page }) => {
   await page.goto('/demo');

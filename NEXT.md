@@ -1,7 +1,59 @@
 # NEXT
 
-## ▶ Next session: template v1.6.2 from BACKLOG F-06, F-08, F-09, F-11 to F-14 (rollout fallout). Model: Sonnet for the mechanics; F-09 and F-12 touch RLS migration output and upgrade claims, so Opus.
-First, 5 minutes: rebuild and republish the portfolio scorecard (`audit/build-scorecard.py`, same URL, see CLONES.md footer) now that every clone is on v1.6.1.
+## ▶ 2026-11-16: v1.6.3 PR open (branch `fix/module-table-guard-removed-modules`): module-table guard respects removed modules (BACKLOG F-17, F-18)
+Housefile PR #1 (`fbab45b`, billing removed) was red on `ci (off)`: the v1.6.2 F-09 guard test asserted all four modules present.
+After the owner merges: tag `v1.6.3`, push the tag to the clones, roll them (CHANGELOG 1.6.3: clones with the "F-17 test patched"
+note take the template's `describe` block on conflict). Housefile is unblocked by merging v1.6.3 into its PR #1 branch.
+**Decision (agent, 2026-11-16, unattended run; owner may reverse):** v1.6.3 is scoped to this fix only. It ships the F-17 test
+change already on `main` in its stronger form (F-18), since both are the same bug. The **demo-gate env fix** (`DEMO_ACCESS_PASSWORD`/`VERCEL`
+read outside `src/core/env.ts`, missing from `.env.example`; K11 ✗ in ledgerleave, gavel, tradepost, callboard), previously
+planned "as v1.6.3 (with F-17)" below, **moves to v1.6.4**.
+
+## ▶ Next session: scorecard gap plan **Step 2** (Opus, one project per session). Order: event toolkit (K2, K5, K11, K12), storage (K11, K12), reservations, use-case-studio, showcall, countertop.
+**Step 1 DONE (2026-11-13), scorecard version 13** (https://claude.ai/artifact/TognMvisj8T9GNQGtE9MbJ): items 1-2 earlier (design bridge retired, `≈` state);
+**item 3 (BACKLOG F-15) closed: 14 clone rows added**, one Sonnet sweep each against `origin/main` (data `audit/rescore/clones/<name>.json`, built by `build-scorecard.py` `CLONES`;
+boxloop is a paused row). Results: bracketry, coursework, earmark, loanbook, pulseboard, quorum clean (0 ✗); adjuster 1, commons 1, gavel 1, housefile 1, ledgerleave 1, tradepost 1, callboard 3, footnote 3.
+**Clone findings worth a template change:** the demo gate reads `DEMO_ACCESS_PASSWORD`/`VERCEL` from `process.env` outside `src/core/env.ts` and omits it from `.env.example`
+(K11 ✗ in ledgerleave, gavel, tradepost, callboard): fix once in the template as v1.6.4 (moved from v1.6.3, decision 2026-11-16 above), then clones inherit it.
+Other ✗: adjuster K4 (no org column, D73, candidate for `≈`); commons K11 `UPLOAD_ROOT`; housefile K14 port 5500 on `main`; footnote K5 (`/api/answers` unlimited, paid LLM calls), K11, K13 (key/role grants unaudited);
+callboard K6 (`/p/*` referrer, no per-link revoke), K9 (Twilio inbound replayable), K11. Clone rows show a Re-check button that nothing services (cosmetic).
+Earlier `≈` candidates and republish recipe: build `audit/scorecard.template.html` with `__DATA__` replaced by `audit/scorecard.json`; read the live source in full first (saved to tool-results), then resend.
+Also owed: template patch **v1.6.4** for the demo-gate env fix above (F-17 ships in v1.6.3).
+
+## ✅ 2026-11-09: every clone is on **v1.6.2** (13 PRs merged; earmark is the owner's, boxloop is on hold)
+
+| Clone | PR | Merge | Production | Notes |
+|---|---|---|---|---|
+| pulseboard | #6 | ce2d574 | not deployed | |
+| loanbook | #7 | 557b487 | not deployed | e2e first failed: F-08's child-process seed ran `seedDemoBook()`, whose book-wide accrual/status charged fees on loans.spec's loans. Owner chose D33 (skip the book when `TEST_WORKER_INDEX` is set) |
+| adjuster | #6 | 7fd88f7 | not deployed | |
+| bracketry | #5 | 22e6143 | not deployed | |
+| housefile | #12 | 9463f76 | not deployed | `main` only |
+| footnote | #4 | 3c9b0c7 | not deployed | F-17 test patched; apikeys stays removed |
+| ledgerleave | #7 | 6e1ae9e | auto-deployed, Ready, 401 | F-17 |
+| commons | #18 | dab862d | not deployed | F-17; F-14 ci.yml conflict |
+| coursework | #6 | 0a91945 | not deployed | F-17; F-14 |
+| quorum | #7 | 5999bc4 | not deployed | F-17; F-14; README conflict |
+| gavel | #6 | 1ad1934 | auto-deployed, Ready, 401 | F-17; F-14; kept its own e2e demo flows |
+| callboard | #21 | ee3c2f5 | hook redeploy, Ready, 401 | F-06 patch row dropped |
+| tradepost | #6 | 824bfc3 | hook redeploy, Ready, 401 | hand port; D-031 |
+
+Template audit: production 0; dev-only `minimatch` advisory logged as BACKLOG F-16.
+
+## (done) roll every clone to **v1.6.2**
+v1.6.2 released 2026-11-09 (PR #15 merged `51fbd33`, tag pushed to the template only; push it to each clone repo first).
+No migration, no env change. Per-clone notes from the CHANGELOG 1.6.2 entry:
+- **F-06** `Org.events` → `orgEvents`: callboard drops its `FOUNDATION_PATCHES.md` rename row; expect a merge conflict on that line.
+- **F-14** CI enforce step: coursework, quorum, gavel hand-edited the DB name; take the template's lines (conflict expected).
+- **F-08** e2e specs: callboard and tradepost patched `security-pages.spec.ts`/`demo.spec.ts`; take the template's unless their
+  slugs/org names differ (tradepost's do: keep its demo orgs, take the seeding + nav change).
+- gavel keeps its billing stub pair (D-102); nothing to undo.
+Open owner decision: **BACKLOG F-15**, add clone rows to the scorecard or keep the disclaimer (page version 10 says clones are not scored).
+
+## ✅ 2026-11-09: v1.6.2 released (BACKLOG F-06, F-08, F-09, F-11 to F-14). Scorecard republished (versions 9 and 10).
+
+## (done) template v1.6.2 from BACKLOG F-06, F-08, F-09, F-11 to F-14 (rollout fallout). Model: Sonnet for the mechanics; F-09 and F-12 touch RLS migration output and upgrade claims, so Opus.
+(done 2026-11-09: scorecard republished, version 9, foundation row v1.6.1, 286 pass + 21 skipped.)
 
 ## ✅ 2026-11-09: v1.6.x rollout done. Every clone is on **v1.6.1** (measured `FOUNDATION_VERSION` on each `origin/main`)
 

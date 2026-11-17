@@ -2,6 +2,63 @@
 
 Entries prefixed `security:` are mandatory for anything touching an invariant. Clones must take a `security:` release within 7 days.
 
+## 1.6.3 (unreleased; tag after merge)
+
+Fix: the F-09 unit test `tests/unit/foundation-tools.test.ts` › "guards every module table" asserted that all four removable
+modules have tables, so it failed (`ci (off)`, 1 test) in every clone that removed a module by the "Removing a module"
+recipe. Found by housefile PR #1 (head `fbab45b`, billing removed) after merging v1.6.2 (BACKLOG F-17, F-18). Not `security:`:
+the test was over-strict in clones, never permissive, and no generated policy SQL changes.
+
+- **The guard check is per present module.** `presentModules()` (`scripts/foundation-modules.ts`) says a module is present
+  while its directory exists, the test `foundation:drift` already used (drift now calls it). `guardGaps()`
+  (`scripts/rls-policies.ts`) requires every table of a present module to carry the `to_regclass` guard, no core or clone
+  table to carry it, and each present module to contribute at least one table, so a missing schema file fails instead of
+  passing on nothing. This replaces the interim F-17 assertion on `main` ("every present module is a known one"), which
+  could never fail: `orgTables()` only tags tables from known module files.
+- **New tests** on a fixture tree, so they hold in any clone: (1) all modules present, `BillingAccount` is guarded;
+  (2) billing removed by `removeModule()`, the check passes on the three left; (3) mutation: a present module's table left
+  unguarded, a guarded core table, and a present module with no tables found each fail. The real-tree test and
+  `policySql` were also mutation-checked red (billing left unguarded).
+- **`removeModule()`** is the recipe as code (paths + marked lines); `foundation:check-modules` now calls it instead of its
+  own copy of the loop.
+- **CI `modules-removed` runs the module-tooling unit tests** (`tests/unit/foundation-tools.test.ts`) in its scratch copy
+  after removing the modules, between typecheck and build. It ran validate, typecheck, build and drift only, which is why
+  the template never saw this (as with INV-32 in 1.6.1). The v1.6.2 test fails there; this one passes.
+
+Upgrade: merge, `npm ci`. No migration, no env change. A clone that patched this test locally (footnote, ledgerleave,
+commons, coursework, quorum, gavel: "F-17 test patched") gets a conflict in that `describe` block: take the template's.
+
+## 1.6.2 (2026-11-09)
+
+Fixes from the v1.6.x clone rollout (BACKLOG F-06, F-08, F-09, F-11 to F-14). Not `security:`: no invariant is relaxed.
+
+- **F-06:** core's `Org.events OrgEvent[]` is now `Org.orgEvents`. A clone with its own `Org.events` relation (callboard's
+  `Event`) no longer gets a Prisma name collision. Relation name only: no column, no migration. A clone that renamed it
+  locally drops that patch row from `FOUNDATION_PATCHES.md`.
+- **F-09:** `npm run rls:policies` wraps each removable module's table (`billing`, `notifications`, `sso`, `apikeys`) in a
+  `to_regclass` guard, so a later policy migration still applies after a clone dropped that module's tables. Core and
+  clone tables stay unguarded, so a missing one fails the migration instead of silently getting no policy. The five
+  policy migrations already shipped (up to `20261108000002`) are unchanged: editing an applied migration breaks
+  `migrate dev` in every clone. A clone that drops a module's tables does it in a migration dated after them (README,
+  "Removing a module"); gavel's stub-table pair (its D-102) stays valid.
+- **F-08:** `e2e/demo.spec.ts` and `e2e/security-pages.spec.ts` seed with `npm run seed:demo:test` in a child process
+  instead of importing `scripts/seed-demo` (a clone seed that imports `next/navigation` broke Playwright's loader), and
+  the settings nav is found as the `navigation` that holds the "Audit log" link, however many nav rows a clone adds.
+- **F-11:** `foundation:check-modules` gives its scratch copy a fresh `git init` instead of copying `.git`. From a git
+  worktree, `.git` is a pointer file and the `scratch` commit landed on the real branch.
+- **F-14:** the CI enforce leg reads the test database name from the job's `DATABASE_URL`, so a clone that set
+  `RLS_ENFORCE=1` no longer edits three `saas_foundation_test` lines.
+
+Upgrade: merge, `npm ci`, `npx prisma generate`. No migration, no env change. Two notes the 1.6.0 and 1.6.1 entries left out:
+
+- **F-12:** 1.6.0's "merge and set nothing, behaves as 1.5.0" holds only when the app connects as the table owner or a
+  role with `BYPASSRLS`. The policy migrations `ENABLE` RLS, and that alone filters every other role: with `RLS_MODE`
+  unset no `app.org_id` is set, so such a role sees no org rows at all. A clone whose runtime role is neither (quorum's
+  `quorum_app`) either gives it `BYPASSRLS` until it adopts enforce (quorum D-61) or turns enforce on. Check with
+  `SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user;` on the runtime connection.
+- **F-13:** a clone that removed `billing` also deletes the `// billing` line in `src/app/modules.ts` (the clone-owned
+  file 1.6.0 added). `foundation:check-modules` already does; a hand removal must too.
+
 ## 1.6.1 (2026-11-07)
 
 Fix: `src/core/db/cross-org.ts` listed `src/modules/billing/webhook.ts` and `src/modules/notifications/outbox.ts` without
