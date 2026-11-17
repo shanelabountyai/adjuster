@@ -1,5 +1,11 @@
 # NEXT
 
+## ▶ 2026-11-17: v1.6.5 PR open (branch `security/v1.6.5`): A-06, A-10 (owner decisions), A-05 guard half, demo gate in core
+v1.6.4 is tagged and on all 19 clones (CLONES.md). After the owner merges v1.6.5: tag `v1.6.5`, push the tag to quorum,
+coursework and commons too (their CI drift step needs it in their own repo), roll to every clone; in ledgerleave, gavel,
+tradepost and callboard replace the local demo gate with `@/core/demo-gate`. Still open from the audit (v1.7.0): A-04,
+A-08, A-11, A-12, A-14, webhook address pinning, the `AiHold` CHECK.
+
 ## ▶ 2026-11-17: v1.6.4 PR open (branch `security/v1.6.4`): `security:` fixes from the 2026-11-17 audit
 A-01, A-02, A-03, A-05 (session half), A-07, A-09, A-13 (CHANGELOG 1.6.4). The branch includes the audit itself (draft PR #20's
 three commits), so merging it lands the report too and #20 can be closed. After the owner merges: tag `v1.6.4`, roll the
