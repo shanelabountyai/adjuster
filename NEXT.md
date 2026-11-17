@@ -1,5 +1,14 @@
 # NEXT
 
+## ▶ 2026-11-17: v1.6.4 PR open (branch `security/v1.6.4`): `security:` fixes from the 2026-11-17 audit
+A-01, A-02, A-03, A-05 (session half), A-07, A-09, A-13 (CHANGELOG 1.6.4). The branch includes the audit itself (draft PR #20's
+three commits), so merging it lands the report too and #20 can be closed. After the owner merges: tag `v1.6.4`, roll the
+`security:` release to every v1.6.x clone within 7 days (CLONES.md), apikeys first in the deployed four (tradepost, callboard,
+gavel, ledgerleave). Still open from the audit: owner decisions A-06 (who Require SSO refuses) and A-10 (fresh sign-in for an
+export download); v1.7.0 A-04, A-08, A-05 guard half, A-11, A-12, A-14, address pinning for webhooks, `AiHold` CHECK.
+**Decision (agent, 2026-11-17; owner may reverse):** v1.6.4 is the audit's security set only. The demo-gate env fix planned
+for v1.6.4 (K11 in ledgerleave, gavel, tradepost, callboard) moves to v1.6.5, so this release stays a pure `security:` one.
+
 ## ▶ 2026-11-16: v1.6.3 PR open (branch `fix/module-table-guard-removed-modules`): module-table guard respects removed modules (BACKLOG F-17, F-18)
 Housefile PR #1 (`fbab45b`, billing removed) was red on `ci (off)`: the v1.6.2 F-09 guard test asserted all four modules present.
 After the owner merges: tag `v1.6.3`, push the tag to the clones, roll them (CHANGELOG 1.6.3: clones with the "F-17 test patched"
