@@ -60,6 +60,21 @@ export function policySql(tables: OrgTable[]): string {
     .join('\n\n');
 }
 
+// v1.6.3: what is wrong with the module guard for a tree whose present modules are `present` (empty = correct). Every
+// table of a present module must be guarded and no core or clone table may be; and each present module must contribute
+// at least one table, so a missing or unparsed schema file fails instead of making the check pass on nothing. A removed
+// module is simply not in `present`: its tables are gone with its schema file (README "Removing a module").
+export function guardGaps(tables: OrgTable[], present: readonly string[], sql: (t: OrgTable[]) => string = policySql): string[] {
+  const gaps: string[] = [];
+  for (const t of tables) {
+    const guarded = sql([t]).includes(`to_regclass('"${t.table}"')`);
+    if (t.module && !guarded) gaps.push(`${t.table}: table of module ${t.module} has no to_regclass guard`);
+    if (!t.module && guarded) gaps.push(`${t.table}: core/clone table is guarded (a missing one would silently get no policy)`);
+  }
+  for (const m of present) if (!tables.some((t) => t.module === m)) gaps.push(`module ${m} is present but none of its org tables was found`);
+  return gaps;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const tables = orgTables();
   const stamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
