@@ -6,7 +6,13 @@ endpoints. One migration (guarded; backfills creators from the audit log and dis
 (`changeRole` takes `onRoleChanged`). After the owner merges: tag `v1.7.0`, push the tag to quorum, coursework and commons,
 roll to every clone within 7 days (each adds `onRoleChanged` to its own `org-hooks.ts`; earmark keeps its guest lines).
 **Decision (agent, 2026-11-17; owner may reverse):** a demotion also disables the person's endpoints, not only their keys,
-by the same rule. Still open from the audit: A-11, A-12, A-14, webhook address pinning, the `AiHold` CHECK.
+by the same rule.
+
+## ▶ 2026-11-17: v1.7.0 continued (branch `security/v1.7.0`): A-11, A-12, A-14, webhook pinning, `AiHold` CHECK
+PR #26 (A-04, A-08) merged as 0c0f709 but untagged; this branch finishes the release (CHANGELOG 1.7.0, second half), so the
+tag goes on after it merges. Every audit finding is then fixed. Rollout extras per clone: `GLOBAL_MODELS` in
+`tests/fixtures/app.ts` (INV-42 lists what to name), the `recheckSsoDomains` cron line, and adjuster's reseed needs
+`SET LOCAL app.allow_truncate = 'on'` if it runs outside a `_test` database. Not done: SSO issuer fetches are not pinned.
 
 ## ▶ 2026-11-17: v1.6.5 PR open (branch `security/v1.6.5`): A-06, A-10 (owner decisions), A-05 guard half, demo gate in core
 v1.6.4 is tagged and on all 19 clones (CLONES.md). After the owner merges v1.6.5: tag `v1.6.5`, push the tag to quorum,
