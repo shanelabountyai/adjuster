@@ -33,9 +33,44 @@ file for the exact lines and markers). A clone without apikeys exports an empty 
 `changeRole(...)` call in the clone's own code and tests gets `onRoleChanged` as its fourth argument: `tsc` lists them.
 A clone that patched `onMembershipEnded` (earmark's guests) keeps its own lines and adds the call.
 
-Still open from the audit: A-11, A-12, A-14, webhook address pinning, the `AiHold` CHECK.
+security: the rest of the 2026-11-17 audit: A-11, A-12, A-14, webhook address pinning, the `AiHold` CHECK. With this, every
+audit finding is fixed. **Two more migrations** (`20261118000000_core_hardening`; `20261118000001_sso_domain_hardening`,
+guarded for a clone that dropped the sso tables).
 
-## 1.6.6 (unreleased; tag after merge)
+- **A-11 an append-style row carries no org or yours.** `AuditEvent` and `Outbox` (nullable `orgId`) took
+  `INSERT … WITH CHECK (true)`, so a write scoped to org A could file a row under org B. The insert policy is now
+  `orgId IS NULL OR orgId = app.org_id`; `scripts/rls-policies.ts` emits the same text. Cross-org writers run as the system
+  role and are unaffected. INV-29 now inserts into each append-style table as org A with B (refused), A and null.
+- **A-11 every model is org-scoped or named global (new INV-42).** A model with no `orgId` fails the suite until it is named,
+  with a reason, in core's list (`tests/invariants/inv-42-org-scope.test.ts`) or the clone's new `GLOBAL_MODELS` export in
+  the clone-owned `tests/fixtures/app.ts`. It does not add policies to `User`, `Session` and the other global tables; it makes
+  every table outside RLS a written decision. A clone table that is org-owned through a parent (no `orgId` of its own) goes
+  on the list too, and its comment should say so: it is outside RLS and INV-34's export.
+- **A-12 `TRUNCATE "AuditEvent"` is refused.** The append-only trigger was row-level and TRUNCATE fires no row trigger. A
+  statement-level `BEFORE TRUNCATE` trigger now raises, except in a database whose name ends `_test` (the test helpers empty
+  every table) or in a transaction that ran `SET LOCAL app.allow_truncate = 'on'`. `app.truncate_guard = 'strict'` turns the
+  `_test` exemption off; INV-19 uses it to prove the refusal.
+- **A-14 one verified org per domain, in the database.** A partial unique index on `SsoDomain(domain) WHERE verifiedAt IS
+  NOT NULL`; two orgs verifying at once can no longer both win (`verifyDomain` maps the violation to the same refusal).
+- **A-14 verification can lapse.** New cron job `recheckSsoDomains` (`src/app/cron-jobs.ts`, `// sso`): each verified
+  domain's TXT record is re-read once a day (at most 25 per run). The first miss is recorded (`checkFailedAt`) and the SSO
+  settings page warns with the deadline; after **72 hours** missing, the domain is unverified and audited
+  (`sso.domain_unverified`, no actor). The TXT value is derived from `AUTH_SECRET`, so **rotating `AUTH_SECRET` now lapses
+  every verified domain after 72 hours** unless its record is updated from the settings page.
+- **Webhooks dial the address that was checked.** `resolveOutbound()` (core `net.ts`) returns the checked addresses and
+  `fetchPinned()` connects to the first one, with the URL's name kept for Host and TLS, so a name can no longer answer a
+  public address to the check and a private one to the connection. `transport.fetch(url, init, pin)` takes the pin as a third
+  argument; a test mock that ignores it still works. `WEBHOOK_ALLOW_PRIVATE=1` and IP-literal URLs send unpinned, as before.
+  The SSO issuer's fetches are not pinned yet (issuer and endpoints are checked, not pinned).
+- **`AiHold.costMicros > 0`** as a CHECK (`NOT VALID`: new and updated rows only), behind v1.6.4's throw in `budget.ts`.
+
+Upgrade (in addition to the above): `prisma migrate deploy` applies both. In the clone-owned `tests/fixtures/app.ts` add
+`export const GLOBAL_MODELS: readonly string[] = [...]` naming every clone model with no `orgId` (INV-42 prints the list).
+In the clone-owned `src/app/cron-jobs.ts`, take the template's `recheckSsoDomains` import and its `jobs.ssoDomains` line
+(`// sso`; a clone without sso has neither). A clone script that empties `AuditEvent` outside a `_test` database adds
+`SET LOCAL app.allow_truncate = 'on'` in the same transaction (adjuster's `seedDecisions`, when run against a dev database).
+
+## 1.6.6 (2026-11-17)
 
 Fix to 1.6.5's Require SSO guard (owner decision 2026-11-17): a session made through `/demo` passes `refusesSession`. Demo
 accounts are shared synthetic users that exist only while `DEMO_MODE` is on (INV-27) and are never on any provider, so a

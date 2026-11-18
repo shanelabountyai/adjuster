@@ -9,7 +9,7 @@ import { now } from '@/core/clock';
 import { asSystem, withOrg, type Tx } from '@/core/db/rls';
 import { env } from '@/core/env';
 import { Refused } from '@/core/errors';
-import { checkOutboundUrl, isPrivateAddress } from '@/core/net';
+import { fetchPinned, isPrivateAddress, resolveOutbound, type Pin } from '@/core/net';
 import { safeEqual } from '@/core/tokens';
 import { EVENT_TYPES } from '@/app/event-types';
 
@@ -33,7 +33,13 @@ const SEND_TIMEOUT_MS = 10_000;
 const STALE_SENDING_MS = 15 * 60_000;
 
 /** Tests replace these; everything else uses the network. */
-export const transport = { fetch: (url: string, init: RequestInit) => fetch(url, init), lookup: (host: string) => lookup(host, { all: true }) };
+// v1.7.0: `fetch` gets the address checkUrl judged (`pin`) and dials it, closing the DNS-rebinding window between the
+// check and the connection. With no pin (WEBHOOK_ALLOW_PRIVATE, an IP literal) it is a plain fetch.
+export const transport = {
+  fetch: (url: string, init: { method: string; headers: Record<string, string>; body: string; signal: AbortSignal }, pin: Pin | null = null) =>
+    pin ? fetchPinned(url, init, pin) : fetch(url, { ...init, redirect: 'manual' }),
+  lookup: (host: string) => lookup(host, { all: true }),
+};
 
 // ---- signing
 
@@ -59,8 +65,11 @@ const newSecret = () => `whsec_${randomBytes(32).toString('base64url')}`;
 export { isPrivateAddress };
 
 export async function checkUrl(raw: string, allowPrivate = env.WEBHOOK_ALLOW_PRIVATE === '1'): Promise<string> {
-  return checkOutboundUrl(raw, { lookup: (host) => transport.lookup(host), allowPrivate, allowHttp: allowPrivate });
+  return (await checkUrlPinned(raw, allowPrivate)).url;
 }
+
+const checkUrlPinned = (raw: string, allowPrivate = env.WEBHOOK_ALLOW_PRIVATE === '1') =>
+  resolveOutbound(raw, { lookup: (host) => transport.lookup(host), allowPrivate, allowHttp: allowPrivate });
 
 // ---- owner controls (settings page). Every change needs apikeys.manage and is audited; secrets are shown once.
 
@@ -284,8 +293,8 @@ async function firstKiB(res: Response): Promise<string> {
 
 async function send(url: string, headers: Record<string, string>, body: string): Promise<Outcome> {
   try {
-    await checkUrl(url); // again at send time: DNS may have moved
-    const res = await transport.fetch(url, { method: 'POST', headers, body, redirect: 'manual', signal: AbortSignal.timeout(SEND_TIMEOUT_MS) });
+    const { pin } = await checkUrlPinned(url); // again at send time: DNS may have moved; then dial what was checked
+    const res = await transport.fetch(url, { method: 'POST', headers, body, signal: AbortSignal.timeout(SEND_TIMEOUT_MS) }, pin);
     const excerpt = await firstKiB(res);
     const ok = res.status >= 200 && res.status < 300;
     return { ok, status: res.status, excerpt, error: ok ? null : `HTTP ${res.status}` };

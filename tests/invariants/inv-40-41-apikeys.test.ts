@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { onMembershipEnded, onRoleChanged } from '@/app/org-hooks';
@@ -311,6 +312,18 @@ describe('INV-41 webhook deliveries: retried after a failure, sent once per even
     expect(await sweepWebhooks()).toMatchObject({ failed: 1 });
     expect(sent).toHaveLength(0);
     expect((await db.webhookDelivery.findFirstOrThrow()).lastError).toMatch(/private/);
+  });
+
+  it('the send dials the address the check judged, not a second DNS answer (v1.7.0, DNS rebinding)', async () => {
+    transport.lookup = async () => [{ address: '93.184.216.34', family: 4 }];
+    const e = await endpoint();
+    receiver([]);
+    await e.publish();
+    transport.lookup = async () => [{ address: '93.184.216.35', family: 4 }]; // public, but not what was saved
+    await sweepWebhooks();
+    expect(transport.fetch).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(transport.fetch).mock.calls[0]![2]).toEqual({ address: '93.184.216.35', family: 4 }); // checked at send, then pinned
+    expect(readFileSync('src/modules/apikeys/webhooks.ts', 'utf8')).toMatch(/pin \? fetchPinned\(url, init, pin\)/); // the real transport uses it
   });
 });
 
