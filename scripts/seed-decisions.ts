@@ -101,7 +101,7 @@ export async function seedDecisions(db: Db, store: DocumentStore = new LocalDisk
     // template's own events are kept aside, the table truncated and they are put back; one simple query is one transaction.
     await db.query(`CREATE TEMP TABLE kept ON COMMIT DROP AS SELECT * FROM "AuditEvent"
         WHERE "targetType" IS DISTINCT FROM 'Claim' AND "targetType" IS DISTINCT FROM 'RuleSetVersion' AND "action" <> 'authority.tier_assigned';
-      TRUNCATE "AuditEvent"; INSERT INTO "AuditEvent" SELECT * FROM kept`);
+      SET LOCAL app.allow_truncate = 'on'; TRUNCATE "AuditEvent"; INSERT INTO "AuditEvent" SELECT * FROM kept`); // v1.7.0 (A-12): opt in outside *_test
   } catch (e) { throw await blockedBy(db, e); } finally { await db.query('RESET lock_timeout'); }
   await seedOverrideReasons(db);
   // Every directory under rules/ is a product, and every plan and ops file in it is published, oldest version first.
