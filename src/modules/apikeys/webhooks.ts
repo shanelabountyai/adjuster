@@ -6,7 +6,7 @@ import { openSecret, sealSecret } from '@/core/auth/secret-box';
 import { assertNotDemo } from '@/core/auth/session';
 import { inOrg, type OrgCtx } from '@/core/authz/guards';
 import { now } from '@/core/clock';
-import { asSystem, withOrg } from '@/core/db/rls';
+import { asSystem, withOrg, type Tx } from '@/core/db/rls';
 import { env } from '@/core/env';
 import { Refused } from '@/core/errors';
 import { checkOutboundUrl, isPrivateAddress } from '@/core/net';
@@ -85,7 +85,7 @@ export async function createEndpoint(ctx: OrgCtx, input: { url: string; eventTyp
   const secret = newSecret();
   await withOrg(ctx, async (tx) => {
     const { eventSeq } = await tx.org.findUniqueOrThrow({ where: { id: ctx.orgId }, select: { eventSeq: true } });
-    const ep = await tx.webhookEndpoint.create({ data: { ...inOrg(ctx), url, eventTypes, secretSealed: sealSecret(secret, 'webhook'), cursorSeq: eventSeq } });
+    const ep = await tx.webhookEndpoint.create({ data: { ...inOrg(ctx), url, eventTypes, secretSealed: sealSecret(secret, 'webhook'), cursorSeq: eventSeq, createdById: ctx.userId } });
     await audit(ctx, 'webhook.endpoint_created', { targetType: 'webhookEndpoint', targetId: ep.id, data: { url, eventTypes } }, tx);
   });
   return secret;
@@ -106,17 +106,40 @@ export async function rotateSecret(ctx: OrgCtx, id: string): Promise<string> {
   return secret;
 }
 
-/** `active` resumes (failure count cleared) and gets the backlog its cursor never passed; `disabled` is the owner's off. */
+/**
+ * `active` resumes (failure count cleared) and gets the backlog its cursor never passed; `disabled` is the owner's off.
+ * Whoever resumes an endpoint becomes its creator (A-04): it then lives and dies with their membership and role, so an
+ * endpoint switched back on after its creator left is never again tied to no one.
+ */
 export async function setEndpointStatus(ctx: OrgCtx, id: string, to: 'active' | 'disabled') {
   assertManager(ctx);
   const ep = await endpointOf(ctx, id);
   await withOrg(ctx, async (tx) => {
     await tx.webhookEndpoint.update({
       where: { id: ep.id },
-      data: to === 'active' ? { status: 'active', consecutiveFailures: 0, disabledAt: null, disabledReason: null } : { status: 'disabled', disabledAt: now(), disabledReason: 'Switched off by an owner or admin.' },
+      data:
+        to === 'active'
+          ? { status: 'active', consecutiveFailures: 0, disabledAt: null, disabledReason: null, createdById: ctx.userId }
+          : { status: 'disabled', disabledAt: now(), disabledReason: 'Switched off by an owner or admin.' },
     });
-    await audit(ctx, to === 'active' ? 'webhook.endpoint_resumed' : 'webhook.endpoint_disabled', { targetType: 'webhookEndpoint', targetId: ep.id }, tx);
+    await audit(ctx, to === 'active' ? 'webhook.endpoint_resumed' : 'webhook.endpoint_disabled', { targetType: 'webhookEndpoint', targetId: ep.id, ...(to === 'active' && ep.createdById !== ctx.userId && { data: { createdByFrom: ep.createdById, createdByTo: ctx.userId } }) }, tx);
   });
+}
+
+export const ENDPOINT_CREATOR_LEFT = 'Its creator left this organization. Check the URL, then switch it back on to take it over.';
+export const ENDPOINT_CREATOR_DEMOTED = 'Its creator can no longer manage API keys and webhooks. Check the URL, then switch it back on to take it over.';
+
+/**
+ * A-04 (owner decision 2026-11-17): the endpoints a person created are disabled when their membership ends (`member`) or
+ * their role loses apikeys.manage (`role`), in the caller's transaction. Disabled, not deleted: the owner sees why on the
+ * settings page and can switch one back on. Nothing is sent to a disabled endpoint (fan-out and the claim read `active`).
+ */
+export async function disableEndpointsCreatedBy(tx: Tx, orgId: string, userId: string, why: 'member' | 'role') {
+  const { count } = await tx.webhookEndpoint.updateMany({
+    where: { orgId, createdById: userId, status: { not: 'disabled' } },
+    data: { status: 'disabled', disabledAt: now(), disabledReason: why === 'member' ? ENDPOINT_CREATOR_LEFT : ENDPOINT_CREATOR_DEMOTED },
+  });
+  if (count) await audit({ orgId, userId: null }, `webhook.disabled_with_${why}`, { targetType: 'user', targetId: userId, data: { count } }, tx);
 }
 
 export async function deleteEndpoint(ctx: OrgCtx, id: string) {
