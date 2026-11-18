@@ -199,6 +199,8 @@ describe('INV-35: no join outside the org’s verified domains', () => {
   it('a verified domain whose TXT record goes missing is unverified after the grace period, and audited (v1.7.0)', async () => {
     const real = dns.resolveTxt;
     const row = () => db.ssoDomain.findFirstOrThrow({ where: { orgId: org.id } });
+    let offset = 0; // advanceClock sets an absolute offset, so walk it forward by hand
+    const later = (ms: number) => advanceClock((offset += ms));
     try {
       dns.resolveTxt = async () => [[txtValue(org.id, DOMAIN)]];
       expect(await recheckSsoDomains()).toEqual({ checked: 1, failing: 0, unverified: 0 });
@@ -207,22 +209,22 @@ describe('INV-35: no join outside the org’s verified domains', () => {
       dns.resolveTxt = async () => {
         throw Object.assign(new Error('queryTxt ENOTFOUND'), { code: 'ENOTFOUND' });
       };
-      advanceClock(RECHECK_MS + 60_000);
+      later(RECHECK_MS + 60_000);
       expect(await recheckSsoDomains()).toEqual({ checked: 1, failing: 1, unverified: 0 });
       const missingSince = (await row()).checkFailedAt!;
-      advanceClock(RECHECK_MS + 60_000);
+      later(RECHECK_MS + 60_000);
       expect(await recheckSsoDomains()).toEqual({ checked: 1, failing: 1, unverified: 0 }); // still inside the grace
       expect((await row()).checkFailedAt).toEqual(missingSince); // the first miss is kept, not reset
 
       dns.resolveTxt = async () => [[txtValue(org.id, DOMAIN)]]; // put back in time: cleared
-      advanceClock(RECHECK_MS + 60_000);
+      later(RECHECK_MS + 60_000);
       expect(await recheckSsoDomains()).toEqual({ checked: 1, failing: 0, unverified: 0 });
       expect((await row()).checkFailedAt).toBeNull();
 
       dns.resolveTxt = async () => [['unrelated']];
-      advanceClock(RECHECK_MS + 60_000);
+      later(RECHECK_MS + 60_000);
       await recheckSsoDomains();
-      advanceClock(RECHECK_GRACE_MS);
+      later(RECHECK_GRACE_MS);
       expect(await recheckSsoDomains()).toEqual({ checked: 1, failing: 0, unverified: 1 });
       expect((await row()).verifiedAt).toBeNull();
       expect(await resolveSso(ALICE.email)).toBeNull(); // sign-ins on the domain no longer route to the org
@@ -230,6 +232,7 @@ describe('INV-35: no join outside the org’s verified domains', () => {
       expect(ev).toMatchObject({ orgId: org.id, actorUserId: null, data: { domain: DOMAIN } });
     } finally {
       dns.resolveTxt = real;
+      advanceClock(0);
     }
   });
 });
