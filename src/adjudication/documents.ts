@@ -6,6 +6,7 @@ import { tierOf } from '@/adjudication/authority';
 import { paidCents } from '@/adjudication/payments';
 import { checkAuthority } from '@/rules/authority';
 import type { FactValue } from '@/rules/evaluate';
+import { isIsoDate } from '@/rules/schema';
 import { selectVersions } from '@/rules/select';
 
 // Evidence documents (domain brief §8, D53). An upload is a new DocumentVersion row and nothing else changes: the
@@ -119,7 +120,7 @@ type DictFact = { id: string; type: string; source: string; values?: string[] };
 const VALUE_OK: Record<string, (v: unknown, f: DictFact) => boolean> = {
   bool: (v) => typeof v === 'boolean',
   int: Number.isSafeInteger, cents: Number.isSafeInteger, bps: Number.isSafeInteger,
-  date: (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)),
+  date: isIsoDate,
   string: (v) => typeof v === 'string',
   enum: (v, f) => typeof v === 'string' && (f.values ?? []).includes(v),
 };
